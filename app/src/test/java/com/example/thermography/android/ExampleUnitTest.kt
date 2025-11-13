@@ -1,4 +1,4 @@
-package com.example.thermography.android
+package com.tech.thermography.android
 
 import org.junit.Test
 

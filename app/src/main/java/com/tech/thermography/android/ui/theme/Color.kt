@@ -1,4 +1,4 @@
-package com.example.thermography.android.ui.theme
+package com.tech.thermography.android.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
