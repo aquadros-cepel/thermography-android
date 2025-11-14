@@ -13,9 +13,12 @@ interface CompanyDao {
     @Query("SELECT * FROM company WHERE id = :id")
     suspend fun getCompanyById(id: UUID): CompanyEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertCompany(company: CompanyEntity)
-
+    
+    @Update
+    suspend fun updateCompany(company: CompanyEntity)
+    
     @Delete
     suspend fun deleteCompany(company: CompanyEntity)
 }

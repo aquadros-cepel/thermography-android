@@ -13,9 +13,12 @@ interface PlantDao {
     @Query("SELECT * FROM plant WHERE id = :id")
     suspend fun getPlantById(id: UUID): PlantEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPlant(plant: PlantEntity)
-
+    
+    @Update
+    suspend fun updatePlant(plant: PlantEntity)
+    
     @Delete
     suspend fun deletePlant(plant: PlantEntity)
 }
