@@ -4,6 +4,8 @@ import androidx.room.*
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
+import com.tech.thermography.android.data.local.entity.enum.ThermographicInspectionRecordType
+import com.tech.thermography.android.data.local.entity.enum.ConditionType
 
 @Entity(
     tableName = "thermographic_inspection_record",

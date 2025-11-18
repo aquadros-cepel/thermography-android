@@ -1,6 +1,6 @@
 package com.tech.thermography.android.data.local.entity.enum
 
-enum EquipmentType {
+enum class EquipmentType {
     AUTOTRANSFORMER, 
     BATTERY_BANK, 
     BLOCKING_COIL, 
