@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.dao.PlantDao
-import com.tech.thermography.android.data.repository.PlantRepository
+import com.tech.thermography.android.data.local.repository.PlantRepository
 
 import dagger.Module
 import dagger.Provides

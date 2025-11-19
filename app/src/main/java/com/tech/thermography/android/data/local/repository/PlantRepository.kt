@@ -1,4 +1,4 @@
-package com.tech.thermography.android.data.repository
+package com.tech.thermography.android.data.local.repository
 
 import com.tech.thermography.android.data.local.dao.PlantDao
 import com.tech.thermography.android.data.local.entity.PlantEntity
