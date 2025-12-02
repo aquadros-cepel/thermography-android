@@ -1,34 +1,31 @@
 package com.tech.thermography.android.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.tech.thermography.android.ui.auth.login.LoginScreen
-import com.tech.thermography.android.ui.HomeScreen
+import com.tech.thermography.android.ui.home.HomeScreen
+import com.tech.thermography.android.ui.sync.SyncScreen
 
 @Composable
-fun AppNavHost(
-    navController: NavHostController = rememberNavController()
-) {
-    NavHost(
-        navController = navController,
-        startDestination = NavRoutes.LOGIN
-    ) {
-        composable(NavRoutes.LOGIN) {
+fun AppNavHost() {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "login") {
+
+        composable("login") {
             LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(NavRoutes.HOME) {
-                        popUpTo(NavRoutes.LOGIN) { inclusive = true }
-                    }
-                },
-                onNavigateToCreateAccount = {
-                    // implementar se quiser
-                }
+                onLoginSuccess = { navController.navigate("sync") },
+                onNavigateToCreateAccount = { /* TODO */ }
             )
         }
-        composable(NavRoutes.HOME) {
+
+        composable("sync") {
+            SyncScreen(onSyncComplete = { navController.navigate("home") })
+        }
+
+        composable("home") {
             HomeScreen()
         }
     }

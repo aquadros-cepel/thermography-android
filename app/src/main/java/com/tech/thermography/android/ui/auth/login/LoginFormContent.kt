@@ -55,13 +55,20 @@ fun LoginFormContent(
             painter = painterResource(id = R.drawable.login_small),
             contentDescription = "Logo small",
             modifier = Modifier
-                .size(120.dp)
+                .size(80.dp)
                 .padding(bottom = 24.dp)
         )
 
-        Text("Thermography", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Gestão de Inspeções Termográficas", style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 24.dp))
+        Text("Thermography",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp))
+
+        Text("Gestão de Inspeções Termográficas",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.DarkGray,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 48.dp))
 
         OutlinedTextField(
             value = username,
@@ -96,16 +103,21 @@ fun LoginFormContent(
                     remember = it
                     onRememberChanged(it)
                 })
-                Text("Manter conectado")
+                Text("Manter conectado",
+                    style = MaterialTheme.typography.bodyMedium)
             }
-            Text("Esqueceu sua senha?", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { })
+            Text("Esqueceu sua senha?",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable { }
+            )
         }
 
         uiState.error?.let {
             Text(it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(48.dp))
 
         Button(onClick = { onLoginClicked() }, modifier = Modifier.fillMaxWidth()) {
             Text("Entrar")
@@ -113,6 +125,9 @@ fun LoginFormContent(
 
         Spacer(Modifier.height(16.dp))
 
-        Text("Criar conta", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { onNavigateToCreateAccount() })
+        Text("Criar conta",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.clickable { onNavigateToCreateAccount() })
     }
 }

@@ -37,12 +37,12 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(error = "E-mail obrigatório") }
             return@launch
         }
-        if (!current.username.contains("@")) {
-            _uiState.update { it.copy(error = "E-mail inválido") }
-            return@launch
-        }
-        if (current.password.length < 6) {
-            _uiState.update { it.copy(error = "Senha deve ter pelo menos 6 caracteres") }
+//        if (!current.username.contains("@")) {
+//            _uiState.update { it.copy(error = "E-mail inválido") }
+//            return@launch
+//        }
+        if (current.password.length < 5) {
+            _uiState.update { it.copy(error = "Senha deve ter pelo menos 5 caracteres") }
             return@launch
         }
 

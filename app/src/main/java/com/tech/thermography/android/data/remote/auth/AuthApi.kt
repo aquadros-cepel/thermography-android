@@ -6,10 +6,10 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface AuthApi {
-    @POST("api/authenticate")
-    suspend fun authenticate(@Body body: AuthRequest): Response<Unit>
+    @POST("authenticate")
+    suspend fun authenticate(@Body body: AuthRequest): Response<AuthResponse>
 
-    @GET("api/account")
+    @GET("account")
     suspend fun getAccount(): Response<AccountResponse>
 }
 

@@ -2,6 +2,7 @@ package com.tech.thermography.android.di
 
 import com.tech.thermography.android.data.remote.auth.AuthApi
 import com.tech.thermography.android.data.remote.auth.AuthInterceptor
+import com.tech.thermography.android.data.remote.sync.SyncApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,9 +22,10 @@ object NetworkModule {
             .build()
 
     @Provides
-    fun provideRetrofit(client: OkHttpClient): Retrofit =
+    fun provideRetrofit(client: OkHttpClient): Retrofit =        
         Retrofit.Builder()
-            .baseUrl("https://SEU_BACKEND/api/")
+            .baseUrl("http://192.168.15.172:8080/api/")
+//            .baseUrl("http://35.247.197.28:8080/api/")
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()
@@ -31,4 +33,8 @@ object NetworkModule {
     @Provides
     fun provideAuthApi(retrofit: Retrofit): AuthApi =
         retrofit.create(AuthApi::class.java)
+
+    @Provides
+    fun provideSyncApi(retrofit: Retrofit): SyncApi =
+        retrofit.create(SyncApi::class.java)
 }

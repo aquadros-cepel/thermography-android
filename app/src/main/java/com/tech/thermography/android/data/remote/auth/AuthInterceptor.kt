@@ -10,15 +10,27 @@ import javax.inject.Inject
 class AuthInterceptor @Inject constructor(
     private val session: UserSessionStore
 ) : Interceptor {
+
     override fun intercept(chain: Interceptor.Chain): Response {
+        val original = chain.request()
+        val url = original.url.toString()
+
+        // Se for login, não adiciona Authorization
+        if (url.endsWith("/authenticate")) {
+            return chain.proceed(original)
+        }
+
+        // Para as demais requisições, pega o token
         val token = runBlocking { session.token.first() }
+
         val request = if (!token.isNullOrBlank()) {
-            chain.request().newBuilder()
+            original.newBuilder()
                 .addHeader("Authorization", "Bearer $token")
                 .build()
         } else {
-            chain.request()
+            original
         }
+
         return chain.proceed(request)
     }
 }

@@ -1,4 +1,4 @@
-package com.tech.thermography.android.ui
+package com.tech.thermography.android.ui.home
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

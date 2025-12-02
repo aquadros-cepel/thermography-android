@@ -1,7 +1,10 @@
 package com.tech.thermography.android.data.local.entity
 
-import androidx.room.*
-import java.util.*
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "business_unit",
@@ -17,8 +20,8 @@ import java.util.*
 )
 data class BusinessUnitEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
-    val name: String,
-    val title: String?,
+    val code: String,
+    val name: String?,
     val description: String?,
     val companyId: UUID?
 )
