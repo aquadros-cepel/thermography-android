@@ -20,8 +20,8 @@ import java.util.UUID
 )
 data class BusinessUnitEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
-    val code: String,
-    val name: String?,
+    val code: String?,
+    val name: String,
     val description: String?,
     val companyId: UUID?
 )

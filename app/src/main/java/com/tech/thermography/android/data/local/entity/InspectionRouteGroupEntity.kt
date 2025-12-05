@@ -23,9 +23,11 @@ import java.util.*
 )
 data class InspectionRouteGroupEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
+    val code: String?,
     val name: String,
-    val title: String?,
     val description: String?,
+    val included: Boolean?,
+    val orderIndex: Int?,
     val inspectionRouteId: UUID?,
     val parentGroupId: UUID?
 )

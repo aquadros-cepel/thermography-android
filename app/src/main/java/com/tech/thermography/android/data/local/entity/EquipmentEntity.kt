@@ -26,8 +26,8 @@ import com.tech.thermography.android.data.local.entity.enum.PhaseType
 )
 data class EquipmentEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
+    val code: String?,
     val name: String,
-    val title: String?,
     val description: String?,
     val type: EquipmentType,
     val manufacturer: String?,

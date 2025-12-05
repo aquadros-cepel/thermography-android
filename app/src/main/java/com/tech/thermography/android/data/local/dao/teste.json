@@ -1,0 +1,88 @@
+{
+    "id": "2705c9e5-ed83-4986-8253-e0243cbbdee8",
+    "code": null,
+    "name": "RI_N-S-RRBV_C001_001",
+    "description": "Parece que está funcionando ",
+    "maintenanceDocument": null,
+    "createdAt": "2025-12-03T17:30:54.910568Z",
+    "expectedStartDate": "2026-01-01",
+    "expectedEndDate": "2026-06-30",
+    "started": null,
+    "startedAt": null,
+    "finished": null,
+    "finishedAt": null,
+    "plant": {
+        "id": "af15bcce-c707-4bd8-99bf-9ff81f38f5ed",
+        "code": "N-S-RRBV",
+        "name": "SE Boa Vista",
+        "description": "SUBESTAÇÃO DE BOA VISTA",
+        "latitude": 2.942067496,
+        "longitude": -60.7172411,
+        "startDate": "2001-07-21"
+    },
+    "inspectionRoute": {
+        "id": "b130d48d-6dca-42bf-9021-96a13a205b1c"
+    },
+    "createdBy": {
+        "id": "b64c4286-e69c-4bcc-b7cd-282012215b88",
+        "position": "System Administrator",
+        "phoneNumber": "+55 11 99999-9999"
+    },
+    "startedBy": null,
+    "finishedBy": null,
+    "groups": [
+        {
+            "id": "684de6be-82ef-4277-9ef6-abfd9dd4a70f",
+            "code": "N-S-RRBV-NFT",
+            "name": "Bay Transformador de Potência 230 kV 02",
+            "description": null,
+            "orderIndex": 1,
+            "finished": null,
+            "finishedAt": null,
+            "inspectionRecord": {
+                "id": "2705c9e5-ed83-4986-8253-e0243cbbdee8"
+            },
+            "parentGroup": null,
+            "subGroups": [
+                {
+                    "id": "a639753a-d408-46bb-a071-7396ecea7696",
+                    "code": "N-S-RRBV-NFT-TF602",
+                    "name": "Módulo TF602",
+                    "description": null,
+                    "orderIndex": 1,
+                    "finished": null,
+                    "finishedAt": null,
+                    "parentGroup": {
+                        "id": "684de6be-82ef-4277-9ef6-abfd9dd4a70f"
+                    },
+                    "equipments": [
+                        {
+                            "id": "3a4217f8-ac8e-44c2-bb8e-0c3f168e5a3e",
+                            "orderIndex": 1,
+                            "status": null,
+                            "inspectionRecordGroup": {
+                                "id": "a639753a-d408-46bb-a071-7396ecea7696"
+                            },
+                            "equipment": {
+                                "id": "b41f0d8d-95a4-4ab7-a84c-f033f3fd0b71",
+                                "code": "N-S-RRBV-NFT-TF602-BVDJ221",
+                                "name": "Disjuntor 13.8 kV",
+                                "description": "\"Disjuntor 13.8 kV / Bay Transformador de Potência 230 kV 02 / SE Boa Vista\"",
+                                "type": "CIRCUIT_BREAKER",
+                                "manufacturer": "",
+                                "model": "",
+                                "serialNumber": "",
+                                "voltageClass": 13800.0,
+                                "phaseType": "THREE_PHASE",
+                                "startDate": "2001-03-31",
+                                "latitude": null,
+                                "longitude": null
+                            }
+                        }
+                    ]
+                }
+            ],
+            "equipments": []
+        }
+    ]
+}

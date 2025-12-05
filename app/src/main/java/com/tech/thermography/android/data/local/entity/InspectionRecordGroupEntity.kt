@@ -1,31 +1,35 @@
 package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
+import java.time.Instant
 import java.util.*
 
 @Entity(
-    tableName = "equipment_group",
+    tableName = "inspection_record_group",
     foreignKeys = [
         ForeignKey(
-            entity = PlantEntity::class,
+            entity = InspectionRecordEntity::class,
             parentColumns = ["id"],
-            childColumns = ["plantId"],
+            childColumns = ["inspectionRecordId"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
-            entity = EquipmentGroupEntity::class,
+            entity = InspectionRecordGroupEntity::class,
             parentColumns = ["id"],
             childColumns = ["parentGroupId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("plantId"), Index("parentGroupId")]
+    indices = [Index("inspectionRecordId"), Index("parentGroupId")]
 )
-data class EquipmentGroupEntity(
+data class InspectionRecordGroupEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
     val code: String?,
     val name: String,
     val description: String?,
-    val plantId: UUID?,
+    val orderIndex: Int?,
+    val finished: Boolean?,
+    val finishedAt: Instant?,
+    val inspectionRecordId: UUID?,
     val parentGroupId: UUID?
 )

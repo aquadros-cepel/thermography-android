@@ -4,6 +4,7 @@ import androidx.room.*
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
+import com.tech.thermography.android.data.local.entity.enum.Periodicity
 
 @Entity(
     tableName = "inspection_route",
@@ -19,37 +20,20 @@ import java.util.*
             parentColumns = ["id"],
             childColumns = ["createdById"],
             onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = UserInfoEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["startedById"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = UserInfoEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["finishedById"],
-            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("plantId"), Index("createdById"), Index("startedById"), Index("finishedById")]
+    indices = [Index("plantId"), Index("createdById")]
 )
 data class InspectionRouteEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
+    val code: String?,
     val name: String,
-    val title: String?,
     val description: String?,
-    val planNote: String?,
+    val maintenancePlan: String?,
+    val periodicity: Periodicity?,
+    val duration: Int?,
+    val expectedStartDate: LocalDate?,
     val createdAt: Instant,
-    val startDate: LocalDate,
-    val started: Boolean?,
-    val startedAt: Instant?,
-    val endDate: LocalDate,
-    val finished: Boolean?,
-    val finishedAt: Instant?,
     val plantId: UUID,
-    val createdById: UUID,
-    val startedById: UUID?,
-    val finishedById: UUID?
+    val createdById: UUID
 )
