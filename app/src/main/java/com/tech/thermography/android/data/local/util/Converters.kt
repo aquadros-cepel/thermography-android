@@ -1,7 +1,7 @@
 package com.tech.thermography.android.data.local.util
 
 import androidx.room.TypeConverter
-import com.tech.thermography.android.data.local.entity.enum.*
+import com.tech.thermography.android.data.local.entity.enumeration.*
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
