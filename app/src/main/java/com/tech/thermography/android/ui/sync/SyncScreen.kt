@@ -47,7 +47,7 @@ fun SyncScreen(
     // Navega para a próxima tela quando a sincronização terminar
     if (uiState.isSyncFinished) {
         LaunchedEffect(Unit) {
-            onSyncComplete()
+//            onSyncComplete()
         }
     }
 
