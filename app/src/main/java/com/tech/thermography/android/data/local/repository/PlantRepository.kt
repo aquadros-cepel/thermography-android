@@ -2,7 +2,7 @@ package com.tech.thermography.android.data.local.repository
 
 import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.entity.PlantEntity
-import com.tech.thermography.android.data.remote.mapper.PlantMapper.dtoToEntity
+import com.tech.thermography.android.data.remote.mapper.PlantMapper
 import com.tech.thermography.android.data.remote.sync.SyncApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class PlantRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) {
+) : SyncableRepository {
     private val plantDao = db.plantDao()
     
     fun getAllPlants(): Flow<List<PlantEntity>> = plantDao.getAllPlants()
@@ -25,11 +25,15 @@ class PlantRepository @Inject constructor(
 
     suspend fun deletePlant(plant: PlantEntity) = plantDao.deletePlant(plant)
 
-    suspend fun syncPlants() {
+    override suspend fun syncEntities() {
 
+        // 1. Buscar tudo do backend
         val remotePlants = syncApi.getAllPlants()
-        val entities = remotePlants.map {plant -> dtoToEntity(plant) }
 
+        // 2. Fazer o mapeamento para entidades Room
+        val entities = remotePlants.map { dto -> PlantMapper.dtoToEntity(dto) }
+
+        // 3. Transação única -> desempenho máximo
         db.runInTransaction {
             runBlocking {
                 plantDao.insertPlants(entities)
