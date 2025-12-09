@@ -3,8 +3,8 @@ package com.tech.thermography.android.data.local.entity
 import androidx.room.*
 import java.time.LocalDate
 import java.util.*
-import com.tech.thermography.android.data.local.entity.enum.EquipmentType
-import com.tech.thermography.android.data.local.entity.enum.PhaseType
+import com.tech.thermography.android.data.local.entity.enumeration.EquipmentType
+import com.tech.thermography.android.data.local.entity.enumeration.PhaseType
 
 @Entity(
     tableName = "equipment",

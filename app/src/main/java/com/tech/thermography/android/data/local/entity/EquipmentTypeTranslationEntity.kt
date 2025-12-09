@@ -2,7 +2,7 @@ package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
 import java.util.*
-import com.tech.thermography.android.data.local.entity.enum.EquipmentType
+import com.tech.thermography.android.data.local.entity.enumeration.EquipmentType
 
 @Entity(tableName = "equipment_type_translation")
 data class EquipmentTypeTranslationEntity(

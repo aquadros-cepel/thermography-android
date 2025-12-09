@@ -4,7 +4,7 @@ import androidx.room.*
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
-import com.tech.thermography.android.data.local.entity.enum.Periodicity
+import com.tech.thermography.android.data.local.entity.enumeration.Periodicity
 
 @Entity(
     tableName = "inspection_route",

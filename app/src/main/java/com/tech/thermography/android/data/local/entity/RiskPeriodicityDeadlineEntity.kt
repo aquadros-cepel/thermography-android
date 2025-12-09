@@ -2,7 +2,7 @@ package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
 import java.util.*
-import com.tech.thermography.android.data.local.entity.enum.DatetimeUnit
+import com.tech.thermography.android.data.local.entity.enumeration.DatetimeUnit
 
 @Entity(tableName = "risk_periodicity_deadline")
 data class RiskPeriodicityDeadlineEntity(

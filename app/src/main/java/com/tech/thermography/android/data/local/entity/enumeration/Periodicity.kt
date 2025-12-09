@@ -1,4 +1,4 @@
-package com.tech.thermography.android.data.local.entity.enum
+package com.tech.thermography.android.data.local.entity.enumeration
 
 enum class Periodicity {
     MONTHLY,

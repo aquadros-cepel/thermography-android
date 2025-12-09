@@ -2,7 +2,7 @@ package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
 import java.util.*
-import com.tech.thermography.android.data.local.entity.enum.EquipmentInspectionStatus
+import com.tech.thermography.android.data.local.entity.enumeration.EquipmentInspectionStatus
 
 @Entity(
     tableName = "inspection_record_group_equipment",
