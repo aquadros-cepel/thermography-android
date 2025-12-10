@@ -23,6 +23,9 @@ interface InspectionRecordDao {
     fun getInspectionRecordsByStatus(finished: Boolean): Flow<List<InspectionRecordEntity>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertInspectionRecords(records: List<InspectionRecordEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertInspectionRecord(record: InspectionRecordEntity)
     
     @Update

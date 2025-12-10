@@ -17,8 +17,11 @@ interface InspectionRouteGroupEquipmentDao {
     fun getEquipmentsByGroupId(groupId: UUID): Flow<List<InspectionRouteGroupEquipmentEntity>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertInspectionRouteGroupEquipment(equipment: InspectionRouteGroupEquipmentEntity)
+    suspend fun insertInspectionRouteGroupEquipments(equipments: List<InspectionRouteGroupEquipmentEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertInspectionRouteGroupEquipment(equipment: InspectionRouteGroupEquipmentEntity)
+
     @Update
     suspend fun updateInspectionRouteGroupEquipment(equipment: InspectionRouteGroupEquipmentEntity)
     

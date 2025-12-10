@@ -14,6 +14,9 @@ interface EquipmentComponentTemperatureLimitsDao {
     suspend fun getEquipmentComponentTemperatureLimitsById(id: UUID): EquipmentComponentTemperatureLimitsEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertEquipmentComponentTemperatureLimitsList(equipmentComponentTemperatureLimits: List<EquipmentComponentTemperatureLimitsEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertEquipmentComponentTemperatureLimits(equipmentComponentTemperatureLimits: EquipmentComponentTemperatureLimitsEntity)
     
     @Update

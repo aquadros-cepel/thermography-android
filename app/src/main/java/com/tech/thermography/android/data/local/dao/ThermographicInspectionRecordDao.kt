@@ -14,8 +14,11 @@ interface ThermographicInspectionRecordDao {
     suspend fun getThermographicInspectionRecordById(id: UUID): ThermographicInspectionRecordEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertThermographicInspectionRecord(thermographicInspectionRecord: ThermographicInspectionRecordEntity)
+    suspend fun insertThermographicInspectionRecords(thermographicInspectionRecords: List<ThermographicInspectionRecordEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertThermographicInspectionRecord(thermographicInspectionRecord: ThermographicInspectionRecordEntity)
+
     @Update
     suspend fun updateThermographicInspectionRecord(thermographicInspectionRecord: ThermographicInspectionRecordEntity)
     

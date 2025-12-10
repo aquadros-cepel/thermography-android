@@ -13,6 +13,9 @@ interface EquipmentComponentDao {
     @Query("SELECT * FROM equipment_component WHERE id = :id")
     suspend fun getEquipmentComponentById(id: UUID): EquipmentComponentEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEquipmentComponents(equipmentComponents: List<EquipmentComponentEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertEquipmentComponent(equipmentComponent: EquipmentComponentEntity)
     

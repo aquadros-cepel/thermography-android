@@ -13,6 +13,9 @@ interface BusinessUnitDao {
     @Query("SELECT * FROM business_unit WHERE id = :id")
     suspend fun getBusinessUnitById(id: UUID): BusinessUnitEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBusinessUnits(businessUnits: List<BusinessUnitEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertBusinessUnit(businessUnit: BusinessUnitEntity)
     

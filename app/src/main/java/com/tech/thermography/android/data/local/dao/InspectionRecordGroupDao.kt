@@ -22,6 +22,9 @@ interface InspectionRecordGroupDao {
     @Query("SELECT * FROM inspection_record_group WHERE finished = :finished ORDER BY orderIndex")
     fun getGroupsByStatus(finished: Boolean): Flow<List<InspectionRecordGroupEntity>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertInspectionRecordGroups(groups: List<InspectionRecordGroupEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertInspectionRecordGroup(group: InspectionRecordGroupEntity)
     

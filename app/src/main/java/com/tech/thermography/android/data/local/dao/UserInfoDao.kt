@@ -13,6 +13,9 @@ interface UserInfoDao {
     @Query("SELECT * FROM user_info WHERE id = :id")
     suspend fun getUserInfoById(id: UUID): UserInfoEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUserInfos(userInfos: List<UserInfoEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertUserInfo(userInfo: UserInfoEntity)
     

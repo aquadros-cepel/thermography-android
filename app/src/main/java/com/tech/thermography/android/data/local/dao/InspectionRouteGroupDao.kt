@@ -13,6 +13,9 @@ interface InspectionRouteGroupDao {
     @Query("SELECT * FROM inspection_route_group WHERE id = :id")
     suspend fun getInspectionRouteGroupById(id: UUID): InspectionRouteGroupEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertInspectionRouteGroups(inspectionRouteGroups: List<InspectionRouteGroupEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertInspectionRouteGroup(inspectionRouteGroup: InspectionRouteGroupEntity)
     

@@ -14,8 +14,11 @@ interface ROIDao {
     suspend fun getROIById(id: UUID): ROIEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertROI(roi: ROIEntity)
+    suspend fun insertROIs(rois: List<ROIEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertROI(roi: ROIEntity)
+
     @Update
     suspend fun updateROI(roi: ROIEntity)
     

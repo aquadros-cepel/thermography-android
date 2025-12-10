@@ -13,6 +13,9 @@ interface EquipmentTypeTranslationDao {
     @Query("SELECT * FROM equipment_type_translation WHERE id = :id")
     suspend fun getEquipmentTypeTranslationById(id: UUID): EquipmentTypeTranslationEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEquipmentTypeTranslations(equipmentTypeTranslations: List<EquipmentTypeTranslationEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertEquipmentTypeTranslation(equipmentTypeTranslation: EquipmentTypeTranslationEntity)
     

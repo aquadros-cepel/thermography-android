@@ -23,8 +23,11 @@ interface InspectionRecordGroupEquipmentDao {
     fun getEquipmentsByStatus(status: String): Flow<List<InspectionRecordGroupEquipmentEntity>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity)
+    suspend fun insertInspectionRecordGroupEquipments(equipments: List<InspectionRecordGroupEquipmentEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity)
+
     @Update
     suspend fun updateInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity)
     

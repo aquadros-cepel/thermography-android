@@ -14,8 +14,11 @@ interface InspectionRouteDao {
     suspend fun getInspectionRouteById(id: UUID): InspectionRouteEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertInspectionRoute(inspectionRoute: InspectionRouteEntity)
+    suspend fun insertInspectionRoutes(inspectionRoutes: List<InspectionRouteEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertInspectionRoute(inspectionRoute: InspectionRouteEntity)
+
     @Update
     suspend fun updateInspectionRoute(inspectionRoute: InspectionRouteEntity)
     

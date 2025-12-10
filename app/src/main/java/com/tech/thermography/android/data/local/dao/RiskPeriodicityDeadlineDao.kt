@@ -14,8 +14,11 @@ interface RiskPeriodicityDeadlineDao {
     suspend fun getRiskPeriodicityDeadlineById(id: UUID): RiskPeriodicityDeadlineEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertRiskPeriodicityDeadline(riskPeriodicityDeadline: RiskPeriodicityDeadlineEntity)
+    suspend fun insertRiskPeriodicityDeadlines(riskPeriodicityDeadlines: List<RiskPeriodicityDeadlineEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertRiskPeriodicityDeadline(riskPeriodicityDeadline: RiskPeriodicityDeadlineEntity)
+
     @Update
     suspend fun updateRiskPeriodicityDeadline(riskPeriodicityDeadline: RiskPeriodicityDeadlineEntity)
     

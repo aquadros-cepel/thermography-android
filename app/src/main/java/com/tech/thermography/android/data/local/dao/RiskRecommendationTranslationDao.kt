@@ -13,6 +13,9 @@ interface RiskRecommendationTranslationDao {
     @Query("SELECT * FROM risk_recommendation_translation WHERE id = :id")
     suspend fun getRiskRecommendationTranslationById(id: UUID): RiskRecommendationTranslationEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRiskRecommendationTranslations(riskRecommendationTranslations: List<RiskRecommendationTranslationEntity>)
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertRiskRecommendationTranslation(riskRecommendationTranslation: RiskRecommendationTranslationEntity)
     

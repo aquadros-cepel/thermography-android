@@ -14,8 +14,11 @@ interface ThermogramDao {
     suspend fun getThermogramById(id: UUID): ThermogramEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertThermogram(thermogram: ThermogramEntity)
+    suspend fun insertThermograms(thermograms: List<ThermogramEntity>)
     
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertThermogram(thermogram: ThermogramEntity)
+
     @Update
     suspend fun updateThermogram(thermogram: ThermogramEntity)
     

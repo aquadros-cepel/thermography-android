@@ -14,6 +14,9 @@ interface EquipmentDao {
     suspend fun getEquipmentById(id: UUID): EquipmentEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertEquipments(equipments: List<EquipmentEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertEquipment(equipment: EquipmentEntity)
     
     @Update
