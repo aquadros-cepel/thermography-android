@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class ThermographicInspectionRecordRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<ThermographicInspectionRecordEntity>() {
     private val thermographicInspectionRecordDao = db.thermographicInspectionRecordDao()
 
     fun getAllThermographicInspectionRecords(): Flow<List<ThermographicInspectionRecordEntity>> = 
@@ -35,11 +35,10 @@ class ThermographicInspectionRecordRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllThermographicInspectionRecords()
         val entities = remoteEntities.map { dto -> ThermographicInspectionRecordMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { thermographicInspectionRecordDao.insertThermographicInspectionRecord(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        thermographicInspectionRecordDao.insertThermographicInspectionRecords(cache)
     }
 }

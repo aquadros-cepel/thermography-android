@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class BusinessUnitRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<BusinessUnitEntity>() {
     private val businessUnitDao = db.businessUnitDao()
 
     fun getAllBusinessUnits(): Flow<List<BusinessUnitEntity>> = businessUnitDao.getAllBusinessUnits()
@@ -26,13 +26,16 @@ class BusinessUnitRepository @Inject constructor(
     suspend fun deleteBusinessUnit(businessUnit: BusinessUnitEntity) = businessUnitDao.deleteBusinessUnit(businessUnit)
 
     override suspend fun syncEntities() {
+        // 1. Buscar tudo do backend
         val remoteBusinessUnits = syncApi.getAllBusinessUnits()
-        val entities = remoteBusinessUnits.map { dto -> BusinessUnitMapper.dtoToEntity(dto) }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { businessUnitDao.insertBusinessUnit(it) }
-            }
-        }
+        // 2. Fazer o mapeamento para entidades Room e guardar no cache local
+        val entities = remoteBusinessUnits.map { dto -> BusinessUnitMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
+
+    override suspend fun insertCached() {
+        businessUnitDao.insertBusinessUnits(cache)
+        clearCache()
     }
 }

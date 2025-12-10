@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class InspectionRouteGroupEquipmentRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<InspectionRouteGroupEquipmentEntity>() {
     private val inspectionRouteGroupEquipmentDao = db.inspectionRouteGroupEquipmentDao()
 
     fun getAllInspectionRouteGroupEquipments(): Flow<List<InspectionRouteGroupEquipmentEntity>> = 
@@ -38,11 +38,10 @@ class InspectionRouteGroupEquipmentRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllInspectionRouteGroupEquipments()
         val entities = remoteEntities.map { dto -> InspectionRouteGroupEquipmentMapper.dtoToEntity(dto) }
-
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { inspectionRouteGroupEquipmentDao.insertInspectionRouteGroupEquipment(it) }
-            }
-        }
+        setCache(entities)
+    }
+    
+    override suspend fun insertCached() {
+        inspectionRouteGroupEquipmentDao.insertInspectionRouteGroupEquipments(cache)
     }
 }

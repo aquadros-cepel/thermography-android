@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class InspectionRecordRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<InspectionRecordEntity>() {
     private val inspectionRecordDao = db.inspectionRecordDao()
 
     fun getAllInspectionRecords(): Flow<List<InspectionRecordEntity>> = inspectionRecordDao.getAllInspectionRecords()
@@ -26,13 +26,16 @@ class InspectionRecordRepository @Inject constructor(
     suspend fun deleteInspectionRecord(inspectionRecord: InspectionRecordEntity) = inspectionRecordDao.deleteInspectionRecord(inspectionRecord)
 
     override suspend fun syncEntities() {
+        // 1. Buscar tudo do backend
         val remoteInspectionRecords = syncApi.getAllInspectionRecords()
-        val entities = remoteInspectionRecords.map { dto -> InspectionRecordMapper.dtoToEntity(dto) }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { inspectionRecordDao.insertInspectionRecord(it) }
-            }
-        }
+        // 2. Fazer o mapeamento para entidades Room e guardar no cache local
+        val entities = remoteInspectionRecords.map { dto -> InspectionRecordMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
+
+    override suspend fun insertCached() {
+        inspectionRecordDao.insertInspectionRecords(cache)
+        clearCache()
     }
 }

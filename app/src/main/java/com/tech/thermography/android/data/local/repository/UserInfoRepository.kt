@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class UserInfoRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<UserInfoEntity>() {
     private val userInfoDao = db.userInfoDao()
 
     fun getAllUserInfos(): Flow<List<UserInfoEntity>> = userInfoDao.getAllUserInfos()
@@ -30,11 +30,10 @@ class UserInfoRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllUserInfos()
         val entities = remoteEntities.map { dto -> UserInfoMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { userInfoDao.insertUserInfo(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        userInfoDao.insertUserInfos(cache)
     }
 }

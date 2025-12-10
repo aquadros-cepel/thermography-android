@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class CompanyRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<CompanyEntity>() {
     private val companyDao = db.companyDao()
 
     fun getAllCompanies(): Flow<List<CompanyEntity>> = companyDao.getAllCompanies()
@@ -28,13 +28,16 @@ class CompanyRepository @Inject constructor(
     suspend fun deleteCompany(company: CompanyEntity) = companyDao.deleteCompany(company)
 
     override suspend fun syncEntities() {
+        // 1. Buscar tudo do backend
         val remoteCompanies = syncApi.getAllCompanies()
-        val entities = remoteCompanies.map { dto -> CompanyMapper.dtoToEntity(dto) }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { companyDao.insertCompany(it) }
-            }
-        }
+        // 2. Fazer o mapeamento para entidades Room e guardar no cache local
+        val entities = remoteCompanies.map { dto -> CompanyMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
+
+    override suspend fun insertCached() {
+        companyDao.insertCompanies(cache)
+        clearCache()
     }
 }

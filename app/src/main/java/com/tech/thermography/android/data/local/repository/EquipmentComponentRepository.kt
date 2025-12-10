@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class EquipmentComponentRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<EquipmentComponentEntity>() {
     private val equipmentComponentDao = db.equipmentComponentDao()
 
     fun getAllEquipmentComponents(): Flow<List<EquipmentComponentEntity>> = equipmentComponentDao.getAllEquipmentComponents()
@@ -26,13 +26,16 @@ class EquipmentComponentRepository @Inject constructor(
     suspend fun deleteEquipmentComponent(equipmentComponent: EquipmentComponentEntity) = equipmentComponentDao.deleteEquipmentComponent(equipmentComponent)
 
     override suspend fun syncEntities() {
+        // 1. Buscar tudo do backend
         val remoteEquipmentComponents = syncApi.getAllEquipmentComponents()
-        val entities = remoteEquipmentComponents.map { dto -> dtoToEntity(dto) }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { equipmentComponentDao.insertEquipmentComponent(it) }
-            }
-        }
+        // 2. Fazer o mapeamento para entidades Room e guardar no cache local
+        val entities = remoteEquipmentComponents.map { dto -> dtoToEntity(dto) }
+        setCache(entities)
+    }
+
+    override suspend fun insertCached() {
+        equipmentComponentDao.insertEquipmentComponents(cache)
+        clearCache()
     }
 }

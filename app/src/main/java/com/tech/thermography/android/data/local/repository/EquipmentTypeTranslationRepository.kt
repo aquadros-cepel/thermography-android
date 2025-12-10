@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class EquipmentTypeTranslationRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<EquipmentTypeTranslationEntity>() {
     private val equipmentTypeTranslationDao = db.equipmentTypeTranslationDao()
 
     fun getAllEquipmentTypeTranslations(): Flow<List<EquipmentTypeTranslationEntity>> = equipmentTypeTranslationDao.getAllEquipmentTypeTranslations()
@@ -28,11 +28,10 @@ class EquipmentTypeTranslationRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEquipmentTypeTranslations = syncApi.getAllEquipmentTypeTranslations()
         val entities = remoteEquipmentTypeTranslations.map { dto -> EquipmentTypeTranslationMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { equipmentTypeTranslationDao.insertEquipmentTypeTranslation(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        equipmentTypeTranslationDao.insertEquipmentTypeTranslations(cache)
     }
 }

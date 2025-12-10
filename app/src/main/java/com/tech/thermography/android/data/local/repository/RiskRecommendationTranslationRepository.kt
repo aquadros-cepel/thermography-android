@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class RiskRecommendationTranslationRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<RiskRecommendationTranslationEntity>() {
     private val riskRecommendationTranslationDao = db.riskRecommendationTranslationDao()
 
     fun getAllRiskRecommendationTranslations(): Flow<List<RiskRecommendationTranslationEntity>> = 
@@ -33,13 +33,16 @@ class RiskRecommendationTranslationRepository @Inject constructor(
         riskRecommendationTranslationDao.deleteRiskRecommendationTranslation(riskRecommendationTranslation)
 
     override suspend fun syncEntities() {
+        // 1. Buscar tudo do backend
         val remoteEntities = syncApi.getAllRiskRecommendationTranslations()
-        val entities = remoteEntities.map { dto -> RiskRecommendationTranslationMapper.dtoToEntity(dto) }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { riskRecommendationTranslationDao.insertRiskRecommendationTranslation(it) }
-            }
-        }
+        // 2. Fazer o mapeamento para entidades Room e guardar no cache local
+        val entities = remoteEntities.map { dto -> RiskRecommendationTranslationMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
+
+    override suspend fun insertCached() {
+        // 3. Transação única -> desempenho máximo
+        riskRecommendationTranslationDao.insertRiskRecommendationTranslations(cache)
     }
 }

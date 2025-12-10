@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class ROIRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<ROIEntity>() {
     private val roiDao = db.roiDao()
 
     fun getAllROIs(): Flow<List<ROIEntity>> = roiDao.getAllROIs()
@@ -30,11 +30,10 @@ class ROIRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllROIs()
         val entities = remoteEntities.map { dto -> ROIMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { roiDao.insertROI(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        roiDao.insertROIs(cache)
     }
 }

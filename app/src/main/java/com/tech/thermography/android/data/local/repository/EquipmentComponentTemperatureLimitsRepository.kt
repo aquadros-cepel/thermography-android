@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class EquipmentComponentTemperatureLimitsRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<EquipmentComponentTemperatureLimitsEntity>() {
     private val equipmentComponentTemperatureLimitsDao = db.equipmentComponentTemperatureLimitsDao()
 
     fun getAllEquipmentComponentTemperatureLimits(): Flow<List<EquipmentComponentTemperatureLimitsEntity>> = 
@@ -34,12 +34,11 @@ class EquipmentComponentTemperatureLimitsRepository @Inject constructor(
 
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllEquipmentComponentTemperatureLimits()
-        val entities = remoteEntities.map { dto -> EquipmentComponentTemperatureLimitsMapper.dtoToEntity(dto) }
-
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { equipmentComponentTemperatureLimitsDao.insertEquipmentComponentTemperatureLimits(it) }
-            }
-        }
+        val entities = remoteEntities.map { dto -> EquipmentComponentTemperatureLimitsMapper.dtoToEntity(dto)}
+        setCache(entities)
+    }
+    override suspend fun insertCached() {
+        equipmentComponentTemperatureLimitsDao.insertEquipmentComponentTemperatureLimitsList(cache)
+        clearCache()
     }
 }

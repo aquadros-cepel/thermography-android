@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class EquipmentRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<EquipmentEntity>() {
     private val equipmentDao = db.equipmentDao()
 
     fun getAllEquipments(): Flow<List<EquipmentEntity>> = equipmentDao.getAllEquipments()
@@ -28,11 +28,10 @@ class EquipmentRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEquipments = syncApi.getAllEquipments()
         val entities = remoteEquipments.map { dto -> dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { equipmentDao.insertEquipment(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        equipmentDao.insertEquipments(cache)
     }
 }

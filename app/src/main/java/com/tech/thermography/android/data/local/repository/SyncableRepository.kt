@@ -8,4 +8,5 @@ interface SyncableRepository {
      * Executa a lógica de sincronização para as entidades do repositório.
      */
     suspend fun syncEntities()
+    suspend fun insertCached()
 }

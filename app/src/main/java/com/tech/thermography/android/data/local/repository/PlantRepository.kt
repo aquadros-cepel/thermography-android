@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class PlantRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<PlantEntity>() {
     private val plantDao = db.plantDao()
     
     fun getAllPlants(): Flow<List<PlantEntity>> = plantDao.getAllPlants()
@@ -30,14 +30,13 @@ class PlantRepository @Inject constructor(
         // 1. Buscar tudo do backend
         val remotePlants = syncApi.getAllPlants()
 
-        // 2. Fazer o mapeamento para entidades Room
+        // 2. Fazer o mapeamento para entidades Room e guardar no cache local
         val entities = remotePlants.map { dto -> PlantMapper.dtoToEntity(dto) }
-
-        // 3. Transação única -> desempenho máximo
-        db.runInTransaction {
-            runBlocking {
-                plantDao.insertPlants(entities)
-            }
-        }
+        setCache(entities)
     }
+
+    override suspend fun insertCached() {
+        plantDao.insertPlants(cache)
+    }
+
 }

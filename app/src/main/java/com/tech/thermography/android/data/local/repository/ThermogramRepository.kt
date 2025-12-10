@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class ThermogramRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<ThermogramEntity>() {
     private val thermogramDao = db.thermogramDao()
 
     fun getAllThermograms(): Flow<List<ThermogramEntity>> = thermogramDao.getAllThermograms()
@@ -30,11 +30,10 @@ class ThermogramRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllThermograms()
         val entities = remoteEntities.map { dto -> ThermogramMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { thermogramDao.insertThermogram(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        thermogramDao.insertThermograms(cache)
     }
 }

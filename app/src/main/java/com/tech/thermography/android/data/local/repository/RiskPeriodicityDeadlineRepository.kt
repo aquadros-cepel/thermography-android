@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class RiskPeriodicityDeadlineRepository @Inject constructor(
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : SyncableRepository {
+) : AbstractSyncRepository<RiskPeriodicityDeadlineEntity>() {
     private val riskPeriodicityDeadlineDao = db.riskPeriodicityDeadlineDao()
 
     fun getAllRiskPeriodicityDeadlines(): Flow<List<RiskPeriodicityDeadlineEntity>> = 
@@ -35,11 +35,10 @@ class RiskPeriodicityDeadlineRepository @Inject constructor(
     override suspend fun syncEntities() {
         val remoteEntities = syncApi.getAllRiskPeriodicityDeadlines()
         val entities = remoteEntities.map { dto -> RiskPeriodicityDeadlineMapper.dtoToEntity(dto) }
+        setCache(entities)
+    }
 
-        db.runInTransaction {
-            runBlocking {
-                entities.forEach { riskPeriodicityDeadlineDao.insertRiskPeriodicityDeadline(it) }
-            }
-        }
+    override suspend fun insertCached() {
+        riskPeriodicityDeadlineDao.insertRiskPeriodicityDeadlines(cache)
     }
 }
