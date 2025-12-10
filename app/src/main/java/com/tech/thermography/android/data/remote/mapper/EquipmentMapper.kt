@@ -19,7 +19,7 @@ object EquipmentMapper {
             startDate = dto.startDate,
             latitude = dto.latitude,
             longitude = dto.longitude,
-            plantId = dto.plantId,
+            plantId = dto.plant.id,
             groupId = dto.groupId
         )
     }

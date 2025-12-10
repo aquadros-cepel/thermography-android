@@ -19,6 +19,6 @@ data class EquipmentDto(
     val startDate: LocalDate?,
     val latitude: Double?,
     val longitude: Double?,
-    val plantId: UUID,
+    val plant: PlantDto,
     val groupId: UUID?
 )

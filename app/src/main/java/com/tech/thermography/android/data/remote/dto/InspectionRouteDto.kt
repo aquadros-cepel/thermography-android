@@ -15,6 +15,6 @@ data class InspectionRouteDto(
     val duration: Int?,
     val expectedStartDate: LocalDate?,
     val createdAt: Instant,
-    val plantId: UUID,
-    val createdById: UUID
+    val plant: PlantDto,
+    val createdBy: UserInfoDto
 )

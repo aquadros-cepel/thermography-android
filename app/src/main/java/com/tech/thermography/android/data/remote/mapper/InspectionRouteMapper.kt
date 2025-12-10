@@ -15,8 +15,8 @@ object InspectionRouteMapper {
             duration = dto.duration,
             expectedStartDate = dto.expectedStartDate,
             createdAt = dto.createdAt,
-            plantId = dto.plantId,
-            createdById = dto.createdById
+            plantId = dto.plant.id,
+            createdById = dto.createdBy.id
         )
     }
 }

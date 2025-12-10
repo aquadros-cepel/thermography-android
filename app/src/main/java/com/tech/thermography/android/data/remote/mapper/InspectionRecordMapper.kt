@@ -18,11 +18,11 @@ object InspectionRecordMapper {
             startedAt = dto.startedAt,
             finished = dto.finished,
             finishedAt = dto.finishedAt,
-            plantId = dto.plantId,
-            inspectionRouteId = dto.inspectionRouteId,
-            createdById = dto.createdById,
-            startedById = dto.startedById,
-            finishedById = dto.finishedById
+            plantId = dto.plant.id,
+            inspectionRouteId = dto.inspectionRoute?.id,
+            createdById = dto.createdBy.id,
+            startedById = dto.startedBy?.id,
+            finishedById = dto.finishedBy?.id
         )
     }
 }

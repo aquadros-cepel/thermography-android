@@ -17,9 +17,9 @@ data class InspectionRecordDto(
     val startedAt: Instant?,
     val finished: Boolean?,
     val finishedAt: Instant?,
-    val plantId: UUID,
-    val inspectionRouteId: UUID?,
-    val createdById: UUID,
-    val startedById: UUID?,
-    val finishedById: UUID?
+    val plant: PlantDto,
+    val inspectionRoute: UUID_DTO?,
+    val createdBy: UserInfoDto,
+    val startedBy: UserInfoDto?,
+    val finishedBy: UserInfoDto?
 )
