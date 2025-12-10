@@ -23,7 +23,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "thermography-db"
-        ).build()
+        )
+        .fallbackToDestructiveMigrationFrom(2, 3)
+        .build()
     }
 
     @Provides
