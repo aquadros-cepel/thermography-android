@@ -17,7 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SyncViewModel @Inject constructor(
-    private val syncableRepositories: Set<@JvmSuppressWildcards SyncableRepository>
+    private val syncableRepositories: Map<Int, @JvmSuppressWildcards SyncableRepository>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SyncState())
@@ -25,10 +25,11 @@ class SyncViewModel @Inject constructor(
 
     init {
         // Cria as tarefas dinamicamente a partir do conjunto de repositórios injetados
-        val tasks = syncableRepositories.map { repository ->
+        val tasks = syncableRepositories.values.map { repository ->
             val taskName = "Sincronizando ${repository.javaClass.simpleName.replace("Repository", "")}..."
             SyncTask(name = taskName, repository = repository)
         }
+     
         _uiState.value = SyncState(tasks = tasks)
     }
 
@@ -71,10 +72,17 @@ class SyncViewModel @Inject constructor(
                 }
             }
 
-            // Espera todas as tarefas terminarem
+            // Espera todas as tarefas terminarem de sincronizar dados da red
             jobs.joinAll()
-
-            // Marca a sincronização como finalizada
+            
+            // Insere os dados em cache após todas as sincronizações serem concluídas
+            syncableRepositories
+                .toSortedMap()
+                .values
+                .forEach {
+                     it.insertCached() 
+                }
+            
             _uiState.update { it.copy(isSyncFinished = true) }
         }
     }
