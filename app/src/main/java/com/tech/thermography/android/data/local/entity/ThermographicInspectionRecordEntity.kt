@@ -1,11 +1,14 @@
 package com.tech.thermography.android.data.local.entity
 
-import androidx.room.*
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
+import com.tech.thermography.android.data.local.entity.enumeration.ThermographicInspectionRecordType
 import java.time.Instant
 import java.time.LocalDate
-import java.util.*
-import com.tech.thermography.android.data.local.entity.enumeration.ThermographicInspectionRecordType
-import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
+import java.util.UUID
 
 @Entity(
     tableName = "thermographic_inspection_record",
@@ -17,7 +20,7 @@ import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
-            entity = InspectionRouteEntity::class,
+            entity = InspectionRecordEntity::class,
             parentColumns = ["id"],
             childColumns = ["routeId"],
             onDelete = ForeignKey.CASCADE
