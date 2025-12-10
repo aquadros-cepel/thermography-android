@@ -1,9 +1,14 @@
 package com.tech.thermography.android.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.tech.thermography.android.data.local.entity.ROIEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.*
+import java.util.UUID
 
 @Dao
 interface ROIDao {
@@ -13,7 +18,7 @@ interface ROIDao {
     @Query("SELECT * FROM roi WHERE id = :id")
     suspend fun getROIById(id: UUID): ROIEntity?
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertROIs(rois: List<ROIEntity>)
     
     @Insert(onConflict = OnConflictStrategy.ABORT)

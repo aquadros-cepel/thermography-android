@@ -1,9 +1,14 @@
 package com.tech.thermography.android.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.*
+import java.util.UUID
 
 @Dao
 interface InspectionRecordDao {
@@ -22,7 +27,7 @@ interface InspectionRecordDao {
     @Query("SELECT * FROM inspection_record WHERE finished = :finished ORDER BY createdAt DESC")
     fun getInspectionRecordsByStatus(finished: Boolean): Flow<List<InspectionRecordEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInspectionRecords(records: List<InspectionRecordEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)

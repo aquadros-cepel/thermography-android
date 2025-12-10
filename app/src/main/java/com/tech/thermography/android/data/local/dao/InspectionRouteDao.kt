@@ -1,9 +1,14 @@
 package com.tech.thermography.android.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.tech.thermography.android.data.local.entity.InspectionRouteEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.*
+import java.util.UUID
 
 @Dao
 interface InspectionRouteDao {
@@ -13,7 +18,7 @@ interface InspectionRouteDao {
     @Query("SELECT * FROM inspection_route WHERE id = :id")
     suspend fun getInspectionRouteById(id: UUID): InspectionRouteEntity?
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInspectionRoutes(inspectionRoutes: List<InspectionRouteEntity>)
     
     @Insert(onConflict = OnConflictStrategy.ABORT)

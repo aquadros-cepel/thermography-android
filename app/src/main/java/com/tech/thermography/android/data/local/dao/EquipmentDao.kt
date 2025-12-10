@@ -1,9 +1,14 @@
 package com.tech.thermography.android.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.tech.thermography.android.data.local.entity.EquipmentEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.*
+import java.util.UUID
 
 @Dao
 interface EquipmentDao {
@@ -13,7 +18,7 @@ interface EquipmentDao {
     @Query("SELECT * FROM equipment WHERE id = :id")
     suspend fun getEquipmentById(id: UUID): EquipmentEntity?
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEquipments(equipments: List<EquipmentEntity>)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
