@@ -90,6 +90,9 @@ dependencies {
     // ConstraintLayout
     implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
 
+    // OSMDroid for maps
+    implementation("org.osmdroid:osmdroid-android:6.1.17")
+
     // Tests...
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
