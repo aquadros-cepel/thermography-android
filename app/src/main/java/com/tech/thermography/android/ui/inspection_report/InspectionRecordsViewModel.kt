@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -45,11 +46,40 @@ class InspectionRecordsViewModel @Inject constructor(
         if (selectedId == null) allRecords else allRecords.filter { it.plantId == selectedId }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    init {
+        // TODO: Remover após o uso. Correção temporária solicitada para o registro RI_N_S_PAAT_C002_001
+        debugResetRecord()
+    }
+
     fun selectPlant(plantId: UUID?) {
         _selectedPlantId.value = plantId
     }
 
     fun selectPlantFromMap(plantId: UUID) {
         _selectedPlantId.value = plantId
+    }
+
+    /**
+     * Função utilitária para resetar o status de finished de um registro específico.
+     */
+    private fun debugResetRecord() {
+        viewModelScope.launch {
+            try {
+                // Obtém a lista atual de registros (snapshot)
+                val records = inspectionRecordRepository.getAllInspectionRecords().first()
+                val targetCode = "RI_N-S-PAAT_C002_001"
+                
+                // Encontra o registro pelo código
+                val recordToFix = records.find { it.name == targetCode }
+                
+                if (recordToFix != null && recordToFix.finished == true) {
+                    // Atualiza para finished = false
+                    val updatedRecord = recordToFix.copy(finished = false)
+                    inspectionRecordRepository.insertInspectionRecord(updatedRecord)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }
