@@ -39,6 +39,7 @@ import com.tech.thermography.android.ui.components.CompactUiWrapper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.MapView
@@ -186,18 +187,27 @@ fun MapComponent(
         
         mapView.setTileSource(esriSource)
         mapView.setMultiTouchControls(true)
-        mapView.controller.setZoom(8.0) // Zoom ajustado para visão mais ampla regional
+        
+        // Configuração inicial: Centraliza no Brasil
+        val startPoint = GeoPoint(-14.2350, -51.9253) // Centro aproximado do Brasil
+        mapView.controller.setCenter(startPoint)
+        mapView.controller.setZoom(4.0) // Zoom que mostra a maior parte do país
     }
 
     // Atualização dos marcadores sempre que a lista de 'plants' ou 'selectedPlantId' mudar
     LaunchedEffect(plants, selectedPlantId) {
         mapView.overlays.clear()
+        
+        val geoPoints = mutableListOf<GeoPoint>()
 
         plants.forEach { plant ->
             plant.latitude?.let { lat ->
                 plant.longitude?.let { lon ->
+                    val point = GeoPoint(lat, lon)
+                    geoPoints.add(point)
+                    
                     val marker = Marker(mapView)
-                    marker.position = GeoPoint(lat, lon)
+                    marker.position = point
                     
                     // Lógica do Tooltip: Se selecionado, mostra o CODE, senão mostra o NAME
                     val isSelected = plant.id == selectedPlantId
@@ -244,6 +254,17 @@ fun MapComponent(
                     
                     mapView.overlays.add(marker)
                 }
+            }
+        }
+        
+        // Ajuste automático de zoom e posição (Fit Bounds) se nenhum item estiver selecionado e houver pontos
+        if (selectedPlantId == null && geoPoints.isNotEmpty()) {
+            val boundingBox = BoundingBox.fromGeoPoints(geoPoints)
+            // Padding de 100px para garantir que os marcadores não fiquem colados na borda
+            val padding = 100 
+            // Post para garantir que o MapView já tenha dimensões calculadas
+            mapView.post {
+                mapView.zoomToBoundingBox(boundingBox, true, padding, 16.0, null)
             }
         }
     }
