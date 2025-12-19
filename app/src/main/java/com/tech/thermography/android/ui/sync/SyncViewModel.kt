@@ -1,5 +1,6 @@
 package com.tech.thermography.android.ui.sync
 
+import android.app.Application
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.tech.thermography.android.data.local.repository.PlantRepository
 import com.tech.thermography.android.data.local.repository.SyncableRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -28,7 +30,8 @@ import kotlin.coroutines.resumeWithException
 @HiltViewModel
 class SyncViewModel @Inject constructor(
     private val syncableRepositories: Map<Int, @JvmSuppressWildcards SyncableRepository>,
-    private val plantRepository: PlantRepository
+    private val plantRepository: PlantRepository,
+    private val application: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SyncState())
@@ -78,23 +81,25 @@ class SyncViewModel @Inject constructor(
         val mutex = Mutex()
         var completedTasks = 0
 
-        tasks.mapIndexed { taskIndex, task ->
-            launch(Dispatchers.IO) {
-                updateTaskStatus(taskIndex, SyncStatus.IN_PROGRESS)
-                try {
-                    task.repository.syncEntities()
-                    updateTaskStatus(taskIndex, SyncStatus.COMPLETED)
-                } catch (e: Exception) {
-                    Log.e("SyncViewModel", "Falha na sincronização de ${task.name}", e)
-                    updateTaskStatus(taskIndex, SyncStatus.FAILED)
-                } finally {
-                    mutex.withLock {
-                        completedTasks++
-                        _uiState.update { it.copy(overallProgress = completedTasks / totalTasks) }
+        coroutineScope {
+            tasks.mapIndexed { taskIndex, task ->
+                launch(Dispatchers.IO) {
+                    updateTaskStatus(taskIndex, SyncStatus.IN_PROGRESS)
+                    try {
+                        task.repository.syncEntities()
+                        updateTaskStatus(taskIndex, SyncStatus.COMPLETED)
+                    } catch (e: Exception) {
+                        Log.e("SyncViewModel", "Falha na sincronização de ${task.name}", e)
+                        updateTaskStatus(taskIndex, SyncStatus.FAILED)
+                    } finally {
+                        mutex.withLock {
+                            completedTasks++
+                            _uiState.update { it.copy(overallProgress = completedTasks / totalTasks) }
+                        }
                     }
                 }
-            }
-        }.joinAll()
+            }.joinAll()
+        }
 
         // Insere os dados em cache após todas as sincronizações serem concluídas
         syncableRepositories.toSortedMap().values.forEach { it.insertCached() }
@@ -119,6 +124,7 @@ class SyncViewModel @Inject constructor(
         val plants = plantRepository.getAllPlants().first()
         if (plants.isEmpty()) return
 
+        // Usa a mesma configuração de fonte (Z/Y/X) e nome do InspectionRecordsScreen para garantir Cache Hit
         val esriSource = object : OnlineTileSourceBase(
             "EsriImagery", 0, 19, 256, "",
             arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/")
@@ -140,19 +146,35 @@ class SyncViewModel @Inject constructor(
                 BoundingBox(plant.latitude + 0.005, plant.longitude + 0.005, plant.latitude - 0.005, plant.longitude - 0.005)
             } else null
         }
+        
+        if (boundingBoxes.isEmpty()) return
 
-        // Envolve a lógica de callback em uma coroutine suspendável
-        suspendCancellableCoroutine<Unit> { continuation ->
-            val callback = object : CacheManager.CacheManagerCallback {
-                override fun onTaskComplete() {
-                    if (continuation.isActive) continuation.resume(Unit)
+        // Processa cada área sequencialmente para não sobrecarregar
+        boundingBoxes.forEach { box ->
+            try {
+                suspendCancellableCoroutine<Unit> { continuation ->
+                    val callback = object : CacheManager.CacheManagerCallback {
+                        override fun onTaskComplete() {
+                            if (continuation.isActive) continuation.resume(Unit)
+                        }
+                        
+                        override fun onTaskFailed(errors: Int) {
+                            Log.e("SyncViewModel", "Erro ao baixar tiles: $errors erros")
+                             // Não falha o processo todo por causa de um erro parcial, apenas segue
+                             if (continuation.isActive) continuation.resume(Unit)
+                        }
+
+                        override fun updateProgress(progress: Int, currentZoomLevel: Int, zoomLevelMax: Int, zoomLevelMin: Int) {}
+                        override fun setPossibleTilesInArea(total: Int) {}
+                        override fun downloadStarted() {} // Implementação necessária
+                    }
+                    
+                    // Chama a função correta que aceita BoundingBox, ZoomMin, ZoomMax e Callback
+                    cacheManager.downloadAreaAsync(application, box, 15, 18, callback)
                 }
-                override fun onGetTilesProgress(progress: Int, total: Int) { /* Opcional: atualizar progresso detalhado */ }
-                override fun onTaskFailed(errors: Int) {
-                     if (continuation.isActive) continuation.resumeWithException(Exception("Falha ao baixar $errors tiles"))
-                }
+            } catch (e: Exception) {
+                Log.e("SyncViewModel", "Exceção ao baixar área: ${e.message}")
             }
-            cacheManager.downloadAreaAsync(null, boundingBoxes, callback) // Contexto nulo é aceitável aqui
         }
     }
 
