@@ -30,7 +30,8 @@ interface InspectionRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInspectionRecords(records: List<InspectionRecordEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    // Alterado de ABORT para REPLACE para permitir atualização via insert (upsert)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInspectionRecord(record: InspectionRecordEntity)
     
     @Update
