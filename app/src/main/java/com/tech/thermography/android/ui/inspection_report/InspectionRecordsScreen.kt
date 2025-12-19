@@ -19,6 +19,8 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.time.format.DateTimeFormatter
+import java.util.UUID
+
 
 @Composable
 fun InspectionRecordsScreen(

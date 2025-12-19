@@ -60,7 +60,7 @@ dependencies {
 
     // --- NOVOS (necessários) ---
     implementation("androidx.datastore:datastore-preferences:1.0.0")
-    implementation("androidx.compose.material3:material3-window-size-class:1.2.1")
+    implementation("androidx.compose.material3:material3-window-size-class")
 
     // ViewModel
     implementation(libs.lifecycle.viewmodel.ktx)
@@ -92,6 +92,9 @@ dependencies {
 
     // OSMDroid for maps
     implementation("org.osmdroid:osmdroid-android:6.1.17")
+
+    // Material Design 3
+    implementation("androidx.compose.material:material-icons-extended:1.7.0")
 
     // Tests...
     testImplementation(libs.junit)
