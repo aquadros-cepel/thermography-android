@@ -32,8 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tech.thermography.android.R
-
-
+import com.tech.thermography.android.ui.components.CompactUiWrapper
 
 @Composable
 fun LoginFormContent(
@@ -70,30 +69,35 @@ fun LoginFormContent(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 48.dp))
 
-        OutlinedTextField(
-            value = username,
-            onValueChange = {
-                username = it
-                onUsernameChanged(it)
-            },
-            label = { Text("E-mail") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Utilizando a estratégia global para Inputs compactos
+        CompactUiWrapper {
+            OutlinedTextField(
+                value = username,
+                onValueChange = {
+                    username = it
+                    onUsernameChanged(it)
+                },
+                label = { Text("E-mail") },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = {
-                password = it
-                onPasswordChanged(it)
-            },
-            label = { Text("Senha") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
+        CompactUiWrapper {
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    onPasswordChanged(it)
+                },
+                label = { Text("Senha") },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
 
