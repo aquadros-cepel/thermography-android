@@ -25,11 +25,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun SyncScreen(
@@ -38,17 +42,11 @@ fun SyncScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val animatedProgress by animateFloatAsState(targetValue = uiState.overallProgress, label = "Overall Progress")
+    var countdown by remember { mutableStateOf(5) }
 
     // Inicia a sincronização quando a tela é criada
     LaunchedEffect(Unit) {
         viewModel.startSync()
-    }
-
-    // Navega para a próxima tela quando a sincronização terminar
-    if (uiState.isSyncFinished) {
-        LaunchedEffect(Unit) {
-//            onSyncComplete()
-        }
     }
 
     Column(
@@ -58,23 +56,37 @@ fun SyncScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Sincronizando dados", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(32.dp))
+        if (uiState.isSyncFinished) {
+            LaunchedEffect(Unit) {
+                for (i in 5 downTo 1) {
+                    countdown = i
+                    delay(1000)
+                }
+                onSyncComplete()
+            }
 
-        // Barra de progresso geral
-        LinearProgressIndicator(
-            progress = { animatedProgress },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("${(uiState.overallProgress * 100).toInt()}% concluído")
+            Text("Dados sincronizados do dispositivo", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Redirecionando em $countdown s", style = MaterialTheme.typography.bodyLarge)
+        } else {
+            Text("Sincronizando dados", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Spacer(modifier = Modifier.height(32.dp))
+            // Barra de progresso geral
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("${(uiState.overallProgress * 100).toInt()}% concluído")
 
-        // Lista de tarefas
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(uiState.tasks) { task ->
-                SyncTaskItem(task = task)
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Lista de tarefas
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(uiState.tasks) { task ->
+                    SyncTaskItem(task = task)
+                }
             }
         }
     }
