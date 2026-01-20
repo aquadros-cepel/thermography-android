@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.repository.PlantRepository
 import com.tech.thermography.android.data.local.repository.SyncableRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,7 +32,8 @@ import kotlin.coroutines.resumeWithException
 class SyncViewModel @Inject constructor(
     private val syncableRepositories: Map<Int, @JvmSuppressWildcards SyncableRepository>,
     private val plantRepository: PlantRepository,
-    private val application: Application
+    private val application: Application,
+    private val appDatabase: AppDatabase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SyncState())
@@ -44,65 +46,57 @@ class SyncViewModel @Inject constructor(
     }
 
     init {
-        // Cria as tarefas de dados
-        val dataTasks = syncableRepositories.values.map { repository ->
-            val taskName = "Sincronizando ${repository.javaClass.simpleName.replace("Repository", "")}"
-            SyncTask(name = taskName, repository = repository)
-        }
+        // Cria as tarefas de dados em ordem de IntKey
+        val dataTasks = syncableRepositories
+            .toSortedMap()
+            .values.map { repository ->
+                val taskName = "Sincronizando ${repository.javaClass.simpleName.replace("Repository", "")}"
+                SyncTask(name = taskName, repository = repository)
+            }
         // Adiciona a tarefa de download de mapa
-        val mapTask = SyncTask(name = "Baixando mapas para uso offline", repository = tileDownloaderRepository)
-        
-        _uiState.value = SyncState(tasks = dataTasks + mapTask)
+        //        val mapTask = SyncTask(name = "Baixando mapas para uso offline", repository = tileDownloaderRepository)
+//        _uiState.value = SyncState(tasks = dataTasks + mapTask)
+        _uiState.value = SyncState(tasks = dataTasks)
     }
 
     fun startSync() {
-        viewModelScope.launch {
-            val allTasks = _uiState.value.tasks
-            if (allTasks.isEmpty()) {
-                _uiState.update { it.copy(isSyncFinished = true) }
-                return@launch
-            }
-            
-            val dataTasks = allTasks.filter { it.repository != tileDownloaderRepository }
-            val mapTask = allTasks.find { it.repository == tileDownloaderRepository }
-
-            // 1. SINCRONIZA DADOS DA API (EM PARALELO)
-            runDataSync(dataTasks)
+        viewModelScope.launch(Dispatchers.IO) {
+            appDatabase.clearAllTables()
+            // 1. SINCRONIZA DADOS DA API (EM ORDEM)
+            runDataSync()
 
             // 2. SINCRONIZA TILES DO MAPA (APÓS DADOS)
-            mapTask?.let { runMapSync(it) }
-
+//            mapTask?.let { runMapSync(it) }
             _uiState.update { it.copy(isSyncFinished = true) }
         }
     }
     
-    private suspend fun runDataSync(tasks: List<SyncTask>) {
+    private suspend fun runDataSync() {
+        val tasks = _uiState.value.tasks
         val totalTasks = _uiState.value.tasks.size.toFloat()
-        val mutex = Mutex()
         var completedTasks = 0
 
-        coroutineScope {
-            tasks.mapIndexed { taskIndex, task ->
-                launch(Dispatchers.IO) {
-                    updateTaskStatus(taskIndex, SyncStatus.IN_PROGRESS)
-                    try {
-                        task.repository.syncEntities()
-                        updateTaskStatus(taskIndex, SyncStatus.COMPLETED)
-                    } catch (e: Exception) {
-                        Log.e("SyncViewModel", "Falha na sincronização de ${task.name}", e)
-                        updateTaskStatus(taskIndex, SyncStatus.FAILED)
-                    } finally {
-                        mutex.withLock {
-                            completedTasks++
-                            _uiState.update { it.copy(overallProgress = completedTasks / totalTasks) }
-                        }
-                    }
+        for ((taskIndex, task) in tasks.withIndex()) {
+            updateTaskStatus(taskIndex, SyncStatus.IN_PROGRESS)
+            try {
+                // Loga a ordem de inserção
+                Log.d("Sync", "Inserindo task ${taskIndex}: ${task.name}")
+                // Se for InspectionRecordGroup, loga a quantidade de registros InspectionRecord
+                if (task.repository.javaClass.simpleName.contains("InspectionRecordGroupRepository")) {
+                    val inspectionRecordCount = appDatabase.inspectionRecordDao().getAllInspectionRecordsCount()
+                    Log.d("Sync", "Antes de inserir InspectionRecordGroup, há $inspectionRecordCount registros em InspectionRecord")
                 }
-            }.joinAll()
+                task.repository.syncEntities()
+                task.repository.insertCached() // Persistência imediata
+                updateTaskStatus(taskIndex, SyncStatus.COMPLETED)
+            } catch (e: Exception) {
+                Log.e("SyncViewModel", "Falha na sincronização de "+task.name, e)
+                updateTaskStatus(taskIndex, SyncStatus.FAILED)
+            } finally {
+                completedTasks++
+                _uiState.update { it.copy(overallProgress = completedTasks / totalTasks) }
+            }
         }
-
-        // Insere os dados em cache após todas as sincronizações serem concluídas
-        syncableRepositories.toSortedMap().values.forEach { it.insertCached() }
     }
     
     private suspend fun runMapSync(task: SyncTask) {
@@ -138,7 +132,7 @@ class SyncViewModel @Inject constructor(
         }
 
         val tileWriter = SqlTileWriter()
-        val cacheManager = CacheManager(esriSource, tileWriter, 15, 18) // Baixa do zoom 15 ao 18
+        val cacheManager = CacheManager(esriSource, tileWriter, 15, 17) // Baixa do zoom 15 ao 17
 
         val boundingBoxes = plants.mapNotNull { plant ->
             if (plant.latitude != null && plant.longitude != null) {
@@ -170,7 +164,7 @@ class SyncViewModel @Inject constructor(
                     }
                     
                     // Chama a função correta que aceita BoundingBox, ZoomMin, ZoomMax e Callback
-                    cacheManager.downloadAreaAsync(application, box, 15, 18, callback)
+                    cacheManager.downloadAreaAsync(application, box, 15, 17, callback)
                 }
             } catch (e: Exception) {
                 Log.e("SyncViewModel", "Exceção ao baixar área: ${e.message}")

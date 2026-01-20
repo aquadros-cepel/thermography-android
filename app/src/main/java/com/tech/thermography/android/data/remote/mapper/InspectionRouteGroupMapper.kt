@@ -12,8 +12,8 @@ object InspectionRouteGroupMapper {
             description = dto.description,
             included = dto.included,
             orderIndex = dto.orderIndex,
-            inspectionRouteId = dto.inspectionRouteId,
-            parentGroupId = dto.parentGroupId
+            inspectionRouteId = dto.inspectionRoute.id,
+            parentGroupId = dto.parentGroup?.id
         )
     }
 }

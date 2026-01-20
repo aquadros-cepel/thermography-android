@@ -7,6 +7,6 @@ data class InspectionRecordGroupEquipmentDto(
     val id: UUID,
     val orderIndex: Int?,
     val status: EquipmentInspectionStatus?,
-    val inspectionRecordGroupId: UUID?,
-    val equipmentId: UUID?
+    val inspectionRecordGroup: InspectionRecordGroupDto?,
+    val equipment: EquipmentDto?
 )

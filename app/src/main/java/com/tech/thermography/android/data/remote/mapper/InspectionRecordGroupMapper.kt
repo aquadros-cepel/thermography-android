@@ -13,8 +13,8 @@ object InspectionRecordGroupMapper {
             orderIndex = dto.orderIndex,
             finished = dto.finished,
             finishedAt = dto.finishedAt,
-            inspectionRecordId = dto.inspectionRecordId?.id,
-            parentGroupId = dto.parentGroupId?.id
+            inspectionRecordId = dto.inspectionRecord?.id,
+            parentGroupId = dto.parentGroup?.id
         )
     }
 }

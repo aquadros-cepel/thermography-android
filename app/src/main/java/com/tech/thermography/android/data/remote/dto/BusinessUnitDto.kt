@@ -7,5 +7,5 @@ data class BusinessUnitDto(
     val code: String?,
     val name: String,
     val description: String?,
-    val companyId: UUID?
+    val company: CompanyDto?
 )

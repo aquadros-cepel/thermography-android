@@ -15,6 +15,12 @@ interface ThermographicInspectionRecordDao {
     @Query("SELECT * FROM thermographic_inspection_record ORDER BY createdAt DESC")
     fun getAllThermographicInspectionRecords(): Flow<List<ThermographicInspectionRecordEntity>>
 
+    @Query("SELECT * FROM thermographic_inspection_record WHERE plantId = :plantId ORDER BY createdAt DESC")
+    fun getThermographicInspectionRecordsByPlantId(plantId: UUID): Flow<List<ThermographicInspectionRecordEntity>>
+
+    @Query("SELECT * FROM thermographic_inspection_record WHERE plantId = :plantId AND equipmentId = :equipmentId ORDER BY createdAt DESC")
+    fun getThermographicInspectionRecordsByPlantAndEquipment(plantId: UUID, equipmentId: UUID): Flow<List<ThermographicInspectionRecordEntity>>
+
     @Query("SELECT * FROM thermographic_inspection_record WHERE id = :id")
     suspend fun getThermographicInspectionRecordById(id: UUID): ThermographicInspectionRecordEntity?
 

@@ -5,6 +5,7 @@ import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import com.tech.thermography.android.data.remote.mapper.InspectionRecordMapper
 import com.tech.thermography.android.data.remote.sync.SyncApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
 import javax.inject.Inject
@@ -24,6 +25,9 @@ class InspectionRecordRepository @Inject constructor(
     suspend fun insertInspectionRecord(inspectionRecord: InspectionRecordEntity) = inspectionRecordDao.insertInspectionRecord(inspectionRecord)
 
     suspend fun deleteInspectionRecord(inspectionRecord: InspectionRecordEntity) = inspectionRecordDao.deleteInspectionRecord(inspectionRecord)
+
+    suspend fun getInspectionRecordsByEquipmentId(equipmentId: UUID): List<InspectionRecordEntity> =
+        inspectionRecordDao.getInspectionRecordsByEquipmentId(equipmentId)
 
     override suspend fun syncEntities() {
         // 1. Buscar tudo do backend

@@ -10,7 +10,7 @@ object BusinessUnitMapper {
             code = dto.code,
             name = dto.name,
             description = dto.description,
-            companyId = dto.companyId
+            companyId = dto.company?.id
         )
     }
 }

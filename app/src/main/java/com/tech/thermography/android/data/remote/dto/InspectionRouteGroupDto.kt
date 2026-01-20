@@ -9,6 +9,6 @@ data class InspectionRouteGroupDto(
     val description: String?,
     val included: Boolean?,
     val orderIndex: Int?,
-    val inspectionRouteId: UUID?,
-    val parentGroupId: UUID?
+    val inspectionRoute: InspectionRouteDto,
+    val parentGroup: InspectionRouteGroupDto?
 )

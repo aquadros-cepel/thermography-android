@@ -39,4 +39,24 @@ interface InspectionRecordDao {
     
     @Delete
     suspend fun deleteInspectionRecord(record: InspectionRecordEntity)
+
+    @Query("""
+        SELECT ir.* FROM inspection_record ir
+        INNER JOIN inspection_record_group irg2 ON irg2.inspectionRecordId = ir.id
+        INNER JOIN inspection_record_group irg ON irg.parentGroupId = irg2.id
+        INNER JOIN inspection_record_group_equipment irgp ON irgp.inspectionRecordGroupId = irg.id
+        INNER JOIN equipment e ON e.id = irgp.equipmentId
+        WHERE e.id = :equipmentId
+    """)
+    suspend fun getInspectionRecordsByEquipmentId(equipmentId: UUID): List<InspectionRecordEntity>
+
+    @Query("""
+        SELECT ir.* FROM inspection_record ir
+        INNER JOIN inspection_record_group irg2 ON irg2.inspectionRecordId = ir.id
+    """)
+    suspend fun getInspectionRecords(): List<InspectionRecordEntity>
+
+    @Query("SELECT COUNT(*) FROM inspection_record")
+    suspend fun getAllInspectionRecordsCount(): Int
+
 }

@@ -18,6 +18,9 @@ interface EquipmentDao {
     @Query("SELECT * FROM equipment WHERE id = :id")
     suspend fun getEquipmentById(id: UUID): EquipmentEntity?
 
+    @Query("SELECT * FROM equipment WHERE plantId = :plantId ORDER BY name")
+    fun getEquipmentsByPlantId(plantId: UUID): Flow<List<EquipmentEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEquipments(equipments: List<EquipmentEntity>)
 

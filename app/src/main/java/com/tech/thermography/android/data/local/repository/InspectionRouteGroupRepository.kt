@@ -33,9 +33,16 @@ class InspectionRouteGroupRepository @Inject constructor(
         inspectionRouteGroupDao.deleteInspectionRouteGroup(inspectionRouteGroup)
 
     override suspend fun syncEntities() {
+        syncEntitiesOrdered()
+    }
+
+    suspend fun syncEntitiesOrdered() {
         val remoteEntities = syncApi.getAllInspectionRouteGroups()
-        val entities = remoteEntities.map { dto -> InspectionRouteGroupMapper.dtoToEntity(dto) }
+        val (roots, children) = remoteEntities.partition { it.parentGroup?.id == null }
+        val ordered = roots + children
+        val entities = ordered.map { dto -> InspectionRouteGroupMapper.dtoToEntity(dto) }
         setCache(entities)
+        insertCached()
     }
 
     override suspend fun insertCached() {

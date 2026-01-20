@@ -60,7 +60,7 @@ fun InspectionRecordsScreen(
     val selectedPlantId by viewModel.selectedPlantId.collectAsState()
 
     // Envolvemos tudo em BoxWithConstraints para saber a altura total disponível
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Usamos 'constraints' diretamente para garantir o uso do scope e evitar erros de resolução
         val totalHeightPx = constraints.maxHeight.toFloat()
         val density = LocalDensity.current
@@ -73,7 +73,7 @@ fun InspectionRecordsScreen(
         // Converte pixels para Dp para usar no Modifier.height
         val topHeightDp = with(density) { topHeightPx.toDp() }
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             // Upper half: Map (Altura Variável)
             Box(
                 modifier = Modifier
@@ -94,9 +94,9 @@ fun InspectionRecordsScreen(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(16.dp) // Altura da área de toque/visual do divisor
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .zIndex(2f) // Divider sempre visível
+                    .height(16.dp)
+                    .background(MaterialTheme.colorScheme.background)
+                    .zIndex(2f)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures { change, dragAmount ->
                             change.consume()
@@ -242,7 +242,7 @@ fun MapComponent(
                             
                             // Obtém o zoom máximo REAL da fonte de tiles (Esri vai até 19)
                             val maxSourceZoom = mapView.tileProvider.tileSource.maximumZoomLevel
-                            val targetZoom = if (maxSourceZoom > 18) 18.0 else maxSourceZoom.toDouble()
+                            val targetZoom = if (maxSourceZoom > 17) 17.0 else maxSourceZoom.toDouble()
                             
                             // Usar setZoom garante a mudança imediata e evita conflitos de animação
                             mapView.controller.setZoom(targetZoom)

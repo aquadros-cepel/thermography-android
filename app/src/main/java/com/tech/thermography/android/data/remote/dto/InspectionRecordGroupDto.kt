@@ -11,6 +11,6 @@ data class InspectionRecordGroupDto(
     val orderIndex: Int? = null,
     val finished: Boolean? = null,
     val finishedAt: Instant? = null,
-    val inspectionRecordId: UUID_DTO? = null,
-    val parentGroupId: UUID_DTO? = null
+    val inspectionRecord: InspectionRecordDto? = null,
+    val parentGroup: InspectionRecordGroupDto? = null
 )

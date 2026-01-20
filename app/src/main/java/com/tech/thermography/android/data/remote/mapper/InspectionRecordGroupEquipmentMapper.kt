@@ -9,8 +9,8 @@ object InspectionRecordGroupEquipmentMapper {
             id = dto.id,
             orderIndex = dto.orderIndex,
             status = dto.status,
-            inspectionRecordGroupId = dto.inspectionRecordGroupId,
-            equipmentId = dto.equipmentId
+            inspectionRecordGroupId = dto.inspectionRecordGroup?.id,
+            equipmentId = dto.equipment?.id
         )
     }
 }

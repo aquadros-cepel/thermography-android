@@ -19,6 +19,8 @@ class EquipmentRepository @Inject constructor(
 
     fun getAllEquipments(): Flow<List<EquipmentEntity>> = equipmentDao.getAllEquipments()
 
+    fun getEquipmentsByPlantId(plantId: UUID): Flow<List<EquipmentEntity>> = equipmentDao.getEquipmentsByPlantId(plantId)
+
     suspend fun getEquipmentById(id: UUID): EquipmentEntity? = equipmentDao.getEquipmentById(id)
 
     suspend fun insertEquipment(equipment: EquipmentEntity) = equipmentDao.insertEquipment(equipment)

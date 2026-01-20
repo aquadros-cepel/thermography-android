@@ -20,6 +20,12 @@ class ThermographicInspectionRecordRepository @Inject constructor(
     fun getAllThermographicInspectionRecords(): Flow<List<ThermographicInspectionRecordEntity>> = 
         thermographicInspectionRecordDao.getAllThermographicInspectionRecords()
 
+    fun getThermographicInspectionRecordsByPlantId(plantId: UUID): Flow<List<ThermographicInspectionRecordEntity>> =
+        thermographicInspectionRecordDao.getThermographicInspectionRecordsByPlantId(plantId)
+
+    fun getThermographicInspectionRecordsByPlantAndEquipment(plantId: UUID, equipmentId: UUID): Flow<List<ThermographicInspectionRecordEntity>> =
+        thermographicInspectionRecordDao.getThermographicInspectionRecordsByPlantAndEquipment(plantId, equipmentId)
+
     suspend fun getThermographicInspectionRecordById(id: UUID): ThermographicInspectionRecordEntity? = 
         thermographicInspectionRecordDao.getThermographicInspectionRecordById(id)
 

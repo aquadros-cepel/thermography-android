@@ -11,4 +11,4 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // Cor de fundo global (Cinza/Azul muito claro, estilo Ghost White)
-val AppBackground = Color(0xFFF4F6F8)
+val AppBackground = Color(0xFFF5F7FA)

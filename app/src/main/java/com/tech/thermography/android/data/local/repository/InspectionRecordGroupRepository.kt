@@ -26,9 +26,29 @@ class InspectionRecordGroupRepository @Inject constructor(
     suspend fun deleteInspectionRecordGroup(inspectionRecordGroup: InspectionRecordGroupEntity) = inspectionRecordGroupDao.deleteInspectionRecordGroup(inspectionRecordGroup)
 
     override suspend fun syncEntities() {
+        try {
+            syncEntitiesOrdered()
+        } catch (e: Exception) {
+            // Loga todos os objetos que seriam inseridos
+            cache.forEach { entity ->
+                try {
+                    // Tenta inserir individualmente para identificar o problemático
+                    inspectionRecordGroupDao.insertInspectionRecordGroup(entity)
+                } catch (ex: Exception) {
+                    android.util.Log.e("InspectionRecordGroupRepository", "Erro ao inserir entity: $entity", ex)
+                }
+            }
+            throw e
+        }
+    }
+
+    private suspend fun syncEntitiesOrdered() {
         val remoteInspectionRecordGroups = syncApi.getAllInspectionRecordGroups()
-        val entities = remoteInspectionRecordGroups.map { dto -> InspectionRecordGroupMapper.dtoToEntity(dto) }
+        val (roots, children) = remoteInspectionRecordGroups.partition { it.parentGroup?.id == null }
+        val ordered = roots + children
+        val entities = ordered.map { dto -> InspectionRecordGroupMapper.dtoToEntity(dto) }
         setCache(entities)
+        insertCached()
     }
 
     override suspend fun insertCached() {

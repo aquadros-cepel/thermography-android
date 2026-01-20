@@ -38,6 +38,7 @@ import com.tech.thermography.android.ui.auth.login.LoginScreen
 import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
+import com.tech.thermography.android.ui.thermal_anomaly.ThermalAnomalyForm
 
 @Composable
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMotionApi::class)
@@ -110,7 +111,7 @@ fun AppNavHost() {
             composable(NavRoutes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { 
-                        navController.navigate("inspection_records") {
+                        navController.navigate(NavRoutes.SYNC) {
                             popUpTo(NavRoutes.LOGIN) { inclusive = true }
                         }
                     },
@@ -135,9 +136,7 @@ fun AppNavHost() {
             }
 
             composable(NavRoutes.THERMOGRAMS) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Tela Termograma do Equipamento")
-                }
+                ThermalAnomalyForm()
             }
 
             composable(NavRoutes.SETTINGS) {
