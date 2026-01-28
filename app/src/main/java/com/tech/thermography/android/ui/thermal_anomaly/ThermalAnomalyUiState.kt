@@ -4,6 +4,7 @@ import com.tech.thermography.android.data.local.entity.EquipmentEntity
 import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import com.tech.thermography.android.data.local.entity.PlantEntity
 import com.tech.thermography.android.data.local.entity.ThermographicInspectionRecordEntity
+import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 
 data class ThermalAnomalyUiState(
     // Dropdown data
@@ -21,10 +22,9 @@ data class ThermalAnomalyUiState(
     val recordName: String = "",
     val serviceOrder: String = "",
     val analysisDescription: String = "",
-    val condition: String = "Baixo Risco",
+    val condition: ConditionType = ConditionType.NORMAL,
     val deadlineExecution: Long? = null,
     val recommendations: String = "",
-    
 
     // UI state
     val isLoading: Boolean = false,

@@ -20,10 +20,68 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 import com.tech.thermography.android.ui.components.AppOutlinedField
 import com.tech.thermography.android.ui.components.AppDatePickerField
 import com.tech.thermography.android.ui.components.AppExposedDropdownMenu
 import com.tech.thermography.android.ui.thermal_anomaly.ThermalAnomalyEvent
+
+fun ConditionType.displayName(): String = when (this) {
+    ConditionType.LOW_RISK -> "Baixo Risco"
+    ConditionType.MEDIUM_RISK -> "Médio Risco"
+    ConditionType.HIGH_RISK -> "Alto Risco"
+    ConditionType.IMMINENT_HIGH_RISK -> "Crítico"
+    ConditionType.NORMAL -> "Normal"
+}
+
+@Composable
+fun RegistrationFields(
+    uiState: ThermalAnomalyUiState,
+    viewModel: ThermalAnomalyViewModel
+) {
+    AppExposedDropdownMenu(
+        label = "INSTALAÇÃO",
+        options = uiState.availablePlants,
+        selectedOption = uiState.selectedPlant,
+        onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.PlantSelected(it)) },
+        optionLabelProvider = { it.name ?: "" }
+    )
+
+    AppExposedDropdownMenu(
+        label = "LOCALIZAÇÃO",
+        options = uiState.filteredEquipments,
+        selectedOption = uiState.selectedEquipment,
+        onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelected(it)) },
+        optionLabelProvider = { it.code ?: "" }
+    )
+
+    AppOutlinedField(
+        value = uiState.equipmentType,
+        onValueChange = {},
+        label = "EQUIPAMENTO",
+//        enabled = false
+    )
+
+    AppExposedDropdownMenu(
+        label = "ROTEIRO DE INSPEÇÃO",
+        options = uiState.filteredInspectionRecords,
+        selectedOption = uiState.selectedInspectionRecord,
+        onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.InspectionRecordSelected(it)) },
+        optionLabelProvider = { it.name }
+    )
+
+    AppOutlinedField(
+        value = uiState.recordName,
+        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateRecordName(it)) },
+        label = "NO RELATÓRIO"
+    )
+
+    AppOutlinedField(
+        value = uiState.serviceOrder,
+        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateServiceOrder(it)) },
+        label = "ORDEM DE SERVIÇO"
+    )
+}
 
 @Composable
 fun ThermalAnomalyForm(
@@ -43,48 +101,7 @@ fun ThermalAnomalyForm(
 
         // --- ROW SUPERIOR (Registration Data) ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppExposedDropdownMenu(
-                label = "INSTALAÇÃO",
-                options = uiState.availablePlants,
-                selectedOption = uiState.selectedPlant,
-                onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.PlantSelected(it)) },
-                optionLabelProvider = { it.name ?: "" }
-            )
-
-            AppExposedDropdownMenu(
-                label = "LOCALIZAÇÃO",
-                options = uiState.filteredEquipments,
-                selectedOption = uiState.selectedEquipment,
-                onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelected(it)) },
-                optionLabelProvider = { it.code ?: "" }
-            )
-
-            AppOutlinedField(
-                value = uiState.equipmentType,
-                onValueChange = {},
-                label = "EQUIPAMENTO",
-//                enabled = false
-            )
-
-            AppExposedDropdownMenu(
-                label = "ROTEIRO DE INSPEÇÃO",
-                options = uiState.filteredInspectionRecords,
-                selectedOption = uiState.selectedInspectionRecord,
-                onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.InspectionRecordSelected(it)) },
-                optionLabelProvider = { it.name }
-            )
-
-            AppOutlinedField(
-                value = uiState.recordName,
-                onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateRecordName(it)) },
-                label = "NO RELATÓRIO"
-            )
-
-            AppOutlinedField(
-                value = uiState.serviceOrder,
-                onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateServiceOrder(it)) },
-                label = "ORDEM DE SERVIÇO"
-            )
+            RegistrationFields(uiState, viewModel)
         }
 
         // --- ROW INFERIOR (Analysis Data) ---
@@ -100,12 +117,26 @@ fun ThermalAnomalyForm(
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val conditionOptions = listOf(
+                    ConditionType.NORMAL,
+                    ConditionType.LOW_RISK,
+                    ConditionType.MEDIUM_RISK,
+                    ConditionType.HIGH_RISK,
+                    ConditionType.IMMINENT_HIGH_RISK
+                )
+                val conditionLabels = mapOf(
+                    ConditionType.NORMAL to "Normal",
+                    ConditionType.LOW_RISK to "Baixo Risco",
+                    ConditionType.MEDIUM_RISK to "Médio Risco",
+                    ConditionType.HIGH_RISK to "Alto Risco",
+                    ConditionType.IMMINENT_HIGH_RISK to "Crítico"
+                )
                 AppExposedDropdownMenu(
                     label = "CONDIÇÃO",
-                    options = listOf("Baixo Risco", "Médio Risco", "Alto Risco", "Crítico"),
+                    options = conditionOptions,
                     selectedOption = uiState.condition,
                     onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCondition(it)) },
-                    optionLabelProvider = { it },
+                    optionLabelProvider = { conditionLabels[it] ?: it.name },
                     modifier = Modifier.weight(1f)
                 )
 

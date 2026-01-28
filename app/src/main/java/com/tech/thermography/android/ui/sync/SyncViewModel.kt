@@ -67,7 +67,7 @@ class SyncViewModel @Inject constructor(
 
             // 2. SINCRONIZA TILES DO MAPA (APÓS DADOS)
 //            mapTask?.let { runMapSync(it) }
-            _uiState.update { it.copy(isSyncFinished = true) }
+//            _uiState.update { it.copy(isSyncFinished = true) }
         }
     }
     

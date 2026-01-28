@@ -63,7 +63,17 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.UpdateRecordName -> _uiState.update { it.copy(recordName = event.value) }
             is ThermalAnomalyEvent.UpdateServiceOrder -> _uiState.update { it.copy(serviceOrder = event.value) }
             is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value) }
-            is ThermalAnomalyEvent.UpdateCondition -> _uiState.update { it.copy(condition = event.value) }
+            is ThermalAnomalyEvent.UpdateCondition -> {
+                _uiState.update { it.copy(condition = event.value) }
+                // Atualiza o nome do relatório ao mudar a condição
+                val plant = _uiState.value.selectedPlant
+                viewModelScope.launch {
+                    if (plant != null) {
+                        val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+                        setThermalRecordName(plant, event.value, anomalyRecords)
+                    }
+                }
+            }
             is ThermalAnomalyEvent.UpdateDeadline -> {
                 val deadlineDate = if (event.value != null) {
                     Instant.ofEpochMilli(event.value).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -89,6 +99,10 @@ class ThermalAnomalyViewModel @Inject constructor(
             equipmentRepository.getEquipmentsByPlantId(plant.id).collect { equipmentList ->
                 _uiState.update { it.copy(filteredEquipments = equipmentList) }
             }
+            // Após carregar equipamentos, busca registros de anomalia para a planta e atualiza o nome do relatório
+            val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+            val condition = _uiState.value.condition
+            setThermalRecordName(plant, condition, anomalyRecords)
         }
     }
 
@@ -118,12 +132,12 @@ class ThermalAnomalyViewModel @Inject constructor(
 
     private fun saveRecord() {
         val state = _uiState.value
-        
+
         if (state.selectedPlant == null || state.selectedEquipment == null) {
             _uiState.update { it.copy(error = "Por favor, selecione Instalação e Equipamento") }
             return
         }
-        
+
         if (state.recordName.isBlank()) {
             _uiState.update { it.copy(error = "Por favor, preencha o nome do relatório") }
             return
@@ -132,13 +146,7 @@ class ThermalAnomalyViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
-                
-                val conditionType = when (state.condition) {
-                    "Médio Risco" -> ConditionType.MEDIUM_RISK
-                    "Alto Risco" -> ConditionType.HIGH_RISK
-                    "Crítico" -> ConditionType.IMMINENT_HIGH_RISK
-                    else -> ConditionType.LOW_RISK
-                }
+                val conditionType = state.condition
 
                 val deadlineDate = if (state.deadlineExecution != null) {
                     Instant.ofEpochMilli(state.deadlineExecution).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -170,27 +178,27 @@ class ThermalAnomalyViewModel @Inject constructor(
                 )
 
                 recordRepository.insertThermographicInspectionRecord(record)
-                
-                _uiState.update { 
+
+                _uiState.update {
                     it.copy(
                         isLoading = false,
                         isSaved = true,
                         error = null
-                    ) 
+                    )
                 }
             } catch (e: Exception) {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         isLoading = false,
                         error = e.message ?: "Erro ao salvar registro"
-                    ) 
+                    )
                 }
             }
         }
     }
 
     private fun resetForm() {
-        _uiState.update { 
+        _uiState.update {
             ThermalAnomalyUiState(
                 availablePlants = it.availablePlants,
                 filteredEquipments = emptyList()
@@ -200,5 +208,23 @@ class ThermalAnomalyViewModel @Inject constructor(
 
     suspend fun getInspectionRecords(equipmentId: UUID): List<InspectionRecordEntity> {
         return inspectionRecordRepository.getInspectionRecordsByEquipmentId(equipmentId)
+    }
+
+    fun setThermalRecordName(powerStation: PlantEntity?, condition: ConditionType, anomalyRecords: List<ThermographicInspectionRecordEntity>) {
+        if (powerStation != null) {
+            val lastName = powerStation.code?.split("-")?.lastOrNull() ?: ""
+            if (condition == ConditionType.NORMAL) {
+                val filteredRecords = anomalyRecords.filter {
+                    it.plantId == powerStation.id &&
+                    it.condition == ConditionType.NORMAL
+                }
+                val newName = if (filteredRecords.isNotEmpty()) {
+                    "THERMAL_RECORD_${filteredRecords.size + 1}_$lastName"
+                } else {
+                    "THERMAL_RECORD_1_$lastName"
+                }
+                _uiState.update { it.copy(recordName = newName) }
+            }
+        }
     }
 }
