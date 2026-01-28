@@ -6,5 +6,6 @@ data class EquipmentComponentDto(
     val id: UUID,
     val code: String?,
     val name: String,
-    val description: String?
+    val description: String?,
+    val componentTemperatureLimits: EquipmentComponentTemperatureLimitsDto?
 )

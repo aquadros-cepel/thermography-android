@@ -23,5 +23,5 @@ data class EquipmentComponentTemperatureLimitsEntity(
     val mediumRisk: String?,
     val highRisk: String?,
     val imminentHighRisk: String?,
-    val componentId: UUID
+    val componentId: UUID?
 )

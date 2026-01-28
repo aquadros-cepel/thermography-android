@@ -5,6 +5,7 @@ import com.tech.thermography.android.data.remote.dto.EquipmentComponentTemperatu
 
 object EquipmentComponentTemperatureLimitsMapper {
     fun dtoToEntity(dto: EquipmentComponentTemperatureLimitsDto): EquipmentComponentTemperatureLimitsEntity {
+        val componentId = dto.componentId ?: dto.equipmentComponent?.id
         return EquipmentComponentTemperatureLimitsEntity(
             id = dto.id,
             name = dto.name,
@@ -13,7 +14,7 @@ object EquipmentComponentTemperatureLimitsMapper {
             mediumRisk = dto.mediumRisk,
             highRisk = dto.highRisk,
             imminentHighRisk = dto.imminentHighRisk,
-            componentId = dto.componentId
+            componentId = componentId
         )
     }
 }

@@ -10,6 +10,7 @@ object EquipmentComponentMapper {
             code = dto.code,
             name = dto.name,
             description = dto.description
+            // If needed, persist temperature limits separately via its own repository using dto.componentTemperatureLimits
         )
     }
 }

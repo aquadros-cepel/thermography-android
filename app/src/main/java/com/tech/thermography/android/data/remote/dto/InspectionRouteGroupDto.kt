@@ -9,6 +9,7 @@ data class InspectionRouteGroupDto(
     val description: String?,
     val included: Boolean?,
     val orderIndex: Int?,
-    val inspectionRoute: InspectionRouteDto,
+    // Make inspectionRoute nullable to reflect JSON where it can be null for child groups
+    val inspectionRoute: InspectionRouteDto?,
     val parentGroup: InspectionRouteGroupDto?
 )

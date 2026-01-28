@@ -10,5 +10,6 @@ data class EquipmentComponentTemperatureLimitsDto(
     val mediumRisk: String?,
     val highRisk: String?,
     val imminentHighRisk: String?,
-    val componentId: UUID
+    val componentId: UUID?,
+    val equipmentComponent: EquipmentComponentDto?
 )

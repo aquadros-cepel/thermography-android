@@ -24,7 +24,8 @@ object DatabaseModule {
             AppDatabase::class.java,
             "thermography-db"
         )
-        .fallbackToDestructiveMigrationFrom(2, 3)
+        .fallbackToDestructiveMigrationFrom(2, 3, 4)
+        .fallbackToDestructiveMigration()
         .build()
     }
 
