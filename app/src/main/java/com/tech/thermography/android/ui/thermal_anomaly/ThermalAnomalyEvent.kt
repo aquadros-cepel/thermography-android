@@ -23,6 +23,7 @@ sealed class ThermalAnomalyEvent {
     data class UpdateRecommendations(val value: String) : ThermalAnomalyEvent()
     data class InspectionRecordSelected(val record: InspectionRecordEntity) : ThermalAnomalyEvent()
     data class InspectionRecordSelectedById(val recordId: java.util.UUID) : ThermalAnomalyEvent()
+    data class ThermographicSelectedById(val thermographicId: java.util.UUID) : ThermalAnomalyEvent()
 
     // Thermogram events
     data class SelectRoi(val roi: ROIEntity) : ThermalAnomalyEvent()

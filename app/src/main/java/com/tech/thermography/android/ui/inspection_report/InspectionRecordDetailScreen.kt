@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.tech.thermography.android.navigation.NavRoutes
+import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -33,13 +35,15 @@ import java.util.UUID
 @Composable
 fun InspectionRecordDetailScreen(
     recordId: UUID,
-    navController: NavHostController
+    navController: NavHostController,
+    expandToEquipmentId: UUID? = null
 ) {
     val vm: InspectionRecordDetailViewModel = hiltViewModel()
     val uiState by vm.uiState.collectAsState()
 
     LaunchedEffect(recordId) {
         vm.load(recordId)
+        expandToEquipmentId?.let { vm.expandToEquipment(it) }
     }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -112,14 +116,14 @@ fun InspectionRecordDetailScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tree card
+        // Tree card — card background should be WHITE; nodes keep colored palette
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F9FB))
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             if (uiState.rootGroups.isEmpty()) {
                 Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -137,7 +141,8 @@ fun InspectionRecordDetailScreen(
                             level = 0,
                             navController = navController,
                             plantId = uiState.plant?.id,
-                            inspectionRecordId = uiState.record?.id
+                            inspectionRecordId = uiState.record?.id,
+                            expandedGroupIds = vm.expandedGroupIds
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                     }
@@ -155,19 +160,25 @@ private fun GroupNode(
     level: Int,
     navController: NavHostController,
     plantId: UUID?,
-    inspectionRecordId: UUID?
+    inspectionRecordId: UUID?,
+    expandedGroupIds: kotlinx.coroutines.flow.StateFlow<Set<UUID>>,
 ) {
+    val expandedIds by expandedGroupIds.collectAsState()
     var expanded by remember { mutableStateOf(false) }
+    LaunchedEffect(expandedIds, grp.id) {
+        expanded = expandedIds.contains(grp.id)
+    }
 
     // Compact indentation for mobile: 8.dp per level
     val paddingStart = (level * 8).dp
     val rowHeight = 44.dp
 
-    // colors per level
+    // colors per level (restore palette):
+    // level 0 => group (light blue), level 1 => subgroup (light beige), level >=2 => equipment-ish (light green)
     val rowColor = when (level) {
-        0 -> Color(0xFFE9F4FF) // light blue
-        1 -> Color(0xFFFFF4E6) // light beige
-        else -> Color.Transparent
+        0 -> Color(0xFFE6F2FF) // light blue
+        1 -> Color(0xFFFFF3E0) // light beige
+        else -> Color(0xFFEAF7EE) // light green
     }
 
     Column(modifier = Modifier.fillMaxWidth().animateContentSize()) {
@@ -216,7 +227,7 @@ private fun GroupNode(
         if (expanded) {
             val children = allGroups.filter { it.parentGroupId == grp.id }
             children.forEach { child ->
-                GroupNode(grp = child, allGroups = allGroups, groupEquipments = groupEquipments, level = level + 1, navController = navController, plantId = plantId, inspectionRecordId = inspectionRecordId)
+                GroupNode(grp = child, allGroups = allGroups, groupEquipments = groupEquipments, level = level + 1, navController = navController, plantId = plantId, inspectionRecordId = inspectionRecordId, expandedGroupIds = expandedGroupIds)
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
@@ -225,6 +236,12 @@ private fun GroupNode(
             equipments?.forEach { item ->
                 EquipmentNode(item, level + 1, navController, plantId, inspectionRecordId)
                 Spacer(modifier = Modifier.height(4.dp))
+                // render anomalies (components) under equipment
+                val anomalies = item.anomalies
+                anomalies.forEach { anomalyDisplay ->
+                    AnomalyComponentRow(anomalyDisplay, navController, plantId, item.equipment?.id, inspectionRecordId)
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
         }
     }
@@ -244,7 +261,7 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
         item.link.equipmentId?.toString() ?: "equip"
     }
 
-    // Outer gutter and indented background for equipment
+    // Outer gutter and indented background for equipment (use light green background)
     val baseLeft = 6.dp
     val baseRight = 8.dp
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -253,7 +270,7 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
         Box(modifier = Modifier
             .weight(1f)
             .padding(end = rightInsetEq)
-            .background(color = Color(0xFFEAF8EE), shape = RoundedCornerShape(8.dp))
+            .background(color = Color(0xFFEAF7EE), shape = RoundedCornerShape(8.dp))
         ) {
             Row(
                 modifier = Modifier
@@ -270,15 +287,88 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
                     modifier = Modifier
                         .size(20.dp)
                         .clickable {
-                            // navigate to thermal anomaly form with query params
+                            // navigate to thermal anomaly form to create a new record (thermographicId=null)
                             val p = plantId?.toString() ?: "null"
                             val e = item.link.equipmentId?.toString() ?: "null"
                             val r = inspectionRecordId?.toString() ?: "null"
-                            val route = "${NavRoutes.THERMAL_ANOMALY}/$p/$e/$r"
-                            navController.navigate(route)
+                            val rp = URLEncoder.encode(p, "UTF-8")
+                            val re = URLEncoder.encode(e, "UTF-8")
+                            val rr = URLEncoder.encode(r, "UTF-8")
+                            val route = "${NavRoutes.THERMAL_ANOMALY}?plantId=$rp&equipmentId=$re&inspectionRecordId=$rr&thermographicId=null"
+                            try { navController.navigate(route) } catch (ex: Exception) { android.util.Log.e("IRDetailScreen","Navigation failed for route=$route", ex); try { navController.navigate(NavRoutes.THERMOGRAMS) } catch (_: Exception) {} }
                         },
                     tint = MaterialTheme.colorScheme.primary
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnomalyComponentRow(
+    anomalyDisplay: DisplayAnomaly,
+    navController: NavHostController,
+    plantId: UUID?,
+    equipmentId: UUID?,
+    inspectionRecordId: UUID?
+) {
+    val rowHeight = 40.dp
+
+    val anomaly = anomalyDisplay.record
+
+    // Row background for components (slightly off-white for contrast) and badge color per condition
+    val rowBg = Color(0xFFF8F9FA)
+    val (labelText, badgeColor) = when (anomaly.condition) {
+        com.tech.thermography.android.data.local.entity.enumeration.ConditionType.IMMINENT_HIGH_RISK -> "Alto Risco Iminente" to Color(0xFFF8D7DA)
+        com.tech.thermography.android.data.local.entity.enumeration.ConditionType.HIGH_RISK -> "Alto Risco" to Color(0xFFFEEAEA)
+        com.tech.thermography.android.data.local.entity.enumeration.ConditionType.MEDIUM_RISK -> "Médio Risco" to Color(0xFFFCEFD8)
+        com.tech.thermography.android.data.local.entity.enumeration.ConditionType.LOW_RISK -> "Baixo Risco" to Color(0xFFE8F6FF)
+        else -> "Normal" to Color(0xFFDFF5E6)
+    }
+
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.width(32.dp)) // slight indent relative to equipment
+        Box(modifier = Modifier
+            .weight(1f)
+            .background(color = rowBg, shape = RoundedCornerShape(8.dp))
+        ) {
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .height(rowHeight)
+                .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Show component name if available, otherwise fallback to record name
+                val leftText = anomalyDisplay.componentName ?: anomaly.name
+                Text(text = leftText, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+
+                // Condition badge as small rounded box
+                Box(modifier = Modifier
+                    .background(color = badgeColor, shape = RoundedCornerShape(12.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(text = labelText, style = MaterialTheme.typography.labelSmall)
+                }
+
+                IconButton(onClick = {
+                    // navigate to thermal anomaly with this thermographic record id for editing
+                    val p = plantId?.toString() ?: "null"
+                    val e = equipmentId?.toString() ?: "null"
+                    val r = inspectionRecordId?.toString() ?: "null"
+                    val t = anomaly.id.toString()
+                    val rp = URLEncoder.encode(p, "UTF-8")
+                    val re = URLEncoder.encode(e, "UTF-8")
+                    val rr = URLEncoder.encode(r, "UTF-8")
+                    val rt = URLEncoder.encode(t, "UTF-8")
+                    val route = "${NavRoutes.THERMAL_ANOMALY}?plantId=$rp&equipmentId=$re&inspectionRecordId=$rr&thermographicId=$rt"
+                    try { navController.navigate(route) } catch (ex: Exception) { android.util.Log.e("IRDetailScreen","Navigation failed for route=$route", ex); try { navController.navigate(NavRoutes.THERMOGRAMS) } catch (_: Exception) {} }
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Editar",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

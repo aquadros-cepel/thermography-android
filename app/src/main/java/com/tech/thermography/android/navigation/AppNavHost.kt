@@ -141,19 +141,47 @@ fun AppNavHost() {
                 ThermalAnomalyForm()
             }
 
-            // Thermal Anomaly form with IDs as path segments: thermal_anomaly/{plantId}/{equipmentId}/{inspectionRecordId}
+            // Backward-compatible route (3 segments) -> thermographicId will be null
             composable("${NavRoutes.THERMAL_ANOMALY}/{plantId}/{equipmentId}/{inspectionRecordId}") { backStackEntry ->
                 val plantIdArg = backStackEntry.arguments?.getString("plantId")
                 val equipmentIdArg = backStackEntry.arguments?.getString("equipmentId")
                 val inspectionRecordIdArg = backStackEntry.arguments?.getString("inspectionRecordId")
+                fun parseUuidOrNull(s: String?): UUID? = try { if (s == null || s == "null") null else UUID.fromString(s) } catch (_: Exception) { null }
+                val plantId = parseUuidOrNull(plantIdArg)
+                val equipmentId = parseUuidOrNull(equipmentIdArg)
+                val inspectionRecordId = parseUuidOrNull(inspectionRecordIdArg)
+                ThermalAnomalyForm(plantId, equipmentId, inspectionRecordId, null, navController)
+            }
 
-                fun parseUuidOrNull(s: String?): UUID? = try { if (s == null || s == "null") null else UUID.fromString(s) } catch (e: Exception) { null }
+            // Thermal Anomaly form with IDs as path segments: thermal_anomaly/{plantId}/{equipmentId}/{inspectionRecordId}/{thermographicId}
+            composable("${NavRoutes.THERMAL_ANOMALY}/{plantId}/{equipmentId}/{inspectionRecordId}/{thermographicId}") { backStackEntry ->
+                val plantIdArg = backStackEntry.arguments?.getString("plantId")
+                val equipmentIdArg = backStackEntry.arguments?.getString("equipmentId")
+                val inspectionRecordIdArg = backStackEntry.arguments?.getString("inspectionRecordId")
+                val thermographicIdArg = backStackEntry.arguments?.getString("thermographicId")
+
+                fun parseUuidOrNull(s: String?): UUID? = try { if (s == null || s == "null") null else UUID.fromString(s) } catch (_: Exception) { null }
 
                 val plantId = parseUuidOrNull(plantIdArg)
                 val equipmentId = parseUuidOrNull(equipmentIdArg)
                 val inspectionRecordId = parseUuidOrNull(inspectionRecordIdArg)
+                val thermographicId = parseUuidOrNull(thermographicIdArg)
 
-                ThermalAnomalyForm(plantId, equipmentId, inspectionRecordId)
+                ThermalAnomalyForm(plantId, equipmentId, inspectionRecordId, thermographicId, navController)
+            }
+
+            // Query-style route to avoid path matching issues: thermal_anomaly?plantId=...&equipmentId=...&inspectionRecordId=...&thermographicId=...
+            composable("${NavRoutes.THERMAL_ANOMALY}?plantId={plantId}&equipmentId={equipmentId}&inspectionRecordId={inspectionRecordId}&thermographicId={thermographicId}") { backStackEntry ->
+                val plantIdArg = backStackEntry.arguments?.getString("plantId")
+                val equipmentIdArg = backStackEntry.arguments?.getString("equipmentId")
+                val inspectionRecordIdArg = backStackEntry.arguments?.getString("inspectionRecordId")
+                val thermographicIdArg = backStackEntry.arguments?.getString("thermographicId")
+                fun parseUuidOrNull(s: String?): UUID? = try { if (s == null || s == "null") null else UUID.fromString(s) } catch (_: Exception) { null }
+                val plantId = parseUuidOrNull(plantIdArg)
+                val equipmentId = parseUuidOrNull(equipmentIdArg)
+                val inspectionRecordId = parseUuidOrNull(inspectionRecordIdArg)
+                val thermographicId = parseUuidOrNull(thermographicIdArg)
+                ThermalAnomalyForm(plantId, equipmentId, inspectionRecordId, thermographicId, navController)
             }
 
             composable(NavRoutes.SETTINGS) {
@@ -162,12 +190,15 @@ fun AppNavHost() {
                 }
             }
 
-            // Inspection record detail route: inspection/{id}
-            composable("${NavRoutes.INSPECTION_RECORD_DETAIL}/{id}") { backStackEntry ->
+            // Inspection record detail route: inspection/{id} with optional expandEquipmentId query
+            composable("${NavRoutes.INSPECTION_RECORD_DETAIL}/{id}?expandEquipmentId={expandEquipmentId}") { backStackEntry ->
                 val idArg = backStackEntry.arguments?.getString("id")
-                val uuid = try { java.util.UUID.fromString(idArg) } catch (_: Exception) { null }
+                val expandArg = backStackEntry.arguments?.getString("expandEquipmentId")
+                fun parseUuidOrNull(s: String?): UUID? = try { if (s == null || s == "null") null else UUID.fromString(s) } catch (_: Exception) { null }
+                val uuid = parseUuidOrNull(idArg)
+                val expandUuid = parseUuidOrNull(expandArg)
                 if (uuid != null) {
-                    com.tech.thermography.android.ui.inspection_report.InspectionRecordDetailScreen(recordId = uuid, navController = navController)
+                    com.tech.thermography.android.ui.inspection_report.InspectionRecordDetailScreen(recordId = uuid, navController = navController, expandToEquipmentId = expandUuid)
                 } else {
                     // show fallback screen
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

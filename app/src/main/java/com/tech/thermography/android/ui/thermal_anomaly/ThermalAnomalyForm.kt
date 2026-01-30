@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 import com.tech.thermography.android.ui.components.AppOutlinedField
 import com.tech.thermography.android.ui.components.AppDatePickerField
@@ -86,15 +87,45 @@ fun ThermalAnomalyForm(
     plantId: UUID? = null,
     equipmentId: UUID? = null,
     inspectionRecordId: UUID? = null,
+    thermographicId: UUID? = null,
+    navController: NavHostController? = null,
     viewModel: ThermalAnomalyViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // If we received IDs via navigation, select them on startup by dispatching ID-based events
+    // If we received a thermographicId (editing), load it first so isEditing is set before plant selection
+    LaunchedEffect(thermographicId) {
+        thermographicId?.let { viewModel.onEvent(ThermalAnomalyEvent.ThermographicSelectedById(it)) }
+    }
+
+    // Then process plant/equipment/inspection selection. Processing thermographicId first ensures
+    // that when navigating to edit an existing record we won't auto-generate/overwrite the recordName.
     LaunchedEffect(plantId, equipmentId, inspectionRecordId) {
         plantId?.let { viewModel.onEvent(ThermalAnomalyEvent.PlantSelectedById(it)) }
         equipmentId?.let { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelectedById(it)) }
         inspectionRecordId?.let { viewModel.onEvent(ThermalAnomalyEvent.InspectionRecordSelectedById(it)) }
+    }
+
+    // When saved, navigate to InspectionRecordDetail and request it to expand to the equipment
+    LaunchedEffect(uiState.isSaved) {
+        if (uiState.isSaved && navController != null) {
+            val recordId = uiState.selectedInspectionRecord?.id?.toString()
+            val equipmentId = uiState.selectedEquipment?.id?.toString()
+            if (recordId != null && equipmentId != null) {
+                val r = java.net.URLEncoder.encode(recordId, "UTF-8")
+                val e = java.net.URLEncoder.encode(equipmentId, "UTF-8")
+                val route = "${com.tech.thermography.android.navigation.NavRoutes.INSPECTION_RECORD_DETAIL}/$r?expandEquipmentId=$e"
+                try {
+                    navController.navigate(route) {
+                        popUpTo(com.tech.thermography.android.navigation.NavRoutes.THERMOGRAMS) { inclusive = true }
+                    }
+                } catch (ex: Exception) {
+                    try { navController.popBackStack() } catch (_: Exception) {}
+                }
+            } else {
+                try { navController.popBackStack() } catch (_: Exception) {}
+            }
+        }
     }
 
     Column(

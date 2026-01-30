@@ -44,5 +44,7 @@ data class ThermalAnomalyUiState(
     // UI state
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    // Whether the form is editing an existing thermographic record
+    val isEditing: Boolean = false
 )

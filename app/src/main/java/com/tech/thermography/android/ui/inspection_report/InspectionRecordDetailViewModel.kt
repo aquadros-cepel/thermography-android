@@ -18,14 +18,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
 // Wrapper to combine link entity with loaded equipment entity
+data class DisplayAnomaly(
+    val record: com.tech.thermography.android.data.local.entity.ThermographicInspectionRecordEntity,
+    val componentName: String?
+)
+
 data class GroupEquipmentItem(
     val link: InspectionRecordGroupEquipmentEntity,
-    val equipment: EquipmentEntity?
+    val equipment: EquipmentEntity?,
+    val anomalies: List<DisplayAnomaly> = emptyList()
 )
 
 data class InspectionRecordDetailUiState(
@@ -42,11 +49,49 @@ class InspectionRecordDetailViewModel @Inject constructor(
     private val groupRepository: InspectionRecordGroupRepository,
     private val groupEquipmentRepository: InspectionRecordGroupEquipmentRepository,
     private val plantRepository: PlantRepository,
-    private val equipmentRepository: EquipmentRepository
+    private val equipmentRepository: EquipmentRepository,
+    private val thermographicRepository: com.tech.thermography.android.data.local.repository.ThermographicInspectionRecordRepository,
+    private val equipmentComponentRepository: com.tech.thermography.android.data.local.repository.EquipmentComponentRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InspectionRecordDetailUiState())
     val uiState: StateFlow<InspectionRecordDetailUiState> = _uiState.asStateFlow()
+
+    // Exposed mutable set of group ids that should be expanded in the tree
+    private val _expandedGroupIds = MutableStateFlow<Set<UUID>>(emptySet())
+    val expandedGroupIds: StateFlow<Set<UUID>> = _expandedGroupIds.asStateFlow()
+
+    // Optional equipment id that should be brought into view after expansion
+    private val _expandedTargetEquipmentId = MutableStateFlow<UUID?>(null)
+    val expandedTargetEquipmentId: StateFlow<UUID?> = _expandedTargetEquipmentId.asStateFlow()
+
+    // Given an equipmentId, find the group(s) that contain it and expand the path from root to that group
+    fun expandToEquipment(equipmentId: UUID) {
+        viewModelScope.launch {
+            try {
+                val allGroupsRaw = groupRepository.getAllInspectionRecordGroups().first()
+                // find link(s) that reference this equipment
+                val links = groupEquipmentRepository.getInspectionRecordGroupEquipmentsWithEquipmentByGroupIdsOnce(allGroupsRaw.map { it.id })
+                val targetGroupIds = links.filter { it.link.equipmentId == equipmentId }.mapNotNull { it.link.inspectionRecordGroupId }
+                if (targetGroupIds.isEmpty()) return@launch
+
+                // For the first match, build ancestor chain
+                val target = targetGroupIds.first()
+                val idToGroup = allGroupsRaw.associateBy { it.id }
+                val ancestors = mutableListOf<UUID>()
+                var curr: UUID? = target
+                while (curr != null) {
+                    ancestors.add(curr)
+                    curr = idToGroup[curr]?.parentGroupId
+                }
+                _expandedGroupIds.value = ancestors.toSet()
+                // set the target equipment id so UI can request bringIntoView
+                _expandedTargetEquipmentId.value = equipmentId
+            } catch (ex: Exception) {
+                // ignore
+            }
+        }
+    }
 
     fun load(recordId: UUID) {
         viewModelScope.launch {
@@ -97,28 +142,59 @@ class InspectionRecordDetailViewModel @Inject constructor(
                     groupEquipmentRepository.getInspectionRecordGroupEquipmentsWithEquipmentByGroupIdsOnce(includedGroupIds)
                 } else emptyList()
 
-                val groupedItems: Map<UUID, List<GroupEquipmentItem>> = linksWithEquipment.groupBy { it.link.inspectionRecordGroupId ?: UUID(0,0) }
-                    .mapValues { entry ->
-                        entry.value.map { rel ->
-                            GroupEquipmentItem(link = rel.link, equipment = rel.equipment)
+                // Prepare base grouping of link+equipment
+                val groupedLinksByGroupId: Map<UUID, List<Pair<InspectionRecordGroupEquipmentEntity, EquipmentEntity?>>> = linksWithEquipment.groupBy { it.link.inspectionRecordGroupId ?: UUID(0,0) }
+                    .mapValues { entry -> entry.value.map { rel -> Pair(rel.link, rel.equipment) } }
+
+                // If we have a plantId, collect anomalies reactively and update UI state whenever anomalies change
+                if (record?.plantId != null) {
+                    viewModelScope.launch {
+                        thermographicRepository.getThermographicInspectionRecordsByPlantId(record.plantId).collect { allAnomalies ->
+                            val anomaliesByEquipment = allAnomalies.groupBy { it.equipmentId }
+
+                            val groupedItems = groupedLinksByGroupId.mapValues { entry ->
+                                entry.value.map { (link, eq) ->
+                                    val anomalies = eq?.id?.let { anomaliesByEquipment[it] } ?: emptyList()
+                                    // resolve component names for each anomaly record
+                                    val displayAnomalies = anomalies.map { rec ->
+                                        var compName: String? = null
+                                        try {
+                                            rec.componentId?.let { cid ->
+                                                val comp = equipmentComponentRepository.getEquipmentComponentById(cid)
+                                                compName = comp?.name ?: comp?.code
+                                            }
+                                        } catch (_: Exception) { }
+                                        DisplayAnomaly(record = rec, componentName = compName)
+                                    }
+                                    GroupEquipmentItem(link = link, equipment = eq, anomalies = displayAnomalies)
+                                }
+                            }
+
+                            _uiState.update {
+                                it.copy(
+                                    record = record,
+                                    plant = plant,
+                                    allGroups = groups,
+                                    rootGroups = root,
+                                    groupEquipments = groupedItems
+                                )
+                            }
                         }
                     }
-
-                // Log equipment counts for included groups
-                groups.forEach { g ->
-                    val count = groupedItems[g.id]?.size ?: 0
-                    if (count > 0) {
-                        Log.d("IRDetailVM", "group=${g.id} equipmentCount=$count equipmentIds=${groupedItems[g.id]?.map { it.link.id }}")
+                } else {
+                    // no plant -> set grouped items without anomalies
+                    val groupedItems = groupedLinksByGroupId.mapValues { entry ->
+                        entry.value.map { (link, eq) -> GroupEquipmentItem(link = link, equipment = eq, anomalies = emptyList()) }
                     }
-                }
 
-                _uiState.value = InspectionRecordDetailUiState(
-                    record = record,
-                    plant = plant,
-                    allGroups = groups,
-                    rootGroups = root,
-                    groupEquipments = groupedItems
-                )
+                    _uiState.value = InspectionRecordDetailUiState(
+                        record = record,
+                        plant = plant,
+                        allGroups = groups,
+                        rootGroups = root,
+                        groupEquipments = groupedItems
+                    )
+                }
             } catch (ex: Exception) {
                 Log.e("IRDetailVM", "Error loading inspection record detail", ex)
             }
