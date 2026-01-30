@@ -18,6 +18,9 @@ interface ROIDao {
     @Query("SELECT * FROM roi WHERE id = :id")
     suspend fun getROIById(id: UUID): ROIEntity?
 
+    @Query("SELECT * FROM roi WHERE thermogramId = :thermogramId ORDER BY label")
+    fun getRoisByThermogramId(thermogramId: UUID): Flow<List<ROIEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertROIs(rois: List<ROIEntity>)
     

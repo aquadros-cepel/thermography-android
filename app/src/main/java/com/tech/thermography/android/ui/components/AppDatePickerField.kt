@@ -54,9 +54,9 @@ fun AppDatePickerField(
     }
 
     OutlinedTextField(
-        value = selectedDate?.let { 
-            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it) 
-        } ?: "",
+        value = selectedDate?.let {
+            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
+        } ?: "--/--/----",
         onValueChange = {},
         readOnly = true,
         label = { Text(label) },

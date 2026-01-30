@@ -23,7 +23,10 @@ class EquipmentComponentTemperatureLimitsRepository @Inject constructor(
     suspend fun getEquipmentComponentTemperatureLimitsById(id: UUID): EquipmentComponentTemperatureLimitsEntity? = 
         equipmentComponentTemperatureLimitsDao.getEquipmentComponentTemperatureLimitsById(id)
 
-    suspend fun insertEquipmentComponentTemperatureLimits(equipmentComponentTemperatureLimits: EquipmentComponentTemperatureLimitsEntity) = 
+    suspend fun getEquipmentComponentTemperatureLimitsByComponentId(componentId: UUID): EquipmentComponentTemperatureLimitsEntity? =
+        equipmentComponentTemperatureLimitsDao.getEquipmentComponentTemperatureLimitsByComponentId(componentId)
+
+    suspend fun insertEquipmentComponentTemperatureLimits(equipmentComponentTemperatureLimits: EquipmentComponentTemperatureLimitsEntity) =
         equipmentComponentTemperatureLimitsDao.insertEquipmentComponentTemperatureLimits(equipmentComponentTemperatureLimits)
 
     suspend fun updateEquipmentComponentTemperatureLimits(equipmentComponentTemperatureLimits: EquipmentComponentTemperatureLimitsEntity) = 

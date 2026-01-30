@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,15 +26,9 @@ import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 import com.tech.thermography.android.ui.components.AppOutlinedField
 import com.tech.thermography.android.ui.components.AppDatePickerField
 import com.tech.thermography.android.ui.components.AppExposedDropdownMenu
-import com.tech.thermography.android.ui.thermal_anomaly.ThermalAnomalyEvent
+import com.tech.thermography.android.ui.thermal_anomaly.components.EmbeddedThermogramSection
+import com.tech.thermography.android.ui.thermogram.ThermogramMode
 
-fun ConditionType.displayName(): String = when (this) {
-    ConditionType.LOW_RISK -> "Baixo Risco"
-    ConditionType.MEDIUM_RISK -> "Médio Risco"
-    ConditionType.HIGH_RISK -> "Alto Risco"
-    ConditionType.IMMINENT_HIGH_RISK -> "Crítico"
-    ConditionType.NORMAL -> "Normal"
-}
 
 @Composable
 fun RegistrationFields(
@@ -48,7 +44,7 @@ fun RegistrationFields(
     )
 
     AppExposedDropdownMenu(
-        label = "LOCALIZAÇÃO",
+        label = "LOCALIZAÇÃO DO EQUIPAMENTO",
         options = uiState.filteredEquipments,
         selectedOption = uiState.selectedEquipment,
         onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelected(it)) },
@@ -97,15 +93,103 @@ fun ThermalAnomalyForm(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Text("Relatório de Registro Termográfico", style = MaterialTheme.typography.headlineSmall)
+        Text("Relatório Registro Termográfico", style = MaterialTheme.typography.headlineSmall)
 
         // --- ROW SUPERIOR (Registration Data) ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RegistrationFields(uiState, viewModel)
         }
 
+        // --- ROW DO MEIO (THERMOGRAM SCREEN) ---
+//        if (uiState.selectedEquipment != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(vertical = 0.dp)) {
+                    EmbeddedThermogramSection(
+                        thermogramId = uiState.thermogramId,
+                        thermogram = uiState.thermogram,
+                        rois = uiState.thermogramRois,
+                        selectedRoi = uiState.selectedRoi,
+                        selectedRefRoi = uiState.selectedRefRoi,
+                        thermogramImageUri = uiState.thermogramImageUri,
+                        mode = ThermogramMode.EDIT,
+                        onRoiSelected = { roi ->
+                            viewModel.onEvent(ThermalAnomalyEvent.SelectRoi(roi))
+                        },
+                        onRefRoiSelected = { roi ->
+                            viewModel.onEvent(ThermalAnomalyEvent.SelectRefRoi(roi))
+                        },
+                        onImageSelected = { uri ->
+                            viewModel.onEvent(ThermalAnomalyEvent.UpdateThermogramImage(uri))
+                        },
+                        temperatureDifference = viewModel.calculateTemperatureDifference()
+                    )
+                }
+            }
+//        }
+
         // --- ROW INFERIOR (Analysis Data) ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppExposedDropdownMenu(
+                    label = "COMPONENTE",
+                    options = uiState.availableComponents,
+                    selectedOption = uiState.selectedComponent,
+                    onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.ComponentSelected(it)) },
+                    optionLabelProvider = { it.name },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // CONDITION row alone
+            val conditionOptions = listOf(
+                ConditionType.NORMAL,
+                ConditionType.LOW_RISK,
+                ConditionType.MEDIUM_RISK,
+                ConditionType.HIGH_RISK,
+                ConditionType.IMMINENT_HIGH_RISK
+            )
+            val conditionLabels = mapOf(
+                ConditionType.NORMAL to "Normal",
+                ConditionType.LOW_RISK to "Baixo Risco",
+                ConditionType.MEDIUM_RISK to "Médio Risco",
+                ConditionType.HIGH_RISK to "Alto Risco",
+                ConditionType.IMMINENT_HIGH_RISK to "Alto Risco Iminente"
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppExposedDropdownMenu(
+                    label = "CONDIÇÃO",
+                    options = conditionOptions,
+                    selectedOption = uiState.condition,
+                    onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCondition(it)) },
+                    optionLabelProvider = { conditionLabels[it] ?: it.name },
+                    modifier = Modifier.fillMaxWidth(),
+                    isCritical = (uiState.condition == ConditionType.IMMINENT_HIGH_RISK)
+                )
+            }
+
+            // Dates row: EXECUÇÃO and PRÓXIMO MONITORAMENTO
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                AppDatePickerField(
+                    label = "MONITORAMENTO",
+                    selectedDate = uiState.nextMonitoring,
+                    onDateSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateNextMonitoring(it)) },
+                    modifier = Modifier.weight(1f)
+                )
+
+                AppDatePickerField(
+                    label = "EXECUÇÃO",
+                    selectedDate = uiState.deadlineExecution,
+                    onDateSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateDeadline(it)) },
+                    modifier = Modifier.weight(1f)
+                )
+
+            }
+
             AppOutlinedField(
                 value = uiState.analysisDescription,
                 onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateAnalysis(it)) },
@@ -116,38 +200,6 @@ fun ThermalAnomalyForm(
                     .height(120.dp)
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val conditionOptions = listOf(
-                    ConditionType.NORMAL,
-                    ConditionType.LOW_RISK,
-                    ConditionType.MEDIUM_RISK,
-                    ConditionType.HIGH_RISK,
-                    ConditionType.IMMINENT_HIGH_RISK
-                )
-                val conditionLabels = mapOf(
-                    ConditionType.NORMAL to "Normal",
-                    ConditionType.LOW_RISK to "Baixo Risco",
-                    ConditionType.MEDIUM_RISK to "Médio Risco",
-                    ConditionType.HIGH_RISK to "Alto Risco",
-                    ConditionType.IMMINENT_HIGH_RISK to "Crítico"
-                )
-                AppExposedDropdownMenu(
-                    label = "CONDIÇÃO",
-                    options = conditionOptions,
-                    selectedOption = uiState.condition,
-                    onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCondition(it)) },
-                    optionLabelProvider = { conditionLabels[it] ?: it.name },
-                    modifier = Modifier.weight(1f)
-                )
-
-                AppDatePickerField(
-                    label = "PRAZO EXECUÇÃO",
-                    selectedDate = uiState.deadlineExecution,
-                    onDateSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateDeadline(it)) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
             AppOutlinedField(
                 value = uiState.recommendations,
                 onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateRecommendations(it)) },
@@ -155,7 +207,7 @@ fun ThermalAnomalyForm(
                 maxLines = 5,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(140.dp)
             )
         }
 

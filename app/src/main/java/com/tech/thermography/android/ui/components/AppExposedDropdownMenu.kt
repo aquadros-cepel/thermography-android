@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,7 +34,8 @@ fun <T> AppExposedDropdownMenu(
     onOptionSelected: (T) -> Unit,
     optionLabelProvider: (T) -> String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true // NOVO: permite desabilitar o campo
+    enabled: Boolean = true, // NOVO: permite desabilitar o campo
+    isCritical: Boolean = false // NOVO: quando true, aplica estilo crítico (vermelho + bold)
 ) {
     var expanded by remember { mutableStateOf(false) }
     val currentDensity = LocalDensity.current
@@ -65,8 +67,8 @@ fun <T> AppExposedDropdownMenu(
     )
 
     // Cores do tema
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val textColor = MaterialTheme.colorScheme.onSurface
+    val labelColor = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    val textColor = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     val disabledBg = Color(0xFFF4F6F8)
     val disabledText = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
     val fieldBg = MaterialTheme.colorScheme.background
@@ -91,12 +93,12 @@ fun <T> AppExposedDropdownMenu(
                         onValueChange = {},
                         readOnly = true,
                         enabled = enabled,
-                        label = { Text(label, color = if (enabled) labelColor else disabledText) },
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (enabled) textColor else disabledText),
+                        label = { Text(label, color = if (enabled) labelColor else disabledText, fontWeight = if (isCritical) FontWeight.Bold else FontWeight.Normal) },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (enabled) textColor else disabledText, fontWeight = if (isCritical) FontWeight.Bold else FontWeight.Normal),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) },
                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                            focusedBorderColor = MaterialTheme.colorScheme.outline,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedBorderColor = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                            unfocusedBorderColor = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                             disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                             focusedLabelColor = labelColor,
                             unfocusedLabelColor = labelColor,

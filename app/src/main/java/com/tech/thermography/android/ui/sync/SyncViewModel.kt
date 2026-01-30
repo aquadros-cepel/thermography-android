@@ -61,13 +61,13 @@ class SyncViewModel @Inject constructor(
 
     fun startSync() {
         viewModelScope.launch(Dispatchers.IO) {
-            appDatabase.clearAllTables()
+        //appDatabase.clearAllTables()
             // 1. SINCRONIZA DADOS DA API (EM ORDEM)
             runDataSync()
 
             // 2. SINCRONIZA TILES DO MAPA (APÓS DADOS)
 //            mapTask?.let { runMapSync(it) }
-//            _uiState.update { it.copy(isSyncFinished = true) }
+            _uiState.update { it.copy(isSyncFinished = true) }
         }
     }
     

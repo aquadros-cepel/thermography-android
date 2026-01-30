@@ -21,6 +21,9 @@ class ROIRepository @Inject constructor(
 
     suspend fun getROIById(id: UUID): ROIEntity? = roiDao.getROIById(id)
 
+    fun getRoisByThermogramId(thermogramId: UUID): Flow<List<ROIEntity>> =
+        roiDao.getRoisByThermogramId(thermogramId)
+
     suspend fun insertROI(roi: ROIEntity) = roiDao.insertROI(roi)
 
     suspend fun updateROI(roi: ROIEntity) = roiDao.updateROI(roi)

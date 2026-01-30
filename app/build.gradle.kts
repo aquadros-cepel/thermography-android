@@ -20,6 +20,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -96,6 +97,13 @@ dependencies {
     // Material Design 3
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
 
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // SDKs nativos da FLIR (arquivos .aar da pasta libs)
+    implementation(files("libs/androidsdk-release.aar"))
+    implementation(files("libs/thermalsdk-release.aar"))
+
     // Tests...
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -105,5 +113,3 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
-
-

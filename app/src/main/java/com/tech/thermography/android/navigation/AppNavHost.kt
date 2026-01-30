@@ -111,7 +111,7 @@ fun AppNavHost() {
             composable(NavRoutes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { 
-                        navController.navigate(NavRoutes.SYNC) {
+                        navController.navigate(NavRoutes.THERMOGRAMS) {
                             popUpTo(NavRoutes.LOGIN) { inclusive = true }
                         }
                     },

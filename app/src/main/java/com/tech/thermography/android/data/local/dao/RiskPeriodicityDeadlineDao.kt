@@ -15,6 +15,9 @@ interface RiskPeriodicityDeadlineDao {
     @Query("SELECT * FROM risk_periodicity_deadline ORDER BY name")
     fun getAllRiskPeriodicityDeadlines(): Flow<List<RiskPeriodicityDeadlineEntity>>
 
+    @Query("SELECT * FROM risk_periodicity_deadline ORDER BY name")
+    suspend fun getAllRiskPeriodicityDeadlinesOnce(): List<RiskPeriodicityDeadlineEntity>
+
     @Query("SELECT * FROM risk_periodicity_deadline WHERE id = :id")
     suspend fun getRiskPeriodicityDeadlineById(id: UUID): RiskPeriodicityDeadlineEntity?
 
@@ -29,4 +32,7 @@ interface RiskPeriodicityDeadlineDao {
     
     @Delete
     suspend fun deleteRiskPeriodicityDeadline(riskPeriodicityDeadline: RiskPeriodicityDeadlineEntity)
+
+    @Query("DELETE FROM risk_periodicity_deadline")
+    suspend fun deleteAllRiskPeriodicityDeadlines()
 }

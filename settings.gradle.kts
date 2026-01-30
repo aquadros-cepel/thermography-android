@@ -16,6 +16,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Repositório local para arquivos .aar da FLIR
+        flatDir {
+            dirs("app/libs")
+        }
     }
 }
 
