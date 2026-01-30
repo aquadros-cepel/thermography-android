@@ -9,5 +9,7 @@ object NavRoutes {
     // Novas rotas para a Bottom Bar
     const val ROUTES = "routes"
     const val THERMOGRAMS = "thermograms"
+    const val THERMAL_ANOMALY = "thermal_anomaly"
     const val SETTINGS = "settings"
+    const val INSPECTION_RECORD_DETAIL = "inspection"
 }

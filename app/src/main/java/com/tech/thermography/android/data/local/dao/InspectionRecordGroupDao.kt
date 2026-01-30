@@ -16,6 +16,9 @@ interface InspectionRecordGroupDao {
     @Query("SELECT * FROM inspection_record_group WHERE inspectionRecordId = :recordId ORDER BY orderIndex")
     fun getGroupsByRecordId(recordId: UUID): Flow<List<InspectionRecordGroupEntity>>
 
+    @Query("SELECT * FROM inspection_record_group WHERE inspectionRecordId = :recordId ORDER BY orderIndex")
+    suspend fun getGroupsByRecordIdOnce(recordId: UUID): List<InspectionRecordGroupEntity>
+
     @Query("SELECT * FROM inspection_record_group WHERE parentGroupId = :parentId ORDER BY orderIndex")
     fun getSubGroupsByParentId(parentId: UUID): Flow<List<InspectionRecordGroupEntity>>
 

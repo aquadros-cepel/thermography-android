@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -28,6 +29,7 @@ import com.tech.thermography.android.ui.components.AppDatePickerField
 import com.tech.thermography.android.ui.components.AppExposedDropdownMenu
 import com.tech.thermography.android.ui.thermal_anomaly.components.EmbeddedThermogramSection
 import com.tech.thermography.android.ui.thermogram.ThermogramMode
+import java.util.UUID
 
 
 @Composable
@@ -81,9 +83,19 @@ fun RegistrationFields(
 
 @Composable
 fun ThermalAnomalyForm(
+    plantId: UUID? = null,
+    equipmentId: UUID? = null,
+    inspectionRecordId: UUID? = null,
     viewModel: ThermalAnomalyViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // If we received IDs via navigation, select them on startup by dispatching ID-based events
+    LaunchedEffect(plantId, equipmentId, inspectionRecordId) {
+        plantId?.let { viewModel.onEvent(ThermalAnomalyEvent.PlantSelectedById(it)) }
+        equipmentId?.let { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelectedById(it)) }
+        inspectionRecordId?.let { viewModel.onEvent(ThermalAnomalyEvent.InspectionRecordSelectedById(it)) }
+    }
 
     Column(
         modifier = Modifier

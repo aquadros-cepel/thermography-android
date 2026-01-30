@@ -83,6 +83,36 @@ class ThermalAnomalyViewModel @Inject constructor(
 
     fun onEvent(event: ThermalAnomalyEvent) {
         when (event) {
+            is ThermalAnomalyEvent.PlantSelectedById -> {
+                viewModelScope.launch {
+                    try {
+                        val plant = plantRepository.getPlantById(event.plantId)
+                        if (plant != null) handlePlantSelected(plant)
+                    } catch (e: Exception) {
+                        Log.w("ThermAnomVM", "PlantSelectedById failed: ${e.message}")
+                    }
+                }
+            }
+            is ThermalAnomalyEvent.EquipmentSelectedById -> {
+                viewModelScope.launch {
+                    try {
+                        val equipment = equipmentRepository.getEquipmentById(event.equipmentId)
+                        if (equipment != null) handleEquipmentSelected(equipment)
+                    } catch (e: Exception) {
+                        Log.w("ThermAnomVM", "EquipmentSelectedById failed: ${e.message}")
+                    }
+                }
+            }
+            is ThermalAnomalyEvent.InspectionRecordSelectedById -> {
+                viewModelScope.launch {
+                    try {
+                        val record = inspectionRecordRepository.getInspectionRecordById(event.recordId)
+                        if (record != null) _uiState.update { it.copy(selectedInspectionRecord = record) }
+                    } catch (e: Exception) {
+                        Log.w("ThermAnomVM", "InspectionRecordSelectedById failed: ${e.message}")
+                    }
+                }
+            }
             is ThermalAnomalyEvent.PlantSelected -> handlePlantSelected(event.plant)
             is ThermalAnomalyEvent.EquipmentSelected -> handleEquipmentSelected(event.equipment)
             is ThermalAnomalyEvent.ComponentSelected -> handleComponentSelected(event.component)
@@ -505,6 +535,33 @@ class ThermalAnomalyViewModel @Inject constructor(
             // on error, don't crash; set error message
             Log.e("SyncDebug", "applyRiskPeriodicity error: ${e.message}")
             _uiState.update { it.copy(error = "Erro ao carregar periodicidade: ${e.message}") }
+        }
+    }
+
+    /**
+     * Helper to preselect plant, equipment and inspectionRecord by their IDs when navigating from other screens.
+     */
+    fun selectInitialIds(plantId: UUID?, equipmentId: UUID?, inspectionRecordId: UUID?) {
+        viewModelScope.launch {
+            try {
+                if (plantId != null) {
+                    val plant = plantRepository.getPlantById(plantId)
+                    if (plant != null) onEvent(ThermalAnomalyEvent.PlantSelected(plant))
+                }
+
+                if (equipmentId != null) {
+                    val equipment = equipmentRepository.getEquipmentById(equipmentId)
+                    if (equipment != null) onEvent(ThermalAnomalyEvent.EquipmentSelected(equipment))
+                }
+
+                if (inspectionRecordId != null) {
+                    // try to find the inspection record in available filteredInspectionRecords or repository
+                    val possible = inspectionRecordRepository.getInspectionRecordById(inspectionRecordId)
+                    if (possible != null) onEvent(ThermalAnomalyEvent.InspectionRecordSelected(possible))
+                }
+            } catch (ex: Exception) {
+                Log.w("ThermAnomVM", "Failed to preselect IDs: ${ex.message}")
+            }
         }
     }
 }

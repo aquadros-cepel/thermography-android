@@ -52,7 +52,8 @@ import java.util.UUID
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun InspectionRecordsScreen(
-    viewModel: InspectionRecordsViewModel = hiltViewModel()
+    viewModel: InspectionRecordsViewModel = hiltViewModel(),
+    onViewRouteClick: (java.util.UUID) -> Unit = {}
 ) {
     val plants by viewModel.plants.collectAsState()
     val filteredPlants by viewModel.filteredPlants.collectAsState()
@@ -139,9 +140,7 @@ fun InspectionRecordsScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     InspectionRecordsList(
                         inspectionRecords = filteredInspectionRecords,
-                        onViewRouteClick = { record ->
-                            // TODO: Implementar navegação para a rota específica
-                        }
+                        onViewRouteClick = { record -> onViewRouteClick(record.id) }
                     )
                 }
             }

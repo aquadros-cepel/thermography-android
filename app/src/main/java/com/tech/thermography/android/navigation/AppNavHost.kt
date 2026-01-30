@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.LinkedCamera
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -39,6 +38,7 @@ import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
 import com.tech.thermography.android.ui.thermal_anomaly.ThermalAnomalyForm
+import java.util.UUID
 
 @Composable
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMotionApi::class)
@@ -132,16 +132,47 @@ fun AppNavHost() {
             }
 
             composable(NavRoutes.INSPECTION_RECORDS) {
-                InspectionRecordsScreen()
+                InspectionRecordsScreen(onViewRouteClick = { id ->
+                    navController.navigate("${NavRoutes.INSPECTION_RECORD_DETAIL}/$id")
+                })
             }
 
             composable(NavRoutes.THERMOGRAMS) {
                 ThermalAnomalyForm()
             }
 
+            // Thermal Anomaly form with IDs as path segments: thermal_anomaly/{plantId}/{equipmentId}/{inspectionRecordId}
+            composable("${NavRoutes.THERMAL_ANOMALY}/{plantId}/{equipmentId}/{inspectionRecordId}") { backStackEntry ->
+                val plantIdArg = backStackEntry.arguments?.getString("plantId")
+                val equipmentIdArg = backStackEntry.arguments?.getString("equipmentId")
+                val inspectionRecordIdArg = backStackEntry.arguments?.getString("inspectionRecordId")
+
+                fun parseUuidOrNull(s: String?): UUID? = try { if (s == null || s == "null") null else UUID.fromString(s) } catch (e: Exception) { null }
+
+                val plantId = parseUuidOrNull(plantIdArg)
+                val equipmentId = parseUuidOrNull(equipmentIdArg)
+                val inspectionRecordId = parseUuidOrNull(inspectionRecordIdArg)
+
+                ThermalAnomalyForm(plantId, equipmentId, inspectionRecordId)
+            }
+
             composable(NavRoutes.SETTINGS) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Tela de Configurações")
+                }
+            }
+
+            // Inspection record detail route: inspection/{id}
+            composable("${NavRoutes.INSPECTION_RECORD_DETAIL}/{id}") { backStackEntry ->
+                val idArg = backStackEntry.arguments?.getString("id")
+                val uuid = try { java.util.UUID.fromString(idArg) } catch (_: Exception) { null }
+                if (uuid != null) {
+                    com.tech.thermography.android.ui.inspection_report.InspectionRecordDetailScreen(recordId = uuid, navController = navController)
+                } else {
+                    // show fallback screen
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Registro inválido")
+                    }
                 }
             }
         }

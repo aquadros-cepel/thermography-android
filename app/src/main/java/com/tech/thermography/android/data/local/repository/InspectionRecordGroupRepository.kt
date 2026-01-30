@@ -21,6 +21,8 @@ class InspectionRecordGroupRepository @Inject constructor(
 
     suspend fun getInspectionRecordGroupById(id: UUID): InspectionRecordGroupEntity? = inspectionRecordGroupDao.getInspectionRecordGroupById(id)
 
+    suspend fun getGroupsByInspectionRecordIdOnce(recordId: UUID): List<InspectionRecordGroupEntity> = inspectionRecordGroupDao.getGroupsByRecordIdOnce(recordId)
+
     suspend fun insertInspectionRecordGroup(inspectionRecordGroup: InspectionRecordGroupEntity) = inspectionRecordGroupDao.insertInspectionRecordGroup(inspectionRecordGroup)
 
     suspend fun deleteInspectionRecordGroup(inspectionRecordGroup: InspectionRecordGroupEntity) = inspectionRecordGroupDao.deleteInspectionRecordGroup(inspectionRecordGroup)

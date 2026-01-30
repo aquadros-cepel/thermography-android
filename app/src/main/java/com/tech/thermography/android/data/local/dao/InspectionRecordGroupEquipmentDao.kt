@@ -1,14 +1,16 @@
 package com.tech.thermography.android.data.local.dao
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEquipmentEntity
+import com.tech.thermography.android.data.local.entity.EquipmentEntity
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
+
+data class InspectionRecordGroupEquipmentWithEquipment(
+    @Embedded val link: InspectionRecordGroupEquipmentEntity,
+    @Relation(parentColumn = "equipmentId", entityColumn = "id")
+    val equipment: EquipmentEntity?
+)
 
 @Dao
 interface InspectionRecordGroupEquipmentDao {
@@ -20,6 +22,9 @@ interface InspectionRecordGroupEquipmentDao {
 
     @Query("SELECT * FROM inspection_record_group_equipment WHERE inspectionRecordGroupId = :groupId ORDER BY orderIndex")
     fun getEquipmentsByGroupId(groupId: UUID): Flow<List<InspectionRecordGroupEquipmentEntity>>
+
+    @Query("SELECT * FROM inspection_record_group_equipment WHERE inspectionRecordGroupId = :groupId ORDER BY orderIndex")
+    suspend fun getEquipmentsByGroupIdOnce(groupId: UUID): List<InspectionRecordGroupEquipmentEntity>
 
     @Query("SELECT * FROM inspection_record_group_equipment WHERE equipmentId = :equipmentId")
     fun getGroupEquipmentsByEquipmentId(equipmentId: UUID): Flow<List<InspectionRecordGroupEquipmentEntity>>
@@ -38,4 +43,8 @@ interface InspectionRecordGroupEquipmentDao {
     
     @Delete
     suspend fun deleteInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity)
+
+    @Transaction
+    @Query("SELECT * FROM inspection_record_group_equipment WHERE inspectionRecordGroupId IN (:groupIds) ORDER BY orderIndex")
+    suspend fun getInspectionRecordGroupEquipmentsWithEquipmentByGroupIdsOnce(groupIds: List<UUID>): List<InspectionRecordGroupEquipmentWithEquipment>
 }

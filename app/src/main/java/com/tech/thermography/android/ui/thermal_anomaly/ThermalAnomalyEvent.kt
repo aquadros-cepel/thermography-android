@@ -10,7 +10,9 @@ import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 
 sealed class ThermalAnomalyEvent {
     data class PlantSelected(val plant: PlantEntity) : ThermalAnomalyEvent()
+    data class PlantSelectedById(val plantId: java.util.UUID) : ThermalAnomalyEvent()
     data class EquipmentSelected(val equipment: EquipmentEntity) : ThermalAnomalyEvent()
+    data class EquipmentSelectedById(val equipmentId: java.util.UUID) : ThermalAnomalyEvent()
     data class ComponentSelected(val component: EquipmentComponentEntity) : ThermalAnomalyEvent()
     data class UpdateRecordName(val value: String) : ThermalAnomalyEvent()
     data class UpdateServiceOrder(val value: String) : ThermalAnomalyEvent()
@@ -20,6 +22,7 @@ sealed class ThermalAnomalyEvent {
     data class UpdateNextMonitoring(val value: Long?) : ThermalAnomalyEvent()
     data class UpdateRecommendations(val value: String) : ThermalAnomalyEvent()
     data class InspectionRecordSelected(val record: InspectionRecordEntity) : ThermalAnomalyEvent()
+    data class InspectionRecordSelectedById(val recordId: java.util.UUID) : ThermalAnomalyEvent()
 
     // Thermogram events
     data class SelectRoi(val roi: ROIEntity) : ThermalAnomalyEvent()
