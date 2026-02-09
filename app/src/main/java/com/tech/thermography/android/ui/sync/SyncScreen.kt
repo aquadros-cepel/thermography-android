@@ -46,7 +46,7 @@ fun SyncScreen(
 
     // Inicia a sincronização quando a tela é criada
     LaunchedEffect(Unit) {
-//        viewModel.startSync()
+        viewModel.startSync()
     }
 
     Column(

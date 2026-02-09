@@ -58,7 +58,7 @@ fun LoginFormContent(
                 .padding(bottom = 24.dp)
         )
 
-        Text("Thermography",
+        Text("Thermal Energy",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp))

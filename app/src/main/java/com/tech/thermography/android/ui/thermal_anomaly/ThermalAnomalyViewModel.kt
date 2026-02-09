@@ -24,8 +24,8 @@ import com.tech.thermography.android.data.local.storage.UserSessionStore
 import com.tech.thermography.android.data.local.entity.enumeration.DatetimeUnit
 import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import com.tech.thermography.android.data.local.entity.RiskPeriodicityDeadlineEntity
-import com.tech.thermography.android.data.flir.FlirThermogramReader
-import com.tech.thermography.android.data.flir.toEntity
+import com.tech.thermography.android.flir.FlirThermogramReader
+import com.tech.thermography.android.flir.toEntity
 import com.tech.thermography.android.data.local.entity.enumeration.EquipmentType
 import com.tech.thermography.android.data.local.repository.ThermogramRepository
 

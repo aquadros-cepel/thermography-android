@@ -1,5 +1,6 @@
-package com.tech.thermography.android.data.flir
+package com.tech.thermography.android.flir
 
+import android.content.Context
 import android.net.Uri
 import com.flir.thermalsdk.androidsdk.ThermalSdkAndroid
 import com.tech.thermography.android.data.local.entity.ROIEntity
@@ -62,7 +63,7 @@ class FlirThermogramReader @Inject constructor() {
     /**
      * Lê os metadados de um termograma a partir de um URI
      */
-    suspend fun readMetadata(uri: Uri, context: android.content.Context): Result<ThermogramMetadata> {
+    suspend fun readMetadata(uri: Uri, context: Context): Result<ThermogramMetadata> {
         return try {
             try { ThermalSdkAndroid.init(context.applicationContext) } catch (_: Exception) {}
             val metadata = FlirThermogramReaderJava.readMetadata(context, uri)

@@ -1,4 +1,4 @@
-package com.tech.thermography.android.data.flir;
+package com.tech.thermography.android.flir;
 
 import android.content.Context;
 import android.net.Uri;

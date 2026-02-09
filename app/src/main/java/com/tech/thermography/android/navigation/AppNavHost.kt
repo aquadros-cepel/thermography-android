@@ -34,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tech.thermography.android.ui.auth.login.LoginScreen
+import com.tech.thermography.android.ui.camera.ThermogramsAceScreen
 import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
@@ -138,7 +139,7 @@ fun AppNavHost() {
             }
 
             composable(NavRoutes.THERMOGRAMS) {
-                ThermalAnomalyForm()
+                ThermogramsAceScreen(navController = navController)
             }
 
             // Backward-compatible route (3 segments) -> thermographicId will be null

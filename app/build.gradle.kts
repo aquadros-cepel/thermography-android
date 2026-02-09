@@ -8,14 +8,15 @@ plugins {
 
 android {
     namespace = "com.tech.thermography.android"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.tech.thermography.android"
         minSdk = 33
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildToolsVersion = "36.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -30,12 +31,14 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
+
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "21"
     }
     buildFeatures {
         compose = true
@@ -45,7 +48,25 @@ android {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        dex {
+            useLegacyPackaging = true
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
+    }
 }
+
 
 dependencies {
 
@@ -101,8 +122,11 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // SDKs nativos da FLIR (arquivos .aar da pasta libs)
-    implementation(files("libs/androidsdk-release.aar"))
-    implementation(files("libs/thermalsdk-release.aar"))
+//    implementation(files("libs/androidsdk-release.aar"))
+//    implementation(files("libs/thermalsdk-release.aar"))
+
+    implementation("", name = "androidsdk-release", ext = "aar")
+    implementation("", name = "thermalsdk-release", ext = "aar")
 
     // Tests...
     testImplementation(libs.junit)

@@ -80,31 +80,31 @@ fun InspectionRecordDetailScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // maintenance doc & description compact fields
-                OutlinedTextField(
-                    value = uiState.record?.maintenanceDocument ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    singleLine = true,
-                    label = { Text("DOCUMENTO DE MANUTENÇÃO") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = uiState.record?.description ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    singleLine = true,
-                    label = { Text("DESCRIÇÃO DO REGISTRO") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(8.dp)
-                )
+//                OutlinedTextField(
+//                    value = uiState.record?.maintenanceDocument ?: "",
+//                    onValueChange = {},
+//                    readOnly = true,
+//                    singleLine = true,
+//                    label = { Text("DOCUMENTO DE MANUTENÇÃO") },
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(52.dp),
+//                    shape = RoundedCornerShape(8.dp)
+//                )
+//
+//                Spacer(modifier = Modifier.height(8.dp))
+//
+//                OutlinedTextField(
+//                    value = uiState.record?.description ?: "",
+//                    onValueChange = {},
+//                    readOnly = true,
+//                    singleLine = true,
+//                    label = { Text("DESCRIÇÃO DO REGISTRO") },
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(52.dp),
+//                    shape = RoundedCornerShape(8.dp)
+//                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 

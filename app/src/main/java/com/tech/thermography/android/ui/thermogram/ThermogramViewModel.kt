@@ -8,8 +8,8 @@ import com.tech.thermography.android.data.local.entity.ROIEntity
 import com.tech.thermography.android.data.local.entity.ThermogramEntity
 import com.tech.thermography.android.data.local.repository.ROIRepository
 import com.tech.thermography.android.data.local.repository.ThermogramRepository
-import com.tech.thermography.android.data.flir.FlirThermogramReader
-import com.tech.thermography.android.data.flir.toEntity
+import com.tech.thermography.android.flir.FlirThermogramReader
+import com.tech.thermography.android.flir.toEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
