@@ -10,7 +10,7 @@ object ROIMapper {
             type = dto.type,
             label = dto.label,
             maxTemp = dto.maxTemp,
-            thermogramId = dto.thermogramId
+            thermogramId = requireNotNull(dto.thermogram.id) { "thermogramId cannot be null in ROIDto" }
         )
     }
 }

@@ -61,7 +61,7 @@ class SyncViewModel @Inject constructor(
 
     fun startSync() {
         viewModelScope.launch(Dispatchers.IO) {
-        //appDatabase.clearAllTables()
+        appDatabase.clearAllTables()
             // 1. SINCRONIZA DADOS DA API (EM ORDEM)
             runDataSync()
 

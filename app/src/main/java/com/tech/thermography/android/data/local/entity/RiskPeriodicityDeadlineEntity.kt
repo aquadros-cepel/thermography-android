@@ -12,5 +12,6 @@ data class RiskPeriodicityDeadlineEntity(
     val deadlineUnit: DatetimeUnit?,
     val periodicity: Int?,
     val periodicityUnit: DatetimeUnit?,
-    val recommendations: String?
+    val recommendations: String?,
+    val description: String?
 )

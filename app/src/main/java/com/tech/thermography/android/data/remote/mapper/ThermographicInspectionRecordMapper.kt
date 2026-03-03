@@ -20,14 +20,14 @@ object ThermographicInspectionRecordMapper {
             recommendations = dto.recommendations,
             finished = dto.finished,
             finishedAt = dto.finishedAt,
-            plantId = dto.plantId,
-            routeId = dto.routeId,
-            equipmentId = dto.equipmentId,
-            componentId = dto.componentId,
-            createdById = dto.createdById,
-            finishedById = dto.finishedById,
-            thermogramId = dto.thermogramId,
-            thermogramRefId = dto.thermogramRefId
+            plantId = requireNotNull(dto.plant.id) { "plantId cannot be null in ThermographicInspectionRecordDto" },
+            routeId = dto.route?.id,
+            equipmentId = requireNotNull(dto.equipment.id) { "equipmentId cannot be null in ThermographicInspectionRecordDto" },
+            componentId = dto.component?.id,
+            createdById = requireNotNull(dto.createdBy.id) { "createdById cannot be null in ThermographicInspectionRecordDto" },
+            finishedById = requireNotNull(dto.finishedBy.id) { "finishedById cannot be null in ThermographicInspectionRecordDto" },
+            thermogramId = requireNotNull(dto.thermogram.id) { "thermogramId cannot be null in ThermographicInspectionRecordDto" },
+            thermogramRefId = dto.thermogramRef?.id
         )
     }
 }

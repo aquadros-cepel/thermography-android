@@ -24,6 +24,6 @@ data class ThermogramDto(
     val createdAt: Instant?,
     val latitude: Double?,
     val longitude: Double?,
-    val equipmentId: UUID,
-    val createdById: UUID
+    val equipment: UUID_DTO,
+    val createdBy: UUID_DTO
 )

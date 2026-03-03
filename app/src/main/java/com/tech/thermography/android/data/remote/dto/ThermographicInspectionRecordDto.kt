@@ -21,12 +21,12 @@ data class ThermographicInspectionRecordDto(
     val recommendations: String?,
     val finished: Boolean?,
     val finishedAt: Instant?,
-    val plantId: UUID,
-    val routeId: UUID?,
-    val equipmentId: UUID,
-    val componentId: UUID?,
-    val createdById: UUID,
-    val finishedById: UUID,
-    val thermogramId: UUID,
-    val thermogramRefId: UUID?
+    val plant: UUID_DTO,
+    val route: UUID_DTO?,
+    val equipment: UUID_DTO,
+    val component: UUID_DTO?,
+    val createdBy: UUID_DTO,
+    val finishedBy: UUID_DTO,
+    val thermogram: UUID_DTO,
+    val thermogramRef: UUID_DTO?
 )

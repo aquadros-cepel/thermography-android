@@ -80,16 +80,6 @@ class ThermalAnomalyViewModel @Inject constructor(
                 _uiState.update { it.copy(availablePlants = allPlants) }
             }
         }
-
-        // Ensure RiskPeriodicityDeadline mock data exists in DB at startup (if table empty)
-        viewModelScope.launch {
-            try {
-                // Reset and populate mock data so updates in repository are applied immediately
-                riskRepo.resetMockData()
-            } catch (e: Exception) {
-                Log.e("SyncDebug", "Failed to ensure RiskPeriodicityDeadline mock: ${e.message}")
-            }
-        }
     }
 
     fun onEvent(event: ThermalAnomalyEvent) {
@@ -248,12 +238,9 @@ class ThermalAnomalyViewModel @Inject constructor(
             equipmentType = generateEquipmentTypeString(equipment),
             selectedComponent = null
         ) }
-
         viewModelScope.launch {
             val inspectionRecords = inspectionRecordRepository.getInspectionRecordsByEquipmentId(equipment.id)
             _uiState.update { it.copy(filteredInspectionRecords = inspectionRecords) }
-            
-            // Filter equipment components based on equipment type
             val componentCode = getEquipmentComponentCode(equipment.type)
             val allComponents = equipmentComponentRepository.getAllEquipmentComponents().first()
             val filteredComponents = if (componentCode.isNotEmpty()) {
@@ -262,6 +249,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 emptyList()
             }
             _uiState.update { it.copy(availableComponents = filteredComponents) }
+            updateAnalysisAndRecommendations() // Atualiza após seleção de equipamento
         }
     }
 
@@ -545,6 +533,42 @@ class ThermalAnomalyViewModel @Inject constructor(
         }
     }
 
+    private fun updateAnalysisAndRecommendations() {
+        val equipment = _uiState.value.selectedEquipment
+        val component = _uiState.value.selectedComponent
+        val condition = _uiState.value.condition
+
+        // Se equipment ou component for null, limpar os campos
+        if (equipment == null || component == null) {
+            _uiState.update {
+                it.copy(
+                    recommendations = "",
+                    analysisDescription = ""
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            val allDeadlines = riskRepo.getAllRiskPeriodicityDeadlines().first()
+            val match = allDeadlines.find { it.name == condition.name }
+            if (match != null) {
+                val equipmentCode = equipment.code?.split("-")?.lastOrNull() ?: ""
+                val equipmentName = equipment.name
+                val componentName = component.name
+                val analysisDescription = (match.recommendations ?: "")
+                    .replace("@COMPONENT", "\"$componentName\"")
+                    .replace("@EQUIPMENT", "\"$equipmentCode ($equipmentName)\"")
+                _uiState.update {
+                    it.copy(
+                        recommendations = match.recommendations ?: "",
+                        analysisDescription = analysisDescription
+                    )
+                }
+            }
+        }
+    }
+
     fun calculateTemperatureDifference(): Double? {
         val thermogram = _uiState.value.thermogram
         val selectedRoi = _uiState.value.selectedRoi
@@ -596,6 +620,7 @@ class ThermalAnomalyViewModel @Inject constructor(
     private fun handleComponentSelected(component: com.tech.thermography.android.data.local.entity.EquipmentComponentEntity) {
         viewModelScope.launch {
             _uiState.update { it.copy(selectedComponent = component) }
+            updateAnalysisAndRecommendations() // Atualiza após seleção de componente
 
             // obtain deltaT
             val deltaT = calculateTemperatureDifference()
@@ -614,30 +639,10 @@ class ThermalAnomalyViewModel @Inject constructor(
     }
 
     private suspend fun getPeriodicityForCondition(condition: ConditionType): RiskPeriodicityDeadlineEntity? {
-        val all = riskRepo.getAllOrMock()
+        val all = riskRepo.getAllRiskPeriodicityDeadlines().first()
         fun normalize(s: String?): String = s?.lowercase()?.replace("[^a-z0-9]".toRegex(), "") ?: ""
         val target = normalize(condition.name)
-        val match = all.find { normalize(it.name) == target }
-        if (match != null) return match
-
-        // Fallback: build inline defaults matching the JSON you provided
-        return when (condition) {
-            ConditionType.NORMAL -> RiskPeriodicityDeadlineEntity(
-                id = UUID.randomUUID(), name = "NORMAL", deadline = -1, deadlineUnit = null, periodicity = -1, periodicityUnit = null, recommendations = "Encerrar Monitoramento"
-            )
-            ConditionType.LOW_RISK -> RiskPeriodicityDeadlineEntity(
-                id = UUID.randomUUID(), name = "LOW_RISK", deadline = 6, deadlineUnit = DatetimeUnit.YEAR, periodicity = 6, periodicityUnit = DatetimeUnit.MONTH, recommendations = "Recomenda-se que a intervenção para correção da anomalia seja executada em aproveitamento, na próxima manutenção preventiva periódica do equipamento principal respeitando um prazo máximo de seis anos."
-            )
-            ConditionType.MEDIUM_RISK -> RiskPeriodicityDeadlineEntity(
-                id = UUID.randomUUID(), name = "MEDIUM_RISK", deadline = 3, deadlineUnit = DatetimeUnit.YEAR, periodicity = 3, periodicityUnit = DatetimeUnit.MONTH, recommendations = "Recomenda-se que a intervenção para correção da anomalia seja executada em aproveitamento, na próxima manutenção preventiva periódica do equipamento principal respeitando um prazo máximo de três anos."
-            )
-            ConditionType.HIGH_RISK -> RiskPeriodicityDeadlineEntity(
-                id = UUID.randomUUID(), name = "HIGH_RISK", deadline = 3, deadlineUnit = DatetimeUnit.MONTH, periodicity = 15, periodicityUnit = DatetimeUnit.DAY, recommendations = "A manutenção para correção da anomalia deve ser executada em até 90 dias a partir de uma intervenção programada. Caso haja dúvidas quanto ao diagnóstico da criticidade da anomalia térmica o termografista responsável deverá solicitar apoio ao CCT (Comitê corporativo de Termografia) para validação da criticidade."
-            )
-            ConditionType.IMMINENT_HIGH_RISK -> RiskPeriodicityDeadlineEntity(
-                id = UUID.randomUUID(), name = "IMMINENT_HIGH_RISK", deadline = 48, deadlineUnit = DatetimeUnit.HOUR, periodicity = 0, periodicityUnit = null, recommendations = "A gerência deverá validar a criticidade da anomalia térmica ou reclassificá-la, alterando se necessário a criticidade no cadastro do sistema Thermal Energy com as respectivas justificativas."
-            )
-        }
+        return all.find { normalize(it.name) == target }
     }
 
     private suspend fun applyRiskPeriodicity(condition: ConditionType) {

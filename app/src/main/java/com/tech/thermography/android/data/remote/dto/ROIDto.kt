@@ -7,4 +7,5 @@ data class ROIDto(
     val type: String,
     val label: String,
     val maxTemp: Double,
-    val thermogramId: UUID)
+    val thermogram: UUID_DTO
+)

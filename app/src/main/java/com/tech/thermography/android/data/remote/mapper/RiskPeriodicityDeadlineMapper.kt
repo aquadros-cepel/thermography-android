@@ -12,7 +12,8 @@ object RiskPeriodicityDeadlineMapper {
             deadlineUnit = dto.deadlineUnit,
             periodicity = dto.periodicity,
             periodicityUnit = dto.periodicityUnit,
-            recommendations = dto.recommendations
+            recommendations = dto.recommendations,
+            description = dto.description
         )
     }
 }

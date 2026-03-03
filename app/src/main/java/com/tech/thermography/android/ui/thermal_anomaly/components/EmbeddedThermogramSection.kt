@@ -165,7 +165,7 @@ fun EmbeddedThermogramSection(
                         // Botão Galeria
                         IconButton(
                             onClick = {
-                                galleryLauncher.launch("image/*")
+                                galleryLauncher.launch("image/*") // Intent para abrir diretamente na galeria de imagens
                             },
                             modifier = Modifier.size(40.dp)
                         ) {
