@@ -240,7 +240,7 @@ fun ThermalAnomalyForm(
                 maxLines = 5,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(180.dp)
             )
 
             AppOutlinedField(

@@ -122,6 +122,7 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value) }
             is ThermalAnomalyEvent.UpdateCondition -> {
                 _uiState.update { it.copy(condition = event.value) }
+                updateAnalysisAndRecommendations() // Garante atualização ao mudar condição
                 // Atualiza o nome do relatório ao mudar a condição
                 viewModelScope.launch {
                     _uiState.value.selectedPlant?.let { p ->
@@ -556,7 +557,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 val equipmentCode = equipment.code?.split("-")?.lastOrNull() ?: ""
                 val equipmentName = equipment.name
                 val componentName = component.name
-                val analysisDescription = (match.recommendations ?: "")
+                val analysisDescription = (match.description ?: "")
                     .replace("@COMPONENT", "\"$componentName\"")
                     .replace("@EQUIPMENT", "\"$equipmentCode ($equipmentName)\"")
                 _uiState.update {
