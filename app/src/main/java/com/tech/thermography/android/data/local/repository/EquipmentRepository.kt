@@ -28,12 +28,35 @@ class EquipmentRepository @Inject constructor(
     suspend fun deleteEquipment(equipment: EquipmentEntity) = equipmentDao.deleteEquipment(equipment)
 
     override suspend fun syncEntities() {
-        val remoteEquipments = syncApi.getAllEquipments()
-        val entities = remoteEquipments.map { dto -> dtoToEntity(dto) }
-        setCache(entities)
+        try {
+            // Busca os dados da API
+            val remoteEquipments = syncApi.getAllEquipments()            // Mapeia os DTOs para Entidades, ignorando os que derem erro no mapeamento
+            val entities = remoteEquipments.mapNotNull { dto ->
+                try {
+                    dtoToEntity(dto)
+                } catch (e: Exception) {
+                    android.util.Log.e("EquipmentRepository", "Erro ao mapear equipamento DTO: $dto", e)
+                    null // Retorna null para o mapNotNull filtrar este item
+                }
+            }
+
+            // Atualiza o cache com a lista de entidades válidas
+            setCache(entities)
+
+        } catch (e: Exception) {
+            // Captura erros de rede ou outros problemas na sincronização geral
+            android.util.Log.e("EquipmentRepository", "Falha geral na sincronização de equipamentos", e)
+        }
     }
 
     override suspend fun insertCached() {
+//        for (equipment in cache) {
+//            try {
+//                equipmentDao.insertEquipment(equipment)
+//            } catch (e: Exception) {
+//                android.util.Log.e("EquipmentRepository", "Erro ao inserir equipamento no banco: $equipment", e)
+//            }
+//        }
         equipmentDao.insertEquipments(cache)
     }
 }
