@@ -24,7 +24,7 @@ interface EquipmentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEquipments(equipments: List<EquipmentEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEquipment(equipment: EquipmentEntity)
     
     @Update
