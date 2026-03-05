@@ -90,8 +90,8 @@ class ThermogramViewModel @Inject constructor(
                         ?: rois.firstOrNull()
                     val selectedRef = rois.getOrNull(1)
 
-                    // Cria URI da imagem (assumindo que imagePath é um caminho local)
-                    val imageUri = thermogram.imagePath.toUri()
+                    // Cria URI da imagem (usando o caminho local)
+                    val imageUri = thermogram.localImagePath.toUri()
 
                     _uiState.update {
                         it.copy(
@@ -154,7 +154,7 @@ class ThermogramViewModel @Inject constructor(
                     // Se já existe thermogram, atualizar. Senão, criar novo
                     val updatedThermogram = if (currentThermogram != null) {
                         currentThermogram.copy(
-                            imagePath = uri.toString(),
+                            localImagePath = uri.toString(),
                             minTemp = metadata.minTemp,
                             avgTemp = metadata.avgTemp,
                             maxTemp = metadata.maxTemp,
@@ -171,7 +171,7 @@ class ThermogramViewModel @Inject constructor(
                         metadata.toEntity(
                             equipmentId = UUID.randomUUID(), // TODO: Get from context
                             createdById = UUID.randomUUID(), // TODO: Get from auth
-                            imagePath = uri.toString()
+                            localImagePath = uri.toString()
                         )
                     }
 

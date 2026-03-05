@@ -2,6 +2,7 @@ package com.tech.thermography.android.data.remote.dto
 
 import java.util.UUID
 
-data class UUID_DTO(
-    val id: UUID? = null
+data class ComponentDto(
+    val id: UUID
 )
+

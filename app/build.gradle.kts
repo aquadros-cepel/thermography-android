@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.ksp)
-    alias(libs.plugins.hilt.android)  // ✔ AGORA SIM!
+    alias(libs.plugins.hilt.android)
 }
 
 
@@ -122,11 +122,15 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // SDKs nativos da FLIR (arquivos .aar da pasta libs)
-//    implementation(files("libs/androidsdk-release.aar"))
-//    implementation(files("libs/thermalsdk-release.aar"))
-
     implementation("", name = "androidsdk-release", ext = "aar")
     implementation("", name = "thermalsdk-release", ext = "aar")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    
+    // Hilt Worker (Atualizado para 1.2.0 para suporte a KSP)
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // Tests...
     testImplementation(libs.junit)

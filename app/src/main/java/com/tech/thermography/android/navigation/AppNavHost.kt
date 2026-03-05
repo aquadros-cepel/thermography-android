@@ -40,6 +40,7 @@ import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
 import com.tech.thermography.android.ui.thermal_anomaly.ThermalAnomalyForm
+import com.tech.thermography.android.ui.settings.SettingsScreen
 import java.util.UUID
 
 @Composable
@@ -113,7 +114,7 @@ fun AppNavHost() {
             composable(NavRoutes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { 
-                        navController.navigate(NavRoutes.SYNC) {
+                        navController.navigate(NavRoutes.INSPECTION_RECORDS) {
                             popUpTo(NavRoutes.LOGIN) { inclusive = true }
                         }
                     },
@@ -121,10 +122,10 @@ fun AppNavHost() {
                 )
             }
 
-            composable("sync") {
+            composable(NavRoutes.SYNC) {
                 SyncScreen(onSyncComplete = { 
                     navController.navigate(NavRoutes.INSPECTION_RECORDS) {
-                        popUpTo("sync") { inclusive = true }
+                        popUpTo(NavRoutes.SYNC) { inclusive = true }
                     }
                 })
             }
@@ -187,9 +188,7 @@ fun AppNavHost() {
             }
 
             composable(NavRoutes.SETTINGS) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Tela de Configurações")
-                }
+                SettingsScreen(navController = navController)
             }
 
             // Inspection record detail route: inspection/{id} with optional expandEquipmentId query

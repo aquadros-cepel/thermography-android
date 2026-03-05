@@ -7,6 +7,7 @@ import com.tech.thermography.android.data.remote.adapter.LocalDateAdapter
 import com.tech.thermography.android.data.remote.auth.AuthApi
 import com.tech.thermography.android.data.remote.auth.AuthInterceptor
 import com.tech.thermography.android.data.remote.sync.SyncApi
+import com.tech.thermography.android.util.Constants
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,7 +40,7 @@ object NetworkModule {
     @Provides
     fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit =        
         Retrofit.Builder()
-            .baseUrl("http://34.95.132.119:8081/api/")
+            .baseUrl(Constants.API_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .client(client)
             .build()

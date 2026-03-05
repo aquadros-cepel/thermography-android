@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.tech.thermography.android.data.local.entity.ROIEntity
 import com.tech.thermography.android.data.local.entity.ThermogramEntity
@@ -77,6 +78,17 @@ fun EmbeddedThermogramSection(
 ) {
     var showLightbox by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Decide qual URI usar: a que vem do state (nova seleção) ou o localImagePath do objeto persistido
+    val displayImageUri = remember(thermogramImageUri, thermogram?.localImagePath) {
+        if (thermogramImageUri != null) {
+            thermogramImageUri
+        } else if (!thermogram?.localImagePath.isNullOrBlank()) {
+            File(thermogram!!.localImagePath).toUri()
+        } else {
+            null
+        }
+    }
 
     // URI temporária para foto da câmera (criada de forma segura)
     val photoUri = remember {
@@ -207,8 +219,8 @@ fun EmbeddedThermogramSection(
 
         // Imagem do termograma
         ThermogramImage(
-            imageUri = thermogramImageUri,
-            onImageClick = { if (thermogramImageUri != null) showLightbox = true },
+            imageUri = displayImageUri,
+            onImageClick = { if (displayImageUri != null) showLightbox = true },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -261,7 +273,7 @@ fun EmbeddedThermogramSection(
     }
 
     // Lightbox para visualização ampliada
-    if (showLightbox && thermogramImageUri != null) {
+    if (showLightbox && displayImageUri != null) {
         // Fullscreen dialog with zoom & pan support
         Dialog(
             onDismissRequest = { showLightbox = false },
@@ -286,7 +298,7 @@ fun EmbeddedThermogramSection(
                 ) {
                     // Image with zoom & pan
                     AsyncImage(
-                        model = thermogramImageUri,
+                        model = displayImageUri,
                         contentDescription = "Imagem térmica ampliada",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier

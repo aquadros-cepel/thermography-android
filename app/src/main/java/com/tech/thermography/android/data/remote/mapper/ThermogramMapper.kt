@@ -7,6 +7,7 @@ object ThermogramMapper {
     fun dtoToEntity(dto: ThermogramDto): ThermogramEntity {
         return ThermogramEntity(
             id = dto.id,
+            localImagePath = "", // Remote DTO doesn't have local path
             imagePath = dto.imagePath,
             audioPath = dto.audioPath,
             imageRefPath = dto.imageRefPath,

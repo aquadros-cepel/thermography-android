@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.local.entity.enumeration.ThermographicInspectionRecordType
 import java.time.Instant
 import java.time.LocalDate
@@ -86,5 +87,6 @@ data class ThermographicInspectionRecordEntity(
     val createdById: UUID,
     val finishedById: UUID,
     val thermogramId: UUID,
-    val thermogramRefId: UUID?
+    val thermogramRefId: UUID?,
+    val syncStatus: RecordSyncStatus = RecordSyncStatus.NEW
 )

@@ -1,26 +1,10 @@
 package com.tech.thermography.android.data.remote.sync
 
-import com.tech.thermography.android.data.remote.dto.BusinessUnitDto
-import com.tech.thermography.android.data.remote.dto.CompanyDto
-import com.tech.thermography.android.data.remote.dto.EquipmentComponentDto
-import com.tech.thermography.android.data.remote.dto.EquipmentComponentTemperatureLimitsDto
-import com.tech.thermography.android.data.remote.dto.EquipmentDto
-import com.tech.thermography.android.data.remote.dto.EquipmentGroupDto
-import com.tech.thermography.android.data.remote.dto.EquipmentTypeTranslationDto
-import com.tech.thermography.android.data.remote.dto.InspectionRecordDto
-import com.tech.thermography.android.data.remote.dto.InspectionRecordGroupDto
-import com.tech.thermography.android.data.remote.dto.InspectionRecordGroupEquipmentDto
-import com.tech.thermography.android.data.remote.dto.InspectionRouteDto
-import com.tech.thermography.android.data.remote.dto.InspectionRouteGroupDto
-import com.tech.thermography.android.data.remote.dto.InspectionRouteGroupEquipmentDto
-import com.tech.thermography.android.data.remote.dto.PlantDto
-import com.tech.thermography.android.data.remote.dto.ROIDto
-import com.tech.thermography.android.data.remote.dto.RiskPeriodicityDeadlineDto
-import com.tech.thermography.android.data.remote.dto.RiskRecommendationTranslationDto
-import com.tech.thermography.android.data.remote.dto.ThermogramDto
-import com.tech.thermography.android.data.remote.dto.ThermographicInspectionRecordDto
-import com.tech.thermography.android.data.remote.dto.UserInfoDto
-import retrofit2.http.GET
+import com.tech.thermography.android.data.remote.dto.*
+import okhttp3.MultipartBody
+import okhttp3.ResponseBody
+import retrofit2.Response
+import retrofit2.http.*
 
 interface SyncApi {
     
@@ -78,9 +62,26 @@ interface SyncApi {
     @GET("thermograms")
     suspend fun getAllThermograms(): List<ThermogramDto>
 
+    @GET
+    @Streaming
+    suspend fun downloadFile(@Url url: String): Response<ResponseBody>
+
+    @Multipart
+    @POST("http://34.39.196.181:5000/api/uploadThermogram")
+    suspend fun uploadThermogram(@Part file: MultipartBody.Part): Response<UploadResponse>
+
     @GET("thermographic-inspection-records")
-    suspend fun getAllThermographicInspectionRecords(): List<ThermographicInspectionRecordDto>
+    suspend fun getAllThermographicInspectionRecords(): List<ThermographicInspectionRecordCreateDTO>
 
     @GET("user-infos")
     suspend fun getAllUserInfos(): List<UserInfoDto>
+
+    @POST("thermographic-inspection-records/actions/create")
+    suspend fun postThermographicInspectionRecord(@Body record: ThermographicInspectionRecordCreateDTO): Response<Unit>
+
+    @POST("thermographic-inspection-records/actions/update")
+    suspend fun updateThermographicInspectionRecord(@Body record: ThermographicInspectionRecordCreateDTO): Response<Unit>
+
+    @DELETE("thermographic-inspection-records/{id}")
+    suspend fun deleteThermographicInspectionRecord(@Path("id") id: String): Response<Unit>
 }

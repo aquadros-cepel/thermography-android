@@ -27,6 +27,7 @@ import com.tech.thermography.android.data.local.entity.RiskPeriodicityDeadlineEn
 import com.tech.thermography.android.flir.FlirThermogramReader
 import com.tech.thermography.android.flir.toEntity
 import com.tech.thermography.android.data.local.entity.enumeration.EquipmentType
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.local.repository.ThermogramRepository
 
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -122,19 +123,16 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value) }
             is ThermalAnomalyEvent.UpdateCondition -> {
                 _uiState.update { it.copy(condition = event.value) }
-                updateAnalysisAndRecommendations() // Garante atualização ao mudar condição
-                // Atualiza o nome do relatório ao mudar a condição
+                updateAnalysisAndRecommendations()
                 viewModelScope.launch {
                     _uiState.value.selectedPlant?.let { p ->
                         val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(p.id).first()
                         setThermalRecordName(p, event.value, anomalyRecords)
                     }
-                    // also apply periodicity/recommendation based on new condition
                     applyRiskPeriodicity(event.value)
                 }
             }
             is ThermalAnomalyEvent.UpdateDeadline -> {
-                // store epoch millis directly on UI state; no local conversion needed here
                 _uiState.update { it.copy(deadlineExecution = event.value) }
             }
             is ThermalAnomalyEvent.UpdateNextMonitoring -> {
@@ -147,25 +145,31 @@ class ThermalAnomalyViewModel @Inject constructor(
                     try {
                         val therm = recordRepository.getThermographicInspectionRecordById(event.thermographicId)
                         if (therm != null) {
-                            // load related entities
                             val plant = therm.plantId.let { plantRepository.getPlantById(it) }
                             val equipment = therm.equipmentId.let { equipmentRepository.getEquipmentById(it) }
                             val inspectionRecord = therm.routeId?.let { inspectionRecordRepository.getInspectionRecordById(it) }
 
-                            // load thermogram and its ROIs so the image and ROIs are available for editing
                             var loadedThermogram: com.tech.thermography.android.data.local.entity.ThermogramEntity? = null
                             var loadedRois: List<com.tech.thermography.android.data.local.entity.ROIEntity> = emptyList()
+                            var loadedThermogramRef: com.tech.thermography.android.data.local.entity.ThermogramEntity? = null
+                            var loadedRoisRef: List<com.tech.thermography.android.data.local.entity.ROIEntity> = emptyList()
+
                             try {
-                                // therm.thermogramId is non-nullable in the entity; attempt load
                                 loadedThermogram = thermogramRepository.getThermogramById(therm.thermogramId)
                                 if (loadedThermogram != null) {
                                     loadedRois = roiRepository.getRoisByThermogramId(loadedThermogram.id).first()
+                                }
+                                
+                                therm.thermogramRefId?.let { refId ->
+                                    loadedThermogramRef = thermogramRepository.getThermogramById(refId)
+                                    if (loadedThermogramRef != null) {
+                                        loadedRoisRef = roiRepository.getRoisByThermogramId(loadedThermogramRef!!.id).first()
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.w("ThermAnomVM", "Failed to load thermogram or rois: ${e.message}")
                             }
 
-                            // update UI state fields
                             _uiState.update { state ->
                                 state.copy(
                                     selectedPlant = plant ?: state.selectedPlant,
@@ -179,11 +183,16 @@ class ThermalAnomalyViewModel @Inject constructor(
                                     deadlineExecution = therm.deadlineExecution?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
                                     nextMonitoring = therm.nextMonitoring?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
                                     isEditing = true,
+                                    thermogramId = therm.id,
                                     thermogram = loadedThermogram ?: state.thermogram,
-                                    thermogramRois = if (loadedRois.isNotEmpty()) loadedRois else state.thermogramRois,
-                                    selectedRoi = loadedRois.firstOrNull { it.id == loadedThermogram?.selectedRoiId } ?: loadedRois.firstOrNull() ?: state.selectedRoi,
-                                    selectedRefRoi = loadedRois.getOrNull(1) ?: state.selectedRefRoi,
-                                    thermogramImageUri = loadedThermogram?.imagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramImageUri
+                                    thermogramRois = loadedRois.ifEmpty { state.thermogramRois },
+                                    selectedRoi = loadedRois.find { it.id == loadedThermogram?.selectedRoiId } ?: loadedRois.firstOrNull(),
+                                    
+                                    thermogramRef = loadedThermogramRef ?: state.thermogramRef,
+                                    thermogramRefRois = loadedRoisRef.ifEmpty { state.thermogramRefRois },
+                                    selectedRefRoi = loadedRoisRef.find { it.id == loadedThermogramRef?.selectedRoiId } ?: loadedRoisRef.firstOrNull(),
+                                    
+                                    thermogramImageUri = loadedThermogram?.localImagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramImageUri
                                 )
                             }
                         }
@@ -193,7 +202,6 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
             }
 
-            // Thermogram events
             is ThermalAnomalyEvent.SelectRoi -> handleRoiSelected(event.roi)
             is ThermalAnomalyEvent.SelectRefRoi -> handleRefRoiSelected(event.roi)
             is ThermalAnomalyEvent.UpdateThermogramImage -> handleImageSelected(event.uri)
@@ -210,15 +218,12 @@ class ThermalAnomalyViewModel @Inject constructor(
             filteredInspectionRecords = emptyList(),
             equipmentType = ""
         ) }
-        // Load equipments for this plant
         viewModelScope.launch {
             equipmentRepository.getEquipmentsByPlantId(plant.id).collect { equipmentList ->
                 _uiState.update { it.copy(filteredEquipments = equipmentList) }
             }
-            // Após carregar equipamentos, busca registros de anomalia para a planta e atualiza o nome do relatório
             val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
             val condition = _uiState.value.condition
-            // If we're not editing an existing record and the recordName is empty, generate a CAT_xxx_<plantCode> name
             val currentState = _uiState.value
             if (!currentState.isEditing && currentState.recordName.isBlank()) {
                 val n = anomalyRecords.size
@@ -227,7 +232,6 @@ class ThermalAnomalyViewModel @Inject constructor(
                 val generated = "CAT_${numberPart}_$codePart"
                 _uiState.update { it.copy(recordName = generated) }
             } else {
-                // fallback for existing logic based on condition (keeps previous behavior)
                 setThermalRecordName(plant, condition, anomalyRecords)
             }
         }
@@ -250,7 +254,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 emptyList()
             }
             _uiState.update { it.copy(availableComponents = filteredComponents) }
-            updateAnalysisAndRecommendations() // Atualiza após seleção de equipamento
+            updateAnalysisAndRecommendations()
         }
     }
 
@@ -293,101 +297,75 @@ class ThermalAnomalyViewModel @Inject constructor(
             return
         }
 
-        // If we're editing, require a non-empty recordName (do not modify it)
         if (state.isEditing && state.recordName.isBlank()) {
             _uiState.update { it.copy(error = "Por favor, preencha o nome do relatório para edição") }
             return
         }
 
-        // We'll compute/generate finalRecordName inside a coroutine (suspend calls must be inside coroutine)
         var finalRecordName = state.recordName
 
         viewModelScope.launch {
             try {
-                // Re-evaluate state inside coroutine (to get any updates that happened since caller)
                 val current = _uiState.value
                 val plant = current.selectedPlant ?: state.selectedPlant
 
-                // If recordName is blank and not editing, generate the CAT_###_<plantCode> using repository (suspend)
                 if (!current.isEditing && finalRecordName.isBlank()) {
-                    // At this point we validated earlier that a plant is selected, so plant is non-null
                     val existing = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
                     val n = existing.size
                     val numberPart = String.format(Locale.US, "%03d", n + 1)
                     val codePart = plant.code ?: plant.name ?: plant.id.toString()
                     finalRecordName = "CAT_${numberPart}_$codePart"
-                    // update UI so user sees generated name
                     _uiState.update { it.copy(recordName = finalRecordName) }
                 }
 
                 _uiState.update { it.copy(isLoading = true, error = null) }
                 val conditionType = current.condition
-
-                // Ensure we have a valid user to reference in FK columns
                 val createdById = resolveCurrentUserId()
 
-                // If a thermogram is present in the UI state, persist it first and use its id as thermogramId.
-                // If none present, create a minimal placeholder thermogram so FK constraints are satisfied.
-                val thermogramState = current.thermogram
-                val thermogramIdToUse: UUID = if (thermogramState != null) {
-                    val toInsert = thermogramState.copy(createdById = createdById)
-                    // If thermogram already exists in DB, perform update to preserve/replace imagePath; otherwise insert
-                    val existingTherm = thermogramRepository.getThermogramById(toInsert.id)
-                    if (existingTherm != null) {
+                // 1. Persistir o termograma principal (Monitoramento)
+                val thermId: UUID = current.thermogram?.let { t ->
+                    val toInsert = t.copy(
+                        createdById = createdById,
+                        selectedRoiId = current.selectedRoi?.id,
+                        maxTempRoi = current.selectedRoi?.maxTemp
+                    )
+                    if (thermogramRepository.getThermogramById(toInsert.id) != null) {
                         thermogramRepository.updateThermogram(toInsert)
                     } else {
                         thermogramRepository.insertThermogram(toInsert)
                     }
+                    
+                    // Salvar ROIs associadas ao monitoramento
+                    val roiEntities = current.thermogramRois.map { roi -> roi.copy(thermogramId = toInsert.id) }
+                    roiRepository.insertROIs(roiEntities)
+                    
                     toInsert.id
-                } else {
-                    // create placeholder thermogram using current.selectedEquipment (up-to-date)
-                    val equipmentIdForPlaceholder = requireNotNull(current.selectedEquipment).id
-                    val placeholder = com.tech.thermography.android.data.local.entity.ThermogramEntity(
-                        id = UUID.randomUUID(),
-                        imagePath = "",
-                        audioPath = null,
-                        imageRefPath = "",
-                        minTemp = null,
-                        avgTemp = null,
-                        maxTemp = null,
-                        emissivity = null,
-                        subjectDistance = null,
-                        atmosphericTemp = null,
-                        reflectedTemp = null,
-                        relativeHumidity = null,
-                        cameraLens = null,
-                        cameraModel = null,
-                        imageResolution = null,
-                        selectedRoiId = null,
-                        maxTempRoi = null,
-                        createdAt = Instant.now(),
-                        latitude = null,
-                        longitude = null,
-                        equipmentId = equipmentIdForPlaceholder,
-                        createdById = createdById
+                } ?: UUID.randomUUID()
+
+                // 2. Persistir o termograma de referência
+                val thermRefId: UUID? = current.thermogramRef?.let { tRef ->
+                    val toInsertRef = tRef.copy(
+                        createdById = createdById,
+                        selectedRoiId = current.selectedRefRoi?.id,
+                        maxTempRoi = current.selectedRefRoi?.maxTemp
                     )
-                    thermogramRepository.insertThermogram(placeholder)
-                    placeholder.id
+                    if (thermogramRepository.getThermogramById(toInsertRef.id) != null) {
+                        thermogramRepository.updateThermogram(toInsertRef)
+                    } else {
+                        thermogramRepository.insertThermogram(toInsertRef)
+                    }
+                    
+                    // Salvar ROIs associadas à referência (garantindo o vínculo com o thermogramRef)
+                    val roiEntitiesRef = current.thermogramRefRois.map { roi -> roi.copy(thermogramId = toInsertRef.id) }
+                    roiRepository.insertROIs(roiEntitiesRef)
+                    
+                    toInsertRef.id
                 }
 
-                // compute deltaT from selected ROIs / thermogram
                 val deltaT = calculateTemperatureDifference() ?: 0.0
 
-                // Insert related ROIs entities (ensure thermogram exists first)
-                val roiEntities = current.thermogramRois.map { roi ->
-                    // ROIEntity fields: id, type, label, maxTemp, thermogramId
-                    roi.copy(
-                        thermogramId = thermogramIdToUse
-                    )
-                }
-                // insert each ROI sequentially to preserve order and avoid concurrency FK issues
-                for (r in roiEntities) {
-                    roiRepository.insertROI(r)
-                }
-
-                // Now create and persist the ThermographicInspectionRecord (after thermogram and ROIs)
                 val record = ThermographicInspectionRecordEntity(
-                    id = UUID.randomUUID(),
+                    id = if (current.isEditing) current.thermogramId ?: UUID.randomUUID() else UUID.randomUUID(),
                     name = finalRecordName,
                     type = ThermographicInspectionRecordType.ANOMALY_INITIAL,
                     serviceOrder = state.serviceOrder.ifBlank { null },
@@ -407,28 +385,23 @@ class ThermalAnomalyViewModel @Inject constructor(
                     componentId = state.selectedComponent?.id,
                     createdById = createdById,
                     finishedById = createdById,
-                    thermogramId = thermogramIdToUse,
-                    thermogramRefId = null
+                    thermogramId = thermId,
+                    thermogramRefId = thermRefId,
+                    syncStatus = RecordSyncStatus.NEW
                 )
 
-                // persist the record
-                recordRepository.insertThermographicInspectionRecord(record)
-
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isSaved = true,
-                        error = null
-                    )
+                if (current.isEditing) {
+                    val existingRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+                    val original = existingRecords.find { it.name == finalRecordName }
+                    val recordToSave = if (original != null) record.copy(id = original.id, syncStatus = RecordSyncStatus.EDITED) else record
+                    recordRepository.updateThermographicInspectionRecord(context, recordToSave)
+                } else {
+                    recordRepository.insertThermographicInspectionRecord(context, record)
                 }
+
+                _uiState.update { it.copy(isLoading = false, isSaved = true, error = null) }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "Erro ao salvar registro"
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Erro ao salvar registro") }
             }
         }
     }
@@ -440,11 +413,6 @@ class ThermalAnomalyViewModel @Inject constructor(
                 filteredEquipments = emptyList()
             )
         }
-    }
-
-    @Suppress("unused")
-    suspend fun getInspectionRecords(equipmentId: UUID): List<InspectionRecordEntity> {
-        return inspectionRecordRepository.getInspectionRecordsByEquipmentId(equipmentId)
     }
 
     fun setThermalRecordName(powerStation: PlantEntity?, condition: ConditionType, anomalyRecords: List<ThermographicInspectionRecordEntity>) {
@@ -467,7 +435,6 @@ class ThermalAnomalyViewModel @Inject constructor(
 
     private fun handleRoiSelected(roi: com.tech.thermography.android.data.local.entity.ROIEntity) {
         _uiState.update { state ->
-            // update selectedRoi
             val updatedThermogram = state.thermogram?.copy(
                 selectedRoiId = roi.id,
                 maxTempRoi = roi.maxTemp
@@ -481,8 +448,13 @@ class ThermalAnomalyViewModel @Inject constructor(
 
     private fun handleRefRoiSelected(roi: com.tech.thermography.android.data.local.entity.ROIEntity) {
         _uiState.update { state ->
+            val updatedThermogramRef = state.thermogramRef?.copy(
+                selectedRoiId = roi.id,
+                maxTempRoi = roi.maxTemp
+            )
             state.copy(
                 selectedRefRoi = roi,
+                thermogramRef = updatedThermogramRef
             )
         }
     }
@@ -490,46 +462,71 @@ class ThermalAnomalyViewModel @Inject constructor(
     private fun handleImageSelected(uri: Uri) {
         _uiState.update { it.copy(thermogramImageUri = uri) }
 
-        // Processar metadados da imagem térmica em background
         viewModelScope.launch {
             try {
                 val result = flirReader.readMetadata(uri, context)
                 result.onSuccess { metadata ->
-                    // Criar thermogram entity
                     val currentUserId = resolveCurrentUserId()
-                    val thermogramEntity = metadata.toEntity(
-                        equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID(),
+                    val equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID()
+                    
+                    // 1. Criar Thermogram de Monitoramento
+                    val thermogramId = UUID.randomUUID()
+                    val thermogramMonitoring = metadata.toEntity(
+                        id = thermogramId,
+                        equipmentId = equipmentId,
                         createdById = currentUserId,
-                        imagePath = uri.toString()
+                        localImagePath = uri.toString()
                     )
 
-                    // Criar ROI entities
-                    val roiEntities = metadata.rois.map { it.toEntity(thermogramEntity.id) }
+                    // 2. Criar Thermogram de Referência (Cópia do metadado)
+                    val thermogramRefId = UUID.randomUUID()
+                    val thermogramReference = metadata.toEntity(
+                        id = thermogramRefId,
+                        equipmentId = equipmentId,
+                        createdById = currentUserId,
+                        localImagePath = uri.toString()
+                    )
 
-                    // Atualizar UI state: selectedRoi = first, selectedRefRoi = second (se existir)
+                    // 3. Criar ROIs para Monitoramento (cada ROI tem um novo ID e aponta para thermogramId)
+                    val roisMonitoring = metadata.rois.map { 
+                        it.toEntity(thermogramId).copy(id = UUID.randomUUID()) 
+                    }
+                    
+                    // 4. Criar ROIs para Referência (cada ROI tem um novo ID e aponta para thermogramRefId)
+                    val roisReference = metadata.rois.map { 
+                        it.toEntity(thermogramRefId).copy(id = UUID.randomUUID()) 
+                    }
+
+                    // SP1 (Sp1) é o primeiro ROI para monitoramento
+                    // SP2 (Sp2) é o segundo ROI para referência
+                    val selectedRoi = roisMonitoring.firstOrNull()
+                    val selectedRefRoi = roisReference.getOrNull(1) ?: roisReference.firstOrNull()
+
                     _uiState.update {
                         it.copy(
-                            thermogram = thermogramEntity,
-                            thermogramRois = roiEntities,
-                            selectedRoi = roiEntities.firstOrNull(),
-                            selectedRefRoi = roiEntities.getOrNull(1)
+                            thermogram = thermogramMonitoring.copy(
+                                selectedRoiId = selectedRoi?.id,
+                                maxTempRoi = selectedRoi?.maxTemp
+                            ),
+                            thermogramRois = roisMonitoring,
+                            selectedRoi = selectedRoi,
+                            
+                            thermogramRef = thermogramReference.copy(
+                                selectedRoiId = selectedRefRoi?.id,
+                                maxTempRoi = selectedRefRoi?.maxTemp
+                            ),
+                            thermogramRefRois = roisReference,
+                            selectedRefRoi = selectedRefRoi
                         )
                     }
                 }
                 result.onFailure { error ->
-                    // Se falhar ao ler metadados, ainda mantém a imagem
                     _uiState.update {
-                        it.copy(
-                            error = "Aviso: Não foi possível ler metadados da imagem: ${error.message}"
-                        )
+                        it.copy(error = "Aviso: Não foi possível ler metadados da imagem: ${error.message}")
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = "Erro ao processar imagem: ${e.message}"
-                    )
-                }
+                _uiState.update { it.copy(error = "Erro ao processar imagem: ${e.message}") }
             }
         }
     }
@@ -539,14 +536,8 @@ class ThermalAnomalyViewModel @Inject constructor(
         val component = _uiState.value.selectedComponent
         val condition = _uiState.value.condition
 
-        // Se equipment ou component for null, limpar os campos
         if (equipment == null || component == null) {
-            _uiState.update {
-                it.copy(
-                    recommendations = "",
-                    analysisDescription = ""
-                )
-            }
+            _uiState.update { it.copy(recommendations = "", analysisDescription = "") }
             return
         }
 
@@ -571,15 +562,10 @@ class ThermalAnomalyViewModel @Inject constructor(
     }
 
     fun calculateTemperatureDifference(): Double? {
-        val thermogram = _uiState.value.thermogram
-        val selectedRoi = _uiState.value.selectedRoi
-        val selectedRefRoi = _uiState.value.selectedRefRoi
-        val reflectedTemp = thermogram?.reflectedTemp
+        val objectTemp = _uiState.value.selectedRoi?.maxTemp
+        val referenceTemp = _uiState.value.selectedRefRoi?.maxTemp ?: _uiState.value.thermogram?.reflectedTemp
 
-        val objectTemp = thermogram?.maxTempRoi ?: selectedRoi?.maxTemp ?: thermogram?.maxTemp
-        val referenceTemp = selectedRefRoi?.maxTemp ?: reflectedTemp ?: return null
-
-        if (objectTemp == null) return null
+        if (objectTemp == null || referenceTemp == null) return null
         return objectTemp - referenceTemp
     }
 
@@ -617,25 +603,15 @@ class ThermalAnomalyViewModel @Inject constructor(
         }
     }
 
-    // Update component selection handler
     private fun handleComponentSelected(component: com.tech.thermography.android.data.local.entity.EquipmentComponentEntity) {
         viewModelScope.launch {
             _uiState.update { it.copy(selectedComponent = component) }
-            updateAnalysisAndRecommendations() // Atualiza após seleção de componente
-
-            // obtain deltaT
+            updateAnalysisAndRecommendations()
             val deltaT = calculateTemperatureDifference()
-            // fetch limits for this component by componentId
             val limits = limitsRepository.getEquipmentComponentTemperatureLimitsByComponentId(component.id)
-
             val newCondition = classifyRisk(deltaT, limits)
-
             _uiState.update { it.copy(condition = newCondition) }
-
-            // also apply periodicity/recommendation based on new condition
             applyRiskPeriodicity(newCondition)
-
-            // no need to set error flag; UI uses condition to style the dropdown
         }
     }
 
@@ -649,7 +625,6 @@ class ThermalAnomalyViewModel @Inject constructor(
     private suspend fun applyRiskPeriodicity(condition: ConditionType) {
         try {
             val match = getPeriodicityForCondition(condition)
-            Log.d("SyncDebug", "applyRiskPeriodicity: resolved match=${match?.name}")
             if (match != null) {
                 val rec = match.recommendations ?: ""
                 val deadlineMillis: Long? = if (match.deadline == null || match.deadline < 0 || match.deadlineUnit == null) {
@@ -666,7 +641,6 @@ class ThermalAnomalyViewModel @Inject constructor(
                     }
                     nowZ.plus(amount, unit).toInstant().toEpochMilli()
                 }
-                // compute nextMonitoring from periodicity if present
                 val nextMonitoringMillis: Long? = if (match.periodicity == null || match.periodicity < 0 || match.periodicityUnit == null) {
                     null
                 } else {
@@ -681,60 +655,22 @@ class ThermalAnomalyViewModel @Inject constructor(
                     }
                     nowZ.plus(amount, unit).toInstant().toEpochMilli()
                 }
-
-                Log.d("SyncDebug", "applyRiskPeriodicity: setting rec='${rec.take(80)}' deadlineMillis=$deadlineMillis")
                 _uiState.update { it.copy(recommendations = rec, deadlineExecution = deadlineMillis, nextMonitoring = nextMonitoringMillis) }
             } else {
-                Log.d("SyncDebug", "applyRiskPeriodicity: no periodicity available for condition=${condition.name}")
                 _uiState.update { it.copy(recommendations = "", deadlineExecution = null) }
             }
         } catch (e: Exception) {
-            // on error, don't crash; set error message
-            Log.e("SyncDebug", "applyRiskPeriodicity error: ${e.message}")
             _uiState.update { it.copy(error = "Erro ao carregar periodicidade: ${e.message}") }
         }
     }
 
-    /**
-     * Helper to preselect plant, equipment and inspectionRecord by their IDs when navigating from other screens.
-     */
-    @Suppress("unused")
-    fun selectInitialIds(plantId: UUID?, equipmentId: UUID?, inspectionRecordId: UUID?) {
-        viewModelScope.launch {
-            try {
-                if (plantId != null) {
-                    val plant = plantRepository.getPlantById(plantId)
-                    if (plant != null) onEvent(ThermalAnomalyEvent.PlantSelected(plant))
-                }
-
-                if (equipmentId != null) {
-                    val equipment = equipmentRepository.getEquipmentById(equipmentId)
-                    if (equipment != null) onEvent(ThermalAnomalyEvent.EquipmentSelected(equipment))
-                }
-
-                if (inspectionRecordId != null) {
-                    // try to find the inspection record in available filteredInspectionRecords or repository
-                    val possible = inspectionRecordRepository.getInspectionRecordById(inspectionRecordId)
-                    if (possible != null) onEvent(ThermalAnomalyEvent.InspectionRecordSelected(possible))
-                }
-            } catch (ex: Exception) {
-                Log.w("ThermAnomVM", "Failed to preselect IDs: ${ex.message}")
-            }
-        }
-    }
-
-    // Resolve the current/logged-in user id.
-    // Strategy: try to parse JWT from sessionStore.token to get a user id claim (sub/id/userId),
-    // otherwise use first UserInfo from DB, otherwise create a default user and return its id.
     private suspend fun resolveCurrentUserId(): UUID {
-        // try token -> parse JWT
         try {
             val token = sessionStore.token.first()
             if (!token.isNullOrBlank()) {
                 val parts = token.split('.')
                 if (parts.size >= 2) {
                     val payload = parts[1]
-                    // decode URL-safe base64
                     val decodedBytes = Base64.decode(payload, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
                     val payloadJson = String(decodedBytes)
                     val jo = JSONObject(payloadJson)
@@ -743,11 +679,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                         if (jo.has(k)) {
                             val v = jo.optString(k).takeIf { it.isNotBlank() }
                             if (!v.isNullOrBlank()) {
-                                try {
-                                    return UUID.fromString(v)
-                                } catch (_: Exception) {
-                                    // not a UUID string -> ignore
-                                }
+                                try { return UUID.fromString(v) } catch (_: Exception) {}
                             }
                         }
                     }
@@ -757,12 +689,10 @@ class ThermalAnomalyViewModel @Inject constructor(
             Log.w("ThermAnomVM", "Failed to parse token for user id: ${e.message}")
         }
 
-        // fallback: first user in DB
         val users = userInfoRepository.getAllUserInfos().first()
         val first = users.firstOrNull()
         if (first != null) return first.id
 
-        // create a default local user
         val defaultUser = com.tech.thermography.android.data.local.entity.UserInfoEntity(
             id = UUID.randomUUID(),
             position = "Local User",

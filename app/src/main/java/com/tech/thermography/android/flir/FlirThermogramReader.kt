@@ -81,16 +81,18 @@ fun ThermogramMetadata.toEntity(
     id: UUID = UUID.randomUUID(),
     equipmentId: UUID,
     createdById: UUID,
-    imagePath: String,
+    localImagePath: String,
+    imagePath: String? = null,
     audioPath: String? = null,
     imageRefPath: String? = null,
     selectedRoiId: UUID? = null
 ): ThermogramEntity {
     return ThermogramEntity(
         id = id,
+        localImagePath = localImagePath,
         imagePath = imagePath,
         audioPath = audioPath,
-        imageRefPath = imageRefPath ?: imagePath,
+        imageRefPath = imageRefPath ?: localImagePath,
         minTemp = minTemp,
         avgTemp = avgTemp,
         maxTemp = maxTemp,

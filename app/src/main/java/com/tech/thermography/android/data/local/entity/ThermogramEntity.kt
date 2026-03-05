@@ -24,7 +24,8 @@ import java.util.*
 )
 data class ThermogramEntity(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
-    val imagePath: String,
+    val localImagePath: String,
+    val imagePath: String?,
     val audioPath: String?,
     val imageRefPath: String,
     val minTemp: Double?,

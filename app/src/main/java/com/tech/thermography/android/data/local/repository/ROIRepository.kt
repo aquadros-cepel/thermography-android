@@ -26,6 +26,8 @@ class ROIRepository @Inject constructor(
 
     suspend fun insertROI(roi: ROIEntity) = roiDao.insertROI(roi)
 
+    suspend fun insertROIs(rois: List<ROIEntity>) = roiDao.insertROIs(rois)
+
     suspend fun updateROI(roi: ROIEntity) = roiDao.updateROI(roi)
 
     suspend fun deleteROI(roi: ROIEntity) = roiDao.deleteROI(roi)
