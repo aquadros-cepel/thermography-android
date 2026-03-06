@@ -2,13 +2,13 @@ package com.tech.thermography.android.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,7 +27,15 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configurações") }
+                title = { Text("Configurações") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar"
+                        )
+                    }
+                }
             )
         }
     ) { padding ->
@@ -76,7 +84,7 @@ fun SettingsScreen(
 
                     Text(
                         text = "Observação: As imagens capturadas localmente não serão excluídas do armazenamento do dispositivo.",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -102,7 +110,9 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("Confirmar Limpeza") },
-            text = { Text("Deseja realmente apagar os dados locais e iniciar uma nova sincronização? Esta ação não pode ser desfeita.") },
+            text = { Text(
+                    "Deseja realmente apagar os dados locais e iniciar uma nova sincronização?\n\nEsta ação não pode ser desfeita!!!",
+                    style = MaterialTheme.typography.bodyLarge) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -114,12 +124,14 @@ fun SettingsScreen(
                         }
                     }
                 ) {
-                    Text("Limpar", color = MaterialTheme.colorScheme.error)
+                    Text("Limpar", color = MaterialTheme.colorScheme.error,
+                        fontSize = 18.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Cancelar")
+                    Text("Cancelar",
+                        fontSize = 18.sp)
                 }
             }
         )

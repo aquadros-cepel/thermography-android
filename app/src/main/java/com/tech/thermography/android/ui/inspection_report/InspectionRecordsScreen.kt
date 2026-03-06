@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.core.content.ContextCompat
+import androidx.navigation.NavController
 import androidx.core.graphics.PathParser
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
@@ -38,7 +39,6 @@ import com.tech.thermography.android.data.local.entity.PlantEntity
 import com.tech.thermography.android.ui.components.CompactUiWrapper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.MapTileIndex
@@ -49,14 +49,15 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun InspectionRecordsScreen(
     viewModel: InspectionRecordsViewModel = hiltViewModel(),
-    onViewRouteClick: (java.util.UUID) -> Unit = {}
+    onViewRouteClick: (UUID) -> Unit = {},
+    navController: NavController? = null
 ) {
     val plants by viewModel.plants.collectAsState()
-    val filteredPlants by viewModel.filteredPlants.collectAsState()
     val filteredInspectionRecords by viewModel.filteredInspectionRecords.collectAsState()
     val selectedPlantId by viewModel.selectedPlantId.collectAsState()
 
@@ -68,13 +69,23 @@ fun InspectionRecordsScreen(
 
         // Altura inicial do mapa (50% da tela conforme solicitado)
         var topHeightPx by remember {
-            mutableFloatStateOf(totalHeightPx * 0.45f)
+            mutableFloatStateOf(totalHeightPx * 0.35f)
         }
 
         // Converte pixels para Dp para usar no Modifier.height
         val topHeightDp = with(density) { topHeightPx.toDp() }
 
         Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            // TopAppBar com título e seta de voltar
+            CenterAlignedTopAppBar(
+                title = { Text("Registros de Inspeção") },
+                navigationIcon = {
+                    IconButton(onClick = { navController?.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    }
+                }
+            )
+
             // Upper half: Map (Altura Variável)
             Box(
                 modifier = Modifier
@@ -293,18 +304,18 @@ fun createCustomMarker(context: Context, level: Int, text: String? = null): Draw
     val darkColor = android.graphics.Color.parseColor(darkColorHex)
     val lightColor = android.graphics.Color.parseColor(lightColorHex)
 
-    // Fator de escala para reduzir o tamanho pela metade
-    val scale = 0.6f
+    // Fator de escala para controlar o tamanho final
+    val scale = 0.5f
 
     // 2. Configuração de Texto
-    val baseTextSizePx = 60f
-    val baseTextPadding = 10f
+    val baseTextSizePx = 50f // Reduzido de 60f para 50f
+    val baseTextPadding = 8f
     
     val textPaint = Paint().apply {
         isAntiAlias = true
         color = android.graphics.Color.WHITE
         style = Paint.Style.FILL
-        textSize = baseTextSizePx // Será escalado pelo Canvas
+        textSize = baseTextSizePx
         textAlign = Paint.Align.CENTER
         // Adiciona sombra preta para contraste
         setShadowLayer(5f, 0f, 0f, android.graphics.Color.BLACK)
@@ -320,7 +331,7 @@ fun createCustomMarker(context: Context, level: Int, text: String? = null): Draw
     val baseExtraHeight = if (text != null) (baseTextSizePx + baseTextPadding * 2).toInt() else 0
     val baseTotalHeight = baseMarkerHeight + baseExtraHeight
 
-    // Cria Bitmap com dimensões escaladas (Metade)
+    // Cria Bitmap com dimensões escaladas
     val scaledWidth = (baseTotalWidth * scale).toInt()
     val scaledHeight = (baseTotalHeight * scale).toInt()
     
@@ -330,7 +341,7 @@ fun createCustomMarker(context: Context, level: Int, text: String? = null): Draw
     // Aplica a escala ao Canvas
     canvas.scale(scale, scale)
 
-    // Centraliza o desenho do marcador horizontalmente (usando coordenadas base)
+    // Centraliza o desenho do marcador horizontalmente
     val markerOffsetX = (baseTotalWidth - baseMarkerWidth) / 2f
 
     // 3. Paint para o corpo com gradiente
@@ -347,7 +358,7 @@ fun createCustomMarker(context: Context, level: Int, text: String? = null): Draw
     canvas.save()
     canvas.translate(markerOffsetX, 0f)
 
-    // 4. Caminho da Gota (SVG Path - Coordenadas originais 100x130)
+    // 4. Caminho da Gota
     val pathData = "M50 0 C22 0, 0 22, 0 50 C0 78, 50 130, 50 130 C50 130, 100 78, 100 50 C100 22, 78 0, 50 0 Z"
     val path = try {
         PathParser.createPathFromPathData(pathData)
@@ -366,7 +377,7 @@ fun createCustomMarker(context: Context, level: Int, text: String? = null): Draw
     
     canvas.restore()
 
-    // 6. Desenha o Texto abaixo do marcador (Coordenadas base)
+    // 6. Desenha o Texto abaixo do marcador
     if (text != null) {
         val textX = baseTotalWidth / 2f
         val textY = baseMarkerHeight.toFloat() + baseTextSizePx
@@ -481,7 +492,7 @@ fun InspectionRecordCard(
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
@@ -495,7 +506,7 @@ fun InspectionRecordCard(
                 Column {
                     Text(
                         text = record.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )

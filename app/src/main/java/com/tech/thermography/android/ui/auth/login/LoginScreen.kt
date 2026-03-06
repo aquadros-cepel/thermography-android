@@ -27,6 +27,7 @@ import androidx.constraintlayout.compose.ExperimentalMotionApi
 import androidx.constraintlayout.compose.MotionLayout
 import androidx.constraintlayout.compose.MotionScene
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.tech.thermography.android.navigation.DeviceUtils
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMotionApi::class)
@@ -38,8 +39,7 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val windowSizeClass = calculateWindowSizeClass(context as Activity)
-    val isTablet = windowSizeClass.widthSizeClass >= WindowWidthSizeClass.Expanded
+    val isTablet = DeviceUtils.isTablet(context)
 
     if (uiState.isAuthenticated) {
         LaunchedEffect(Unit) { onLoginSuccess() }

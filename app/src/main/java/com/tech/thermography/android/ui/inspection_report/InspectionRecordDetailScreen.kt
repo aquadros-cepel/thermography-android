@@ -51,8 +51,8 @@ fun InspectionRecordDetailScreen(
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         Text(
             text = "Registro de Inspeção: ${uiState.record?.name ?: "--"}",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+//            style = MaterialTheme.typography.titleLarge,
+//            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -62,7 +62,7 @@ fun InspectionRecordDetailScreen(
                 .fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -123,7 +123,7 @@ fun InspectionRecordDetailScreen(
                 .weight(1f),
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (uiState.rootGroups.isEmpty()) {
                 Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -144,7 +144,7 @@ fun InspectionRecordDetailScreen(
                             inspectionRecordId = uiState.record?.id,
                             expandedGroupIds = vm.expandedGroupIds
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp)) // Ajuste: aumenta o espaçamento entre os itens da árvore
                     }
                 }
             }
@@ -169,27 +169,20 @@ private fun GroupNode(
         expanded = expandedIds.contains(grp.id)
     }
 
-    // Compact indentation for mobile: 8.dp per level
-    val paddingStart = (level * 8).dp
-    val rowHeight = 44.dp
-
-    // colors per level (restore palette):
-    // level 0 => group (light blue), level 1 => subgroup (light beige), level >=2 => equipment-ish (light green)
+    // Cores fixas para os níveis, independente do tema
     val rowColor = when (level) {
         0 -> Color(0xFFE6F2FF) // light blue
         1 -> Color(0xFFFFF3E0) // light beige
         else -> Color(0xFFEAF7EE) // light green
     }
+    val textColor = Color.Black
+    val iconColor = Color(0xFF294C7A) // substitui o preto pelo azul escuro
 
     Column(modifier = Modifier.fillMaxWidth().animateContentSize()) {
-        // Use base left/right gutters so backgrounds don't span full width and can be indented per level
         val baseLeft = 6.dp
         val baseRight = 8.dp
-
-        // Use a Row with leading Spacer so the colored background is indented as a whole
         Row(modifier = Modifier.fillMaxWidth()) {
-            Spacer(modifier = Modifier.width(baseLeft + paddingStart))
-            // increase right padding with level to accentuate visual receding
+            Spacer(modifier = Modifier.width(baseLeft + (level * 8).dp))
             val rightInset = baseRight + (level * 4).dp
             Box(modifier = Modifier
                 .weight(1f)
@@ -200,14 +193,14 @@ private fun GroupNode(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(rowHeight)
+                        .height(44.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = iconColor,
                         modifier = Modifier.size(20.dp)
                     )
 
@@ -216,10 +209,11 @@ private fun GroupNode(
                     Text(
                         text = grp.name,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = textColor,
                         modifier = Modifier.weight(1f)
                     )
 
-                    Text(text = grp.code ?: "", style = MaterialTheme.typography.bodySmall)
+                    Text(text = grp.code ?: "", style = MaterialTheme.typography.bodySmall, color = textColor)
                 }
             }
         }
@@ -249,10 +243,8 @@ private fun GroupNode(
 
 @Composable
 private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: NavHostController, plantId: UUID?, inspectionRecordId: UUID?) {
-    // Equipment items are slightly more indented than subgroups; keep compact padding
     val paddingStart = (level * 8).dp
     val rowHeight = 40.dp
-
     val eq = item.equipment
     val display = if (eq != null) {
         val shortCode = eq.code?.split("-")?.lastOrNull() ?: eq.code ?: item.link.equipmentId?.toString()
@@ -260,17 +252,18 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
     } else {
         item.link.equipmentId?.toString() ?: "equip"
     }
-
-    // Outer gutter and indented background for equipment (use light green background)
     val baseLeft = 6.dp
     val baseRight = 8.dp
+    val rowColor = Color(0xFFEAF7EE) // light green
+    val textColor = Color.Black
+    val iconColor = Color(0xFF294C7A) // substitui o preto pelo azul escuro
     Row(modifier = Modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.width(baseLeft + paddingStart + 4.dp))
         val rightInsetEq = baseRight + (level * 4).dp
         Box(modifier = Modifier
             .weight(1f)
             .padding(end = rightInsetEq)
-            .background(color = Color(0xFFEAF7EE), shape = RoundedCornerShape(8.dp))
+            .background(color = rowColor, shape = RoundedCornerShape(8.dp))
         ) {
             Row(
                 modifier = Modifier
@@ -279,15 +272,13 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = display, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-
+                Text(text = display, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = textColor)
                 Icon(
                     imageVector = Icons.Filled.CameraAlt,
                     contentDescription = "Camera",
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(24.dp)
                         .clickable {
-                            // navigate to thermal anomaly form to create a new record (thermographicId=null)
                             val p = plantId?.toString() ?: "null"
                             val e = item.link.equipmentId?.toString() ?: "null"
                             val r = inspectionRecordId?.toString() ?: "null"
@@ -297,7 +288,7 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
                             val route = "${NavRoutes.THERMAL_ANOMALY}?plantId=$rp&equipmentId=$re&inspectionRecordId=$rr&thermographicId=null"
                             try { navController.navigate(route) } catch (ex: Exception) { android.util.Log.e("IRDetailScreen","Navigation failed for route=$route", ex); try { navController.navigate(NavRoutes.THERMOGRAMS) } catch (_: Exception) {} }
                         },
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = iconColor
                 )
             }
         }
@@ -326,6 +317,8 @@ private fun AnomalyComponentRow(
         else -> "Normal" to Color(0xFFDFF5E6)
     }
 
+    val iconColor = Color(0xFF294C7A) // substitui o preto pelo azul escuro
+
     Row(modifier = Modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.width(32.dp)) // slight indent relative to equipment
         Box(modifier = Modifier
@@ -340,14 +333,14 @@ private fun AnomalyComponentRow(
             ) {
                 // Show component name if available, otherwise fallback to record name
                 val leftText = anomalyDisplay.componentName ?: anomaly.name
-                Text(text = leftText, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                Text(text = leftText, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = Color.Black)
 
                 // Condition badge as small rounded box
                 Box(modifier = Modifier
                     .background(color = badgeColor, shape = RoundedCornerShape(12.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text(text = labelText, style = MaterialTheme.typography.labelSmall)
+                    Text(text = labelText, style = MaterialTheme.typography.labelSmall, color = Color.Black)
                 }
 
                 IconButton(onClick = {
@@ -366,7 +359,7 @@ private fun AnomalyComponentRow(
                     Icon(
                         imageVector = Icons.Filled.Edit,
                         contentDescription = "Editar",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = iconColor
                     )
                 }
             }

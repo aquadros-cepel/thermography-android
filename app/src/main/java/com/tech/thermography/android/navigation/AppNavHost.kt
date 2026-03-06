@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.LinkedCamera
 import androidx.compose.material.icons.filled.Settings
@@ -47,48 +48,25 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMotionApi::class)
 fun AppNavHost() {
     val navController = rememberNavController()
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-
-    // Itens da barra de navegação
-    val items = listOf(
-        Triple(NavRoutes.HOME, "Home", Icons.Filled.Home),
-        Triple(NavRoutes.INSPECTION_RECORDS, "Rotas", Icons.Outlined.Route),
-        Triple(NavRoutes.THERMOGRAMS, "Termogramas", Icons.Outlined.LinkedCamera),
-        Triple(NavRoutes.SETTINGS, "Configurações", Icons.Filled.Settings)
-    )
-
-    // Verifica se a tela atual deve mostrar a Bottom Bar
+    val items = NavBarItems.items
     val bottomBarRoutes = items.map { it.first }
-    val showBottomBar = currentDestination?.route in bottomBarRoutes
-
-    // Recuperação segura do Activity para o WindowSizeClass
     val context = LocalContext.current
-    val activity = context.findActivity()
-    
-    // Define padrão se não encontrar activity (ex: preview)
-    val windowSizeClass = if (activity != null) {
-        calculateWindowSizeClass(activity)
-    } else {
-        null
-    }
-    
-    val isTablet = windowSizeClass?.widthSizeClass == WindowWidthSizeClass.Expanded
+    val isTablet = DeviceUtils.isTablet(context)
+    val showBottomBar = currentDestination?.route in bottomBarRoutes && isTablet
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    modifier = if (isTablet) Modifier else Modifier.height(90.dp)
+                    modifier = Modifier.height(90.dp)
                 ) {
                     items.forEach { (route, label, icon) ->
                         NavigationBarItem(
                             icon = { Icon(icon, contentDescription = label) },
-                            label = if (isTablet) {
-                                { Text(label) }
-                            } else null,
-                            alwaysShowLabel = isTablet,
+                            label = { Text(label) },
+                            alwaysShowLabel = true,
                             selected = currentDestination?.hierarchy?.any { it.route == route } == true,
                             onClick = {
                                 navController.navigate(route) {
@@ -114,7 +92,7 @@ fun AppNavHost() {
             composable(NavRoutes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { 
-                        navController.navigate(NavRoutes.INSPECTION_RECORDS) {
+                        navController.navigate(NavRoutes.HOME) {
                             popUpTo(NavRoutes.LOGIN) { inclusive = true }
                         }
                     },
@@ -131,13 +109,16 @@ fun AppNavHost() {
             }
 
             composable(NavRoutes.HOME) {
-                HomeScreen()
+                HomeScreen(navController)
             }
 
             composable(NavRoutes.INSPECTION_RECORDS) {
-                InspectionRecordsScreen(onViewRouteClick = { id ->
-                    navController.navigate("${NavRoutes.INSPECTION_RECORD_DETAIL}/$id")
-                })
+                InspectionRecordsScreen(
+                    onViewRouteClick = { id ->
+                        navController.navigate("${NavRoutes.INSPECTION_RECORD_DETAIL}/$id")
+                    },
+                    navController = navController
+                )
             }
 
             composable(NavRoutes.THERMOGRAMS) {
@@ -211,7 +192,7 @@ fun AppNavHost() {
     }
 }
 
-// Função de extensão auxiliar para encontrar a Activity a partir do Contexto
+@Composable
 private fun Context.findActivity(): Activity? {
     var context = this
     while (context is ContextWrapper) {
@@ -219,4 +200,26 @@ private fun Context.findActivity(): Activity? {
         context = context.baseContext
     }
     return null
+}
+
+object DeviceUtils {
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+    @Composable
+    fun isTablet(context: Context): Boolean {
+        val activity = context.findActivity()
+        if (activity != null) {
+            val windowSizeClass = calculateWindowSizeClass(activity)
+            return windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+        }
+        return false
+    }
+}
+
+object NavBarItems {
+    val items = listOf(
+        Triple(NavRoutes.INSPECTION_RECORDS, "Rotas", Icons.Outlined.Route),
+        Triple(NavRoutes.THERMOGRAMS, "Câmera", Icons.Outlined.LinkedCamera),
+        Triple(NavRoutes.SETTINGS, "Configurações", Icons.Filled.Settings),
+        Triple(NavRoutes.LOGIN, "Logout", Icons.AutoMirrored.Filled.Logout)
+    )
 }

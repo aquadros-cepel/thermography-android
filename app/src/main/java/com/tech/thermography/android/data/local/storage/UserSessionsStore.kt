@@ -28,6 +28,13 @@ class UserSessionStore @Inject constructor(@ApplicationContext private val conte
         }
     }
 
+    suspend fun clearSession() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.TOKEN)
+            prefs.remove(Keys.REMEMBER)
+        }
+    }
+
     val token: Flow<String?> = context.dataStore.data.map { prefs -> prefs[Keys.TOKEN] }
     val remember: Flow<Boolean?> = context.dataStore.data.map { prefs -> prefs[Keys.REMEMBER] }
 }
