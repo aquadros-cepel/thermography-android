@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.tech.thermography.android.navigation.NavRoutes
@@ -32,6 +34,7 @@ import java.util.UUID
 /**
  * Polished Inspection Record detail screen.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InspectionRecordDetailScreen(
     recordId: UUID,
@@ -49,11 +52,16 @@ fun InspectionRecordDetailScreen(
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        Text(
-            text = "Registro de Inspeção: ${uiState.record?.name ?: "--"}",
-//            style = MaterialTheme.typography.titleLarge,
-//            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 8.dp)
+        CenterAlignedTopAppBar(
+            title = { Text(uiState.record?.name ?: "--",
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp))
+            },
+
+            navigationIcon = {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                }
+            }
         )
 
         // Header card
@@ -247,8 +255,8 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
     val rowHeight = 40.dp
     val eq = item.equipment
     val display = if (eq != null) {
-        val shortCode = eq.code?.split("-")?.lastOrNull() ?: eq.code ?: item.link.equipmentId?.toString()
-        "$shortCode (${eq.name})"
+        val code = eq.code?.takeIf { it.isNotBlank() }
+        if (code != null) "$code (${eq.name})" else eq.name
     } else {
         item.link.equipmentId?.toString() ?: "equip"
     }

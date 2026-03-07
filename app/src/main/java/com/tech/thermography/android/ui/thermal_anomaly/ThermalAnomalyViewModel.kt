@@ -115,14 +115,14 @@ class ThermalAnomalyViewModel @Inject constructor(
                     }
                 }
             }
-            is ThermalAnomalyEvent.PlantSelected -> handlePlantSelected(event.plant)
-            is ThermalAnomalyEvent.EquipmentSelected -> handleEquipmentSelected(event.equipment)
-            is ThermalAnomalyEvent.ComponentSelected -> handleComponentSelected(event.component)
-            is ThermalAnomalyEvent.UpdateRecordName -> _uiState.update { it.copy(recordName = event.value) }
-            is ThermalAnomalyEvent.UpdateServiceOrder -> _uiState.update { it.copy(serviceOrder = event.value) }
-            is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value) }
+            is ThermalAnomalyEvent.PlantSelected -> handlePlantSelected(event.plant).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.EquipmentSelected -> handleEquipmentSelected(event.equipment).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.ComponentSelected -> handleComponentSelected(event.component).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.UpdateRecordName -> _uiState.update { it.copy(recordName = event.value, isDirty = true) }
+            is ThermalAnomalyEvent.UpdateServiceOrder -> _uiState.update { it.copy(serviceOrder = event.value, isDirty = true) }
+            is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value, isDirty = true) }
             is ThermalAnomalyEvent.UpdateCondition -> {
-                _uiState.update { it.copy(condition = event.value) }
+                _uiState.update { it.copy(condition = event.value, isDirty = true) }
                 updateAnalysisAndRecommendations()
                 viewModelScope.launch {
                     _uiState.value.selectedPlant?.let { p ->
@@ -133,13 +133,13 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
             }
             is ThermalAnomalyEvent.UpdateDeadline -> {
-                _uiState.update { it.copy(deadlineExecution = event.value) }
+                _uiState.update { it.copy(deadlineExecution = event.value, isDirty = true) }
             }
             is ThermalAnomalyEvent.UpdateNextMonitoring -> {
-                _uiState.update { it.copy(nextMonitoring = event.value) }
+                _uiState.update { it.copy(nextMonitoring = event.value, isDirty = true) }
             }
-            is ThermalAnomalyEvent.UpdateRecommendations -> _uiState.update { it.copy(recommendations = event.value) }
-            is ThermalAnomalyEvent.InspectionRecordSelected -> _uiState.update { it.copy(selectedInspectionRecord = event.record) }
+            is ThermalAnomalyEvent.UpdateRecommendations -> _uiState.update { it.copy(recommendations = event.value, isDirty = true) }
+            is ThermalAnomalyEvent.InspectionRecordSelected -> _uiState.update { it.copy(selectedInspectionRecord = event.record, isDirty = true) }
             is ThermalAnomalyEvent.ThermographicSelectedById -> {
                 viewModelScope.launch {
                     try {
@@ -202,9 +202,9 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
             }
 
-            is ThermalAnomalyEvent.SelectRoi -> handleRoiSelected(event.roi)
-            is ThermalAnomalyEvent.SelectRefRoi -> handleRefRoiSelected(event.roi)
-            is ThermalAnomalyEvent.UpdateThermogramImage -> handleImageSelected(event.uri)
+            is ThermalAnomalyEvent.SelectRoi -> handleRoiSelected(event.roi).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.SelectRefRoi -> handleRefRoiSelected(event.roi).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.UpdateThermogramImage -> handleImageSelected(event.uri).also { _uiState.update { it.copy(isDirty = true) } }
 
             ThermalAnomalyEvent.Save -> saveRecord()
             ThermalAnomalyEvent.Cancel -> resetForm()
@@ -278,15 +278,8 @@ class ThermalAnomalyViewModel @Inject constructor(
     }
 
     private fun generateEquipmentTypeString(equipment: EquipmentEntity): String {
-        val code = equipment.code?.split("-")?.lastOrNull()?.trim().orEmpty()
-        val name = equipment.name
-        return if (code.isNotBlank() && name.isNotBlank()) {
-            "$code ($name)"
-        } else if (name.isNotBlank()) {
-            name
-        } else {
-            code
-        }
+        val code = equipment.code?.takeIf { it.isNotBlank() }
+        return if (code != null) "$code (${equipment.name})" else equipment.name
     }
 
     private fun saveRecord() {
@@ -545,12 +538,13 @@ class ThermalAnomalyViewModel @Inject constructor(
             val allDeadlines = riskRepo.getAllRiskPeriodicityDeadlines().first()
             val match = allDeadlines.find { it.name == condition.name }
             if (match != null) {
-                val equipmentCode = equipment.code?.split("-")?.lastOrNull() ?: ""
+                val equipmentCode = equipment.code?.takeIf { it.isNotBlank() }
                 val equipmentName = equipment.name
                 val componentName = component.name
+                val equipmentLabel = if (equipmentCode != null) "$equipmentCode ($equipmentName)" else equipmentName
                 val analysisDescription = (match.description ?: "")
                     .replace("@COMPONENT", "\"$componentName\"")
-                    .replace("@EQUIPMENT", "\"$equipmentCode ($equipmentName)\"")
+                    .replace("@EQUIPMENT", "\"$equipmentLabel\"")
                 _uiState.update {
                     it.copy(
                         recommendations = match.recommendations ?: "",

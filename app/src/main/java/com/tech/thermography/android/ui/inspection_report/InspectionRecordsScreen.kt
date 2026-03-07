@@ -505,7 +505,9 @@ fun InspectionRecordCard(
             ) {
                 Column {
                     Text(
-                        text = record.name,
+                        text = record.code?.takeIf { it.isNotBlank() }
+                            ?.let { "$it (${record.name})" }
+                            ?: record.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
