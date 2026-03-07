@@ -44,6 +44,7 @@ data class ThermalAnomalyUiState(
     val thermogramRef: ThermogramEntity? = null,
     val thermogramRefRois: List<ROIEntity> = emptyList(),
     val selectedRefRoi: ROIEntity? = null,
+    val thermogramRefImageUri: Uri? = null,
 
     // UI state
     val isLoading: Boolean = false,

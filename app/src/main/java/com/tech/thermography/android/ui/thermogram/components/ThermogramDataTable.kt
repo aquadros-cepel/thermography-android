@@ -1,13 +1,16 @@
 package com.tech.thermography.android.ui.thermogram.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,12 +27,18 @@ fun ThermogramDataTable(
     temperatureDifference: Double?,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+    val shape = RoundedCornerShape(8.dp)
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
+            .border(width = 2.dp, color = borderColor, shape = shape)
+            .clip(shape)
     ) {
-        var rowIndex = 0
+        Column(modifier = Modifier.fillMaxWidth()) {
+            var rowIndex = 0
 
         // Áudio (mantém topo sem alternância)
         if (thermogram.audioPath != null) {
@@ -125,18 +134,21 @@ fun ThermogramDataTable(
             value = thermogram.imageResolution ?: "--"
         )
 
-        // Lente
-        DataRow(
-            index = rowIndex++,
-            label = "Lente",
-            value = thermogram.cameraLens?.let { "${it}°" } ?: "--"
-        )
-    }
+            // Lente
+            DataRow(
+                index = rowIndex++,
+                label = "Lente",
+                value = thermogram.cameraLens?.let { "${it}°" } ?: "--"
+            )
+        } // Column
+    } // Box
 }
 
+@Composable
 private fun rowBackgroundColor(index: Int): Color {
-    // Alternância: branco e cinza claro
-    return if (index % 2 == 0) Color.White else Color(0xFFF0F2F5) // rgb(240,242,245) leve
+    val even = MaterialTheme.colorScheme.surface
+    val odd = MaterialTheme.colorScheme.surfaceVariant
+    return if (index % 2 == 0) even else odd
 }
 
 @Composable
@@ -150,7 +162,7 @@ private fun DataRow(
         modifier = modifier
             .fillMaxWidth()
             .background(rowBackgroundColor(index))
-            .padding(horizontal = 12.dp, vertical = 8.dp), // linhas mais estreitas
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -160,7 +172,6 @@ private fun DataRow(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        // Valor alinhado à direita e mais próximo do label
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = value,

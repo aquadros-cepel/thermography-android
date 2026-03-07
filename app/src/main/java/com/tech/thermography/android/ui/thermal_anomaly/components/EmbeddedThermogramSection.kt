@@ -2,7 +2,9 @@ package com.tech.thermography.android.ui.thermal_anomaly.components
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -34,6 +36,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.scale
 import java.io.File
 import java.util.UUID
 
@@ -66,9 +70,14 @@ fun EmbeddedThermogramSection(
     thermogramId: UUID?,
     thermogram: ThermogramEntity?,
     rois: List<ROIEntity>,
+    refRois: List<ROIEntity>,
     selectedRoi: ROIEntity?,
     selectedRefRoi: ROIEntity?,
     thermogramImageUri: Uri?,
+    // Reference thermogram params
+    thermogramRef: ThermogramEntity?,
+    thermogramRefImageUri: Uri?,
+    onRefImageSelected: (Uri) -> Unit,
     mode: ThermogramMode,
     onRoiSelected: (ROIEntity) -> Unit,
     onRefRoiSelected: (ROIEntity) -> Unit,
@@ -77,9 +86,12 @@ fun EmbeddedThermogramSection(
     modifier: Modifier = Modifier
 ) {
     var showLightbox by remember { mutableStateOf(false) }
+    val singleRoi = rois.size <= 1
+    var showRefThermogram by remember(singleRoi) { mutableStateOf(singleRoi) }
+
     val context = LocalContext.current
 
-    // Decide qual URI usar: a que vem do state (nova seleção) ou o localImagePath do objeto persistido
+    // Decide qual URI usar
     val displayImageUri = remember(thermogramImageUri, thermogram?.localImagePath) {
         if (thermogramImageUri != null) {
             thermogramImageUri
@@ -90,67 +102,114 @@ fun EmbeddedThermogramSection(
         }
     }
 
-    // URI temporária para foto da câmera (criada de forma segura)
+    val displayRefImageUri = remember(thermogramRefImageUri, thermogramRef?.localImagePath) {
+        if (thermogramRefImageUri != null) {
+            thermogramRefImageUri
+        } else if (!thermogramRef?.localImagePath.isNullOrBlank()) {
+            File(thermogramRef!!.localImagePath).toUri()
+        } else {
+            null
+        }
+    }
+
+    // URI temporária para foto da câmera
     val photoUri = remember {
         try {
             val photoFile = File(context.cacheDir, "thermogram_${System.currentTimeMillis()}.jpg")
             photoFile.parentFile?.mkdirs()
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                photoFile
-            )
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
-    // Verificar se tem permissão de câmera
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
-        )
+    val photoRefUri = remember {
+        try {
+            val photoFile = File(context.cacheDir, "thermogram_ref_${System.currentTimeMillis()}.jpg")
+            photoFile.parentFile?.mkdirs()
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    // Launcher para GALERIA (com Intent para permitir navegar para pastas específicas)
+    // Gerenciamento de Permissões
+    var hasCameraPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    }
+
+    // Launcher para GALERIA (Usando GetContent para permitir navegação em pastas se necessário)
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { onImageSelected(it) }
     }
 
+    val galleryRefLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> 
+        uri?.let { 
+            onRefImageSelected(it)
+            showRefThermogram = true
+        } 
+    }
+
     // Launcher para CÂMERA
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success: Boolean ->
-        if (success && photoUri != null) {
-            onImageSelected(photoUri)
+        if (success && photoUri != null) onImageSelected(photoUri)
+    }
+
+    val cameraRefLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean -> 
+        if (success && photoRefUri != null) {
+            onRefImageSelected(photoRefUri)
+            showRefThermogram = true
         }
     }
 
-    // Launcher para solicitar permissão de câmera
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+    // Permissões
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         hasCameraPermission = isGranted
-        if (isGranted && photoUri != null) {
-            cameraLauncher.launch(photoUri)
-        }
+        if (isGranted && photoUri != null) cameraLauncher.launch(photoUri)
     }
 
+    val permissionRefLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted -> 
+        hasCameraPermission = isGranted; 
+        if (isGranted && photoRefUri != null) cameraRefLauncher.launch(photoRefUri) 
+    }
+
+    // Função auxiliar para forçar o Android a ver arquivos novos na pasta da FLIR
+    val refreshFlirGallery = {
+        try {
+            val dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val flirDir = File(dcim, "100_FLIR")
+            if (flirDir.exists() && flirDir.isDirectory) {
+                // Escaneia a própria pasta e arquivos nela para atualizar o MediaStore
+                val files = flirDir.listFiles()?.map { it.absolutePath }?.toTypedArray()
+                if (files != null && files.isNotEmpty()) {
+                    MediaScannerConnection.scanFile(context, files, null, null)
+                } else {
+                    // Se não conseguir listar, escaneia pelo menos a pasta
+                    MediaScannerConnection.scanFile(context, arrayOf(flirDir.absolutePath), null, null)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 8.dp), // keep only vertical padding, no horizontal
+            .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header com título e controles
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -162,184 +221,133 @@ fun EmbeddedThermogramSection(
                 modifier = Modifier.weight(1f)
             )
 
-            Row(
-                // removed lateral spacing
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                // Botões de Galeria e Câmera (sempre visíveis no modo edit)
-                if (mode != ThermogramMode.VIEW) {
-                    Row(
-                        // removed lateral spacing between icons
-                        horizontalArrangement = Arrangement.Start
+            if (mode != ThermogramMode.VIEW) {
+                Row(horizontalArrangement = Arrangement.Start) {
+                    IconButton(
+                        onClick = { 
+                            refreshFlirGallery()
+                            galleryLauncher.launch("image/*") 
+                        },
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        // Botão Galeria
-                        IconButton(
-                            onClick = {
-                                galleryLauncher.launch("image/*") // Intent para abrir diretamente na galeria de imagens
-                            },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoLibrary,
-                                contentDescription = "Galeria",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria", tint = MaterialTheme.colorScheme.primary)
+                    }
 
-                        // Botão Câmera
-                        IconButton(
-                            onClick = {
-                                if (hasCameraPermission) {
-                                    photoUri?.let { uri ->
-                                        cameraLauncher.launch(uri)
-                                    }
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.CAMERA)
-                                }
-                            },
-                            modifier = Modifier.size(40.dp),
-                            enabled = true
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoCamera,
-                                contentDescription = "Câmera",
-                                tint = if (photoUri != null) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                }
-                            )
-                        }
+                    IconButton(
+                        onClick = {
+                            if (hasCameraPermission) photoUri?.let { cameraLauncher.launch(it) }
+                            else permissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera",
+                            tint = if (photoUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
                     }
                 }
             }
         }
 
-        // Imagem do termograma
         ThermogramImage(
             imageUri = displayImageUri,
             onImageClick = { if (displayImageUri != null) showLightbox = true },
             modifier = Modifier.fillMaxWidth()
         )
 
-        Row {
-            // ROI Selector (Object area)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             if (rois.isNotEmpty()) {
-                if (mode == ThermogramMode.VIEW) {
-                    RoiLabel(selectedRoi = selectedRoi)
-                } else {
-                    RoiDropdownInline(
-                        label = "ÁREA DO OBJETO",
-                        rois = rois,
-                        selected = selectedRoi,
-                        onSelect = onRoiSelected,
-                        modifier = Modifier.width(200.dp),
-                        enabled = true
-                    )
-                }
+                if (mode == ThermogramMode.VIEW) RoiLabel(selectedRoi = selectedRoi)
+                else RoiDropdownInline(label = "ÁREA DO OBJETO", rois = rois, selected = selectedRoi, onSelect = onRoiSelected, modifier = Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // ROI Selector (Reference area)
-            if (rois.isNotEmpty()) {
-                if (mode == ThermogramMode.VIEW) {
-                    RoiLabel(selectedRoi = selectedRefRoi)
-                } else {
-                    RoiDropdownInline(
-                        label = "ÁREA DE REFERÊNCIA",
-                        rois = rois,
-                        selected = selectedRefRoi,
-                        onSelect = onRefRoiSelected,
-                        modifier = Modifier.width(200.dp),
-                        enabled = true
-                    )
-                }
+            if (!singleRoi && !showRefThermogram && rois.size > 1) {
+                if (mode == ThermogramMode.VIEW) RoiLabel(selectedRoi = selectedRefRoi)
+                else RoiDropdownInline(label = "ÁREA DE REFERÊNCIA", rois = rois, selected = selectedRefRoi, onSelect = onRefRoiSelected, modifier = Modifier.weight(1f))
+            } else if (rois.isNotEmpty()) {
+                Spacer(modifier = Modifier.weight(1f))
             }
-
         }
-        // Tabela de dados
+
+        if (displayImageUri != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Termograma de Referência", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (mode != ThermogramMode.VIEW) {
+                        IconButton(onClick = { 
+                            refreshFlirGallery()
+                            galleryRefLauncher.launch("image/*") 
+                        }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria Ref", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = {
+                            if (hasCameraPermission) photoRefUri?.let { cameraRefLauncher.launch(it) }
+                            else permissionRefLauncher.launch(Manifest.permission.CAMERA)
+                        }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera Ref",
+                                tint = if (photoRefUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                        }
+                    }
+
+                    Switch(
+                        checked = showRefThermogram,
+                        onCheckedChange = { if (!singleRoi) showRefThermogram = it },
+                        enabled = !singleRoi,
+                        modifier = Modifier.scale(0.6f)
+                    )
+                }
+            }
+
+            if (showRefThermogram) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThermogramImage(imageUri = displayRefImageUri, onImageClick = {}, modifier = Modifier.fillMaxWidth())
+
+                    val currentRefRois = if (refRois.isNotEmpty()) refRois else rois
+                    if (currentRefRois.isNotEmpty()) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            if (mode == ThermogramMode.VIEW) RoiLabel(selectedRoi = selectedRefRoi)
+                            else RoiDropdownInline(label = "ÁREA DE REFERÊNCIA", rois = currentRefRois, selected = selectedRefRoi, onSelect = onRefRoiSelected, modifier = Modifier.weight(1f))
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+
         thermogram?.let { thermo ->
-            ThermogramDataTable(
-                thermogram = thermo,
-                selectedRoi = selectedRoi,
-                selectedRefRoi = selectedRefRoi,
-                temperatureDifference = temperatureDifference,
-                modifier = Modifier.fillMaxWidth()
-            )
+            ThermogramDataTable(thermogram = thermo, selectedRoi = selectedRoi, selectedRefRoi = selectedRefRoi, temperatureDifference = temperatureDifference, modifier = Modifier.fillMaxWidth())
         }
     }
 
-    // Lightbox para visualização ampliada
     if (showLightbox && displayImageUri != null) {
-        // Fullscreen dialog with zoom & pan support
-        Dialog(
-            onDismissRequest = { showLightbox = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                // Transform state
+        Dialog(onDismissRequest = { showLightbox = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), color = MaterialTheme.colorScheme.surface) {
                 var scale by remember { mutableStateOf(1f) }
                 var offsetX by remember { mutableStateOf(0f) }
                 var offsetY by remember { mutableStateOf(0f) }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Image with zoom & pan
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
                     AsyncImage(
                         model = displayImageUri,
                         contentDescription = "Imagem térmica ampliada",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer(
-                                scaleX = scale,
-                                scaleY = scale,
-                                translationX = offsetX,
-                                translationY = offsetY
-                            )
+                        modifier = Modifier.fillMaxWidth()
+                            .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offsetX, translationY = offsetY)
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, _ ->
-                                    // Apply zoom with limits
-                                    val newScale = (scale * zoom).coerceIn(1f, 6f)
-                                    scale = newScale
-                                    offsetX += pan.x
-                                    offsetY += pan.y
+                                    scale = (scale * zoom).coerceIn(1f, 6f)
+                                    offsetX += pan.x; offsetY += pan.y
                                 }
                             }
-                            .pointerInput(Unit) {
-                                detectTapGestures(onDoubleTap = {
-                                    // reset
-                                    scale = 1f
-                                    offsetX = 0f
-                                    offsetY = 0f
-                                })
-                            }
+                            .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scale = 1f; offsetX = 0f; offsetY = 0f }) }
                     )
-
-                    // Close button top-right
-                    IconButton(
-                        onClick = { showLightbox = false },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = "Fechar",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                    IconButton(onClick = { showLightbox = false }, modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = "Fechar", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }

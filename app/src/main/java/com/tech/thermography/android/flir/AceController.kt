@@ -66,6 +66,7 @@ class AceController @Inject constructor(
     fun startCamera() {
         ThermalSdkAndroid.init(context, ThermalLog.LogLevel.DEBUG);
         discoveryAndConnectCamera()
+//        startStream()
     }
 
     fun discoveryAndConnectCamera(){

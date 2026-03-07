@@ -205,6 +205,7 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.SelectRoi -> handleRoiSelected(event.roi).also { _uiState.update { it.copy(isDirty = true) } }
             is ThermalAnomalyEvent.SelectRefRoi -> handleRefRoiSelected(event.roi).also { _uiState.update { it.copy(isDirty = true) } }
             is ThermalAnomalyEvent.UpdateThermogramImage -> handleImageSelected(event.uri).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.UpdateRefThermogramImage -> handleRefImageSelected(event.uri).also { _uiState.update { it.copy(isDirty = true) } }
 
             ThermalAnomalyEvent.Save -> saveRecord()
             ThermalAnomalyEvent.Cancel -> resetForm()
@@ -520,6 +521,50 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Erro ao processar imagem: ${e.message}") }
+            }
+        }
+    }
+
+    private fun handleRefImageSelected(uri: Uri) {
+        _uiState.update { it.copy(thermogramRefImageUri = uri) }
+        viewModelScope.launch {
+            try {
+                val result = flirReader.readMetadata(uri, context)
+                result.onSuccess { metadata ->
+                    val currentUserId = resolveCurrentUserId()
+                    val equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID()
+                    
+                    val thermogramRefId = _uiState.value.thermogramRef?.id ?: UUID.randomUUID()
+                    val thermogramReference = metadata.toEntity(
+                        id = thermogramRefId,
+                        equipmentId = equipmentId,
+                        createdById = currentUserId,
+                        localImagePath = uri.toString()
+                    )
+
+                    val roisReference = metadata.rois.map { 
+                        it.toEntity(thermogramRefId).copy(id = UUID.randomUUID()) 
+                    }
+
+                    val selectedRefRoi = roisReference.firstOrNull()
+
+                    _uiState.update {
+                        it.copy(
+                            thermogramRef = thermogramReference.copy(
+                                selectedRoiId = selectedRefRoi?.id,
+                                maxTempRoi = selectedRefRoi?.maxTemp
+                            ),
+                            thermogramRefRois = roisReference,
+                            selectedRefRoi = selectedRefRoi
+                        )
+                    }
+                }
+                result.onFailure { error ->
+                    // Se falhar ao ler metadados, apenas atualiza o caminho da imagem se necessário
+                    Log.w("ThermAnomVM", "Failed to read ref image metadata: ${error.message}")
+                }
+            } catch (e: Exception) {
+                Log.w("ThermAnomVM", "Error processing ref image: ${e.message}")
             }
         }
     }

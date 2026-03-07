@@ -29,6 +29,7 @@ sealed class ThermalAnomalyEvent {
     data class SelectRoi(val roi: ROIEntity) : ThermalAnomalyEvent()
     data class SelectRefRoi(val roi: ROIEntity) : ThermalAnomalyEvent()
     data class UpdateThermogramImage(val uri: Uri) : ThermalAnomalyEvent()
+    data class UpdateRefThermogramImage(val uri: Uri) : ThermalAnomalyEvent()
 
     object Save : ThermalAnomalyEvent()
     object Cancel : ThermalAnomalyEvent()

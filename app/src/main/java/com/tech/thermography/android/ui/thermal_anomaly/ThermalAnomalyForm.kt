@@ -180,9 +180,15 @@ fun ThermalAnomalyForm(
                         thermogramId = uiState.thermogramId,
                         thermogram = uiState.thermogram,
                         rois = uiState.thermogramRois,
+                        refRois = uiState.thermogramRefRois,
                         selectedRoi = uiState.selectedRoi,
                         selectedRefRoi = uiState.selectedRefRoi,
                         thermogramImageUri = uiState.thermogramImageUri,
+                        thermogramRef = uiState.thermogramRef,
+                        thermogramRefImageUri = uiState.thermogramRefImageUri,
+                        onRefImageSelected = { uri ->
+                            viewModel.onEvent(ThermalAnomalyEvent.UpdateRefThermogramImage(uri))
+                        },
                         mode = ThermogramMode.EDIT,
                         onRoiSelected = { roi ->
                             viewModel.onEvent(ThermalAnomalyEvent.SelectRoi(roi))
@@ -266,7 +272,7 @@ fun ThermalAnomalyForm(
                 maxLines = 5,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(160.dp)
             )
 
             AppOutlinedField(
@@ -276,7 +282,7 @@ fun ThermalAnomalyForm(
                 maxLines = 5,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
+                    .height(160.dp)
             )
         }
 
