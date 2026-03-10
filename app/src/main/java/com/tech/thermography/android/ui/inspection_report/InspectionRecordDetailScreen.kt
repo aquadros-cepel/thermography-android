@@ -58,7 +58,7 @@ fun InspectionRecordDetailScreen(
             },
 
             navigationIcon = {
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(onClick = { navController.navigate(NavRoutes.INSPECTION_RECORDS) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                 }
             }
