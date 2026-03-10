@@ -50,7 +50,9 @@ fun InspectionRecordDetailScreen(
         expandToEquipmentId?.let { vm.expandToEquipment(it) }
     }
 
+    // formatters: date only and date + time
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         CenterAlignedTopAppBar(
@@ -90,22 +92,22 @@ fun InspectionRecordDetailScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // START/END: show formatted dates if present (startedAt and finishedAt are Instant?)
+                // START/END: show formatted date+time if present (startedAt and finishedAt are Instant?)
                 val startedText = uiState.record?.startedAt?.let { startedInstant ->
                     try {
-                        java.time.ZonedDateTime.ofInstant(startedInstant, ZoneId.systemDefault()).toLocalDate().format(dateFormatter)
+                        java.time.ZonedDateTime.ofInstant(startedInstant, ZoneId.systemDefault()).format(dateTimeFormatter) + " h"
                     } catch (_: Exception) { "--" }
                 } ?: "--"
 
                 val finishedText = uiState.record?.finishedAt?.let { finishedInstant ->
                     try {
-                        java.time.ZonedDateTime.ofInstant(finishedInstant, ZoneId.systemDefault()).toLocalDate().format(dateFormatter)
+                        java.time.ZonedDateTime.ofInstant(finishedInstant, ZoneId.systemDefault()).format(dateTimeFormatter) + " h"
                     } catch (_: Exception) { "--" }
                 } ?: "--"
 
-                Text(text = "Início da inspeção: $startedText", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Inspeção iniciada\t\t\t\t: $startedText", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Encerramento da inspeção: $finishedText", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Inspeção encerrada\t: $finishedText", style = MaterialTheme.typography.bodySmall)
             }
         }
 
