@@ -123,13 +123,14 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value, isDirty = true) }
             is ThermalAnomalyEvent.UpdateCondition -> {
                 _uiState.update { it.copy(condition = event.value, isDirty = true) }
-                updateAnalysisAndRecommendations()
                 viewModelScope.launch {
                     _uiState.value.selectedPlant?.let { p ->
                         val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(p.id).first()
                         setThermalRecordName(p, event.value, anomalyRecords)
                     }
                     applyRiskPeriodicity(event.value)
+                    // Atualiza recomendações e descrição de análise somente após aplicar a periodicidade/condição
+                    updateAnalysisAndRecommendations()
                 }
             }
             is ThermalAnomalyEvent.UpdateDeadline -> {
@@ -647,12 +648,14 @@ class ThermalAnomalyViewModel @Inject constructor(
     private fun handleComponentSelected(component: com.tech.thermography.android.data.local.entity.EquipmentComponentEntity) {
         viewModelScope.launch {
             _uiState.update { it.copy(selectedComponent = component) }
-            updateAnalysisAndRecommendations()
+            // Recalcula condição com base nos novos limites e deltaT
             val deltaT = calculateTemperatureDifference()
             val limits = limitsRepository.getEquipmentComponentTemperatureLimitsByComponentId(component.id)
             val newCondition = classifyRisk(deltaT, limits)
             _uiState.update { it.copy(condition = newCondition) }
             applyRiskPeriodicity(newCondition)
+            // Atualiza recomendações e description depois que a condição foi determinada
+            updateAnalysisAndRecommendations()
         }
     }
 
