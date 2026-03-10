@@ -148,6 +148,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                             val plant = therm.plantId.let { plantRepository.getPlantById(it) }
                             val equipment = therm.equipmentId.let { equipmentRepository.getEquipmentById(it) }
                             val inspectionRecord = therm.routeId?.let { inspectionRecordRepository.getInspectionRecordById(it) }
+                            val component = therm.componentId?.let { equipmentComponentRepository.getEquipmentComponentById(it) }
 
                             var loadedThermogram: com.tech.thermography.android.data.local.entity.ThermogramEntity? = null
                             var loadedRois: List<com.tech.thermography.android.data.local.entity.ROIEntity> = emptyList()
@@ -174,6 +175,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                                 state.copy(
                                     selectedPlant = plant ?: state.selectedPlant,
                                     selectedEquipment = equipment ?: state.selectedEquipment,
+                                    selectedComponent = component ?: state.selectedComponent,
                                     selectedInspectionRecord = inspectionRecord ?: state.selectedInspectionRecord,
                                     recordName = therm.name,
                                     serviceOrder = therm.serviceOrder ?: "",
