@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -233,16 +234,16 @@ fun EmbeddedThermogramSection(
                         Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria", tint = MaterialTheme.colorScheme.primary)
                     }
 
-                    IconButton(
-                        onClick = {
-                            if (hasCameraPermission) photoUri?.let { cameraLauncher.launch(it) }
-                            else permissionLauncher.launch(Manifest.permission.CAMERA)
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera",
-                            tint = if (photoUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
-                    }
+//                    IconButton(
+//                        onClick = {
+//                            if (hasCameraPermission) photoUri?.let { cameraLauncher.launch(it) }
+//                            else permissionLauncher.launch(Manifest.permission.CAMERA)
+//                        },
+//                        modifier = Modifier.size(40.dp)
+//                    ) {
+//                        Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera",
+//                            tint = if (photoUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+//                    }
                 }
             }
         }
@@ -276,7 +277,7 @@ fun EmbeddedThermogramSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Termograma de Referência", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(text = "Termograma de Referência", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (mode != ThermogramMode.VIEW) {
@@ -286,13 +287,13 @@ fun EmbeddedThermogramSection(
                         }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria Ref", tint = MaterialTheme.colorScheme.primary)
                         }
-                        IconButton(onClick = {
-                            if (hasCameraPermission) photoRefUri?.let { cameraRefLauncher.launch(it) }
-                            else permissionRefLauncher.launch(Manifest.permission.CAMERA)
-                        }, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera Ref",
-                                tint = if (photoRefUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
-                        }
+//                        IconButton(onClick = {
+//                            if (hasCameraPermission) photoRefUri?.let { cameraRefLauncher.launch(it) }
+//                            else permissionRefLauncher.launch(Manifest.permission.CAMERA)
+//                        }, modifier = Modifier.size(40.dp)) {
+//                            Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera Ref",
+//                                tint = if (photoRefUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+//                        }
                     }
 
                     Switch(
@@ -306,7 +307,9 @@ fun EmbeddedThermogramSection(
 
             if (showRefThermogram) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ThermogramImage(imageUri = displayRefImageUri, onImageClick = {}, modifier = Modifier.fillMaxWidth())
+                    ThermogramImage(imageUri = displayRefImageUri,
+                        onImageClick = { if (displayRefImageUri != null) showLightbox = true },
+                        modifier = Modifier.fillMaxWidth())
 
                     val currentRefRois = if (refRois.isNotEmpty()) refRois else rois
                     if (currentRefRois.isNotEmpty()) {
@@ -346,8 +349,8 @@ fun EmbeddedThermogramSection(
                             }
                             .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scale = 1f; offsetX = 0f; offsetY = 0f }) }
                     )
-                    IconButton(onClick = { showLightbox = false }, modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = "Fechar", tint = MaterialTheme.colorScheme.onSurface)
+                    IconButton(onClick = { showLightbox = false }, modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Fechar", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
