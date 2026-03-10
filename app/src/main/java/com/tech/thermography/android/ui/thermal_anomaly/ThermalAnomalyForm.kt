@@ -334,10 +334,10 @@ fun ThermalAnomalyForm(
     if (showCancelDialog) {
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancelar") },
+            title = { Text("Confirmação") },
             text = {
                 Text(
-                    "Realmente deseja cancelar? As alterações feitas não serão salvas.",
+                    "Deseja realmente Cancelar? As alterações feitas não serão salvas.",
                     style = MaterialTheme.typography.bodyLarge
                 )
             },

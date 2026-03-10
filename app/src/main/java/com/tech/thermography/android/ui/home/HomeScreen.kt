@@ -156,11 +156,12 @@ fun HomeScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Confirmar Logout") },
+            title = { Text("Confirmação") },
             text = {
                 Text(
-                    "Após fazer o Logout você só conseguirá fazer Login estando on-line.\n\nSe estiver trabalhando em um local sem conexão de rede não será possível autenticar via Login e entrar na aplicação.\n\nTem certeza que deseja fazer Logout?",
-                    style = MaterialTheme.typography.bodyLarge
+                    "Deseja realmente realizar o Logout?\n\nAtenção: Após fazer o Logout você só conseguirá fazer Login e entrar novamente na aplicação se tiver conexão de rede wi-fi ou 5G.\n\n",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
             },
             confirmButton = {

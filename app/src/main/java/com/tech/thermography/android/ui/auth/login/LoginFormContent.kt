@@ -50,21 +50,21 @@ fun LoginFormContent(
     ) {
 
         Image(
-            painter = painterResource(id = R.drawable.login_small),
+            painter = painterResource(id = R.drawable.logo_thermal_energy_vb),
             contentDescription = "Logo small",
             modifier = Modifier
-                .size(80.dp)
+                .size(140.dp)
                 .padding(bottom = 24.dp)
         )
 
-        Text("Thermal Energy",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp))
+//        Text("Thermal Energy",
+//            style = MaterialTheme.typography.headlineMedium,
+//            fontWeight = FontWeight.Bold,
+//            modifier = Modifier.padding(bottom = 12.dp))
 
         Text("Gestão de Inspeções Termográficas",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.DarkGray,
+//            color = Color.DarkGray,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 48.dp))
 
@@ -75,7 +75,7 @@ fun LoginFormContent(
                     username = it
                     onUsernameChanged(it)
                 },
-                label = { Text("E-mail") },
+                label = { Text("Usuário") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(

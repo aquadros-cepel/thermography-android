@@ -3,7 +3,7 @@ package com.tech.thermography.android.ui.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,7 +47,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Sincronização e Dados",
+                text = "Sincronização de dados",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -78,12 +78,12 @@ fun SettingsScreen(
                     }
 
                     Text(
-                        text = "Esta ação irá excluir todos os dados salvos localmente no banco de dados e baixará as informações mais recentes da nuvem.",
+                        text = "Esta ação irá sincronizar a aplicação com os dados mais recentes da nuvem.",
                         style = MaterialTheme.typography.bodyMedium
                     )
 
                     Text(
-                        text = "Observação: As imagens capturadas localmente não serão excluídas do armazenamento do dispositivo.",
+                        text = "Observação: As imagens guardadas na biblioteca não serão excluídas do dispositivo.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -97,9 +97,14 @@ fun SettingsScreen(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = null)
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = "Sincronizar",
+                            tint = MaterialTheme.colorScheme.onError,
+                            modifier = Modifier.size(20.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Limpar e Sincronizar")
+                        Text("Sincronizar")
                     }
                 }
             }
@@ -109,9 +114,9 @@ fun SettingsScreen(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Confirmar Limpeza") },
+            title = { Text("Confirmação") },
             text = { Text(
-                    "Deseja realmente apagar os dados locais e iniciar uma nova sincronização?\n\nEsta ação não pode ser desfeita!!!",
+                    "Deseja realmente iniciar a sincronização?",
                     style = MaterialTheme.typography.bodyLarge) },
             confirmButton = {
                 TextButton(
@@ -124,13 +129,13 @@ fun SettingsScreen(
                         }
                     }
                 ) {
-                    Text("Limpar", color = MaterialTheme.colorScheme.error,
+                    Text("Sim", color = MaterialTheme.colorScheme.error,
                         fontSize = 18.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Cancelar",
+                    Text("Não",
                         fontSize = 18.sp)
                 }
             }

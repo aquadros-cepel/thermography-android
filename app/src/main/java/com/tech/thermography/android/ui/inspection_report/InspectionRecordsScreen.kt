@@ -36,6 +36,7 @@ import androidx.core.graphics.PathParser
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import com.tech.thermography.android.data.local.entity.PlantEntity
+import com.tech.thermography.android.navigation.NavRoutes
 import com.tech.thermography.android.ui.components.CompactUiWrapper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
@@ -80,7 +81,7 @@ fun InspectionRecordsScreen(
             CenterAlignedTopAppBar(
                 title = { Text("Registros de Inspeção") },
                 navigationIcon = {
-                    IconButton(onClick = { navController?.popBackStack() }) {
+                    IconButton(onClick = { navController?.navigate(NavRoutes.HOME) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
                 }
