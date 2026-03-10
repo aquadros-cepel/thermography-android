@@ -51,8 +51,10 @@ fun AppOutlinedField(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val textColor = MaterialTheme.colorScheme.onSurface
     val fieldBg = MaterialTheme.colorScheme.background
-    val disabledBg = Color(0xFFF5F7FA)
-    val disabledText = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+//    val disabledBg = Color(0xFFF5F7FA)
+    val disabledBg = MaterialTheme.colorScheme.background
+//    val disabledText = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val disabledText = MaterialTheme.colorScheme.onSurfaceVariant
     CompositionLocalProvider(
         LocalDensity provides compactDensity
     ) {

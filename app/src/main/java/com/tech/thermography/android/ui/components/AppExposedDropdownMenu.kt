@@ -69,8 +69,10 @@ fun <T> AppExposedDropdownMenu(
     // Cores do tema
     val labelColor = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
     val textColor = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-    val disabledBg = Color(0xFFF4F6F8)
-    val disabledText = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+//    val disabledBg = Color(0xFFF4F6F8)
+    val disabledBg = MaterialTheme.colorScheme.background
+//    val disabledText = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val disabledText = MaterialTheme.colorScheme.onSurfaceVariant
     val fieldBg = MaterialTheme.colorScheme.background
 
     CompositionLocalProvider(

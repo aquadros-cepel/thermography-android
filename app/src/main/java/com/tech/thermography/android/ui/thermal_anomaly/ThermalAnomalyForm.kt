@@ -54,7 +54,8 @@ fun RegistrationFields(
         options = uiState.availablePlants,
         selectedOption = uiState.selectedPlant,
         onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.PlantSelected(it)) },
-        optionLabelProvider = { it.name ?: "" }
+        optionLabelProvider = { it.name ?: "" },
+        enabled = false
     )
 
     AppExposedDropdownMenu(
@@ -62,14 +63,15 @@ fun RegistrationFields(
         options = uiState.filteredEquipments,
         selectedOption = uiState.selectedEquipment,
         onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelected(it)) },
-        optionLabelProvider = { it.code ?: "" }
+        optionLabelProvider = { it.code ?: "" },
+        enabled = false
     )
 
     AppOutlinedField(
         value = uiState.equipmentType,
         onValueChange = {},
         label = "EQUIPAMENTO",
-//        enabled = false
+        enabled = false
     )
 
     AppExposedDropdownMenu(
@@ -77,13 +79,15 @@ fun RegistrationFields(
         options = uiState.filteredInspectionRecords,
         selectedOption = uiState.selectedInspectionRecord,
         onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.InspectionRecordSelected(it)) },
-        optionLabelProvider = { it.name }
+        optionLabelProvider = { it.name },
+        enabled = false
     )
 
     AppOutlinedField(
         value = uiState.recordName,
         onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateRecordName(it)) },
-        label = "NO RELATÓRIO"
+        label = "NO RELATÓRIO",
+        enabled = false
     )
 
     AppOutlinedField(
