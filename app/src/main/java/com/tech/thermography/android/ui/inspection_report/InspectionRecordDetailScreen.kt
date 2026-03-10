@@ -208,7 +208,7 @@ private fun GroupNode(
                         modifier = Modifier.weight(1f)
                     )
 
-                    Text(text = grp.code ?: "", style = MaterialTheme.typography.bodySmall, color = textColor)
+//                    Text(text = grp.code ?: "", style = MaterialTheme.typography.bodySmall, color = textColor)
                 }
             }
         }
