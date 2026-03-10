@@ -188,10 +188,14 @@ fun ThermalAnomalyForm(
                         selectedRoi = uiState.selectedRoi,
                         selectedRefRoi = uiState.selectedRefRoi,
                         thermogramImageUri = uiState.thermogramImageUri,
+                        realImageUri = uiState.realImageUri,
                         thermogramRef = uiState.thermogramRef,
                         thermogramRefImageUri = uiState.thermogramRefImageUri,
                         onRefImageSelected = { uri ->
                             viewModel.onEvent(ThermalAnomalyEvent.UpdateRefThermogramImage(uri))
+                        },
+                        onRealImageSelected = { uri ->
+                            viewModel.onEvent(ThermalAnomalyEvent.UpdateRealImage(uri))
                         },
                         mode = ThermogramMode.EDIT,
                         onRoiSelected = { roi ->

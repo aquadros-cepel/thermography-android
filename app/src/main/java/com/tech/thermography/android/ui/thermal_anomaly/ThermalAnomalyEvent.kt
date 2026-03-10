@@ -31,6 +31,8 @@ sealed class ThermalAnomalyEvent {
     data class UpdateThermogramImage(val uri: Uri) : ThermalAnomalyEvent()
     data class UpdateRefThermogramImage(val uri: Uri) : ThermalAnomalyEvent()
 
+    data class UpdateRealImage(val uri: Uri) : ThermalAnomalyEvent()
+
     object Save : ThermalAnomalyEvent()
     object Cancel : ThermalAnomalyEvent()
 }

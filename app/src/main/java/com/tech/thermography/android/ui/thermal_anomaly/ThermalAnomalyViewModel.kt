@@ -195,7 +195,17 @@ class ThermalAnomalyViewModel @Inject constructor(
                                     thermogramRefRois = loadedRoisRef.ifEmpty { state.thermogramRefRois },
                                     selectedRefRoi = loadedRoisRef.find { it.id == loadedThermogramRef?.selectedRoiId } ?: loadedRoisRef.firstOrNull(),
                                     
-                                    thermogramImageUri = loadedThermogram?.localImagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramImageUri
+                                    thermogramImageUri = loadedThermogram?.localImagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramImageUri,
+                                    // Preenche a imagem real (localImageRefPath) a partir do thermogram, se disponível
+                                    realImageUri = loadedThermogram?.localImageRefPath?.takeIf { it.isNotBlank() }?.let { path ->
+                                        when {
+                                            path.startsWith("content://") -> android.net.Uri.parse(path)
+                                            path.startsWith("file://") -> android.net.Uri.parse(path)
+                                            else -> java.io.File(path).toUri()
+                                        }
+                                    } ?: state.realImageUri,
+                                    // Preenche a imagem de referência a partir do thermogramRef local path
+                                    thermogramRefImageUri = loadedThermogramRef?.localImagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramRefImageUri
                                 )
                             }
                         }
@@ -209,6 +219,7 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.SelectRefRoi -> handleRefRoiSelected(event.roi).also { _uiState.update { it.copy(isDirty = true) } }
             is ThermalAnomalyEvent.UpdateThermogramImage -> handleImageSelected(event.uri).also { _uiState.update { it.copy(isDirty = true) } }
             is ThermalAnomalyEvent.UpdateRefThermogramImage -> handleRefImageSelected(event.uri).also { _uiState.update { it.copy(isDirty = true) } }
+            is ThermalAnomalyEvent.UpdateRealImage -> handleRealImageSelected(event.uri).also { _uiState.update { it.copy(isDirty = true) } }
 
             ThermalAnomalyEvent.Save -> saveRecord()
             ThermalAnomalyEvent.Cancel -> resetForm()
@@ -332,7 +343,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                         thermogramRepository.insertThermogram(toInsert)
                     }
                     
-                    // Salvar ROIs associadas ao monitoramento
+                    // Salvar ROIs associadas al monitoramento
                     val roiEntities = current.thermogramRois.map { roi -> roi.copy(thermogramId = toInsert.id) }
                     roiRepository.insertROIs(roiEntities)
                     
@@ -466,13 +477,16 @@ class ThermalAnomalyViewModel @Inject constructor(
                     val currentUserId = resolveCurrentUserId()
                     val equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID()
                     
+                    val realImageRef = _uiState.value.realImageUri?.toString() ?: ""
+
                     // 1. Criar Thermogram de Monitoramento
                     val thermogramId = UUID.randomUUID()
                     val thermogramMonitoring = metadata.toEntity(
                         id = thermogramId,
                         equipmentId = equipmentId,
                         createdById = currentUserId,
-                        localImagePath = uri.toString()
+                        localImagePath = uri.toString(),
+                        localImageRefPath = realImageRef
                     )
 
                     // 2. Criar Thermogram de Referência (Cópia do metadado)
@@ -481,7 +495,8 @@ class ThermalAnomalyViewModel @Inject constructor(
                         id = thermogramRefId,
                         equipmentId = equipmentId,
                         createdById = currentUserId,
-                        localImagePath = uri.toString()
+                        localImagePath = uri.toString(),
+                        localImageRefPath = realImageRef
                     )
 
                     // 3. Criar ROIs para Monitoramento (cada ROI tem um novo ID e aponta para thermogramId)
@@ -536,13 +551,15 @@ class ThermalAnomalyViewModel @Inject constructor(
                 result.onSuccess { metadata ->
                     val currentUserId = resolveCurrentUserId()
                     val equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID()
+                    val realImageRef = _uiState.value.realImageUri?.toString() ?: ""
                     
                     val thermogramRefId = _uiState.value.thermogramRef?.id ?: UUID.randomUUID()
                     val thermogramReference = metadata.toEntity(
                         id = thermogramRefId,
                         equipmentId = equipmentId,
                         createdById = currentUserId,
-                        localImagePath = uri.toString()
+                        localImagePath = uri.toString(),
+                        localImageRefPath = realImageRef
                     )
 
                     val roisReference = metadata.rois.map { 
@@ -568,6 +585,51 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.w("ThermAnomVM", "Error processing ref image: ${e.message}")
+            }
+        }
+    }
+
+    private fun handleRealImageSelected(uri: android.net.Uri) {
+        // Copia a imagem selecionada para a pasta app-specific Pictures/thermalEnergy e atualiza o estado
+        viewModelScope.launch {
+            try {
+                val destDir = java.io.File(context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES), "thermalEnergy")
+                if (!destDir.exists()) destDir.mkdirs()
+                val destFile = java.io.File(destDir, "thermogram_${UUID.randomUUID()}.jpg")
+
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                // Atualiza o MediaStore para garantir que o arquivo seja visível via galeria (opcional)
+                try {
+                    android.media.MediaScannerConnection.scanFile(context, arrayOf(destFile.absolutePath), null, null)
+                } catch (_: Exception) {}
+
+                val destUri = destFile.toUri()
+                android.util.Log.d("ThermAnomVM", "Real image saved to: ${destFile.absolutePath}")
+
+                _uiState.update { state ->
+                    val path = destFile.absolutePath
+                    state.copy(
+                        realImageUri = destUri,
+                        thermogram = state.thermogram?.copy(localImageRefPath = path),
+                        thermogramRef = state.thermogramRef?.copy(localImageRefPath = path)
+                    )
+                }
+            } catch (e: Exception) {
+                // Em caso de erro, faz fallback para gravar a Uri original (não deve acontecer normalmente)
+                android.util.Log.w("ThermAnomVM", "Failed to copy real image to app folder: ${e.message}")
+                _uiState.update { state ->
+                    val path = uri.toString()
+                    state.copy(
+                        realImageUri = uri,
+                        thermogram = state.thermogram?.copy(localImageRefPath = path),
+                        thermogramRef = state.thermogramRef?.copy(localImageRefPath = path)
+                    )
+                }
             }
         }
     }

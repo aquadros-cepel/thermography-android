@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.LinkedCamera
 import androidx.compose.material.icons.filled.Settings
@@ -102,7 +103,7 @@ fun AppNavHost() {
 
             composable(NavRoutes.SYNC) {
                 SyncScreen(onSyncComplete = { 
-                    navController.navigate(NavRoutes.INSPECTION_RECORDS) {
+                    navController.navigate(NavRoutes.HOME) {
                         popUpTo(NavRoutes.SYNC) { inclusive = true }
                     }
                 })
@@ -219,7 +220,7 @@ object NavBarItems {
     val items = listOf(
         Triple(NavRoutes.INSPECTION_RECORDS, "Rotas", Icons.Outlined.Route),
         Triple(NavRoutes.THERMOGRAMS, "Câmera", Icons.Outlined.LinkedCamera),
-        Triple(NavRoutes.SETTINGS, "Configurações", Icons.Filled.Settings),
+        Triple(NavRoutes.SETTINGS, "Sincronização", Icons.Default.CloudDownload),
         Triple(NavRoutes.LOGIN, "Logout", Icons.AutoMirrored.Filled.Logout)
     )
 }

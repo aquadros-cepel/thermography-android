@@ -75,10 +75,12 @@ fun EmbeddedThermogramSection(
     selectedRoi: ROIEntity?,
     selectedRefRoi: ROIEntity?,
     thermogramImageUri: Uri?,
+    realImageUri: Uri?,
     // Reference thermogram params
     thermogramRef: ThermogramEntity?,
     thermogramRefImageUri: Uri?,
     onRefImageSelected: (Uri) -> Unit,
+    onRealImageSelected: (Uri) -> Unit,
     mode: ThermogramMode,
     onRoiSelected: (ROIEntity) -> Unit,
     onRefRoiSelected: (ROIEntity) -> Unit,
@@ -87,6 +89,7 @@ fun EmbeddedThermogramSection(
     modifier: Modifier = Modifier
 ) {
     var showLightbox by remember { mutableStateOf(false) }
+    var showRealLightbox by remember { mutableStateOf(false) }
     val singleRoi = rois.size <= 1
     var showRefThermogram by remember(singleRoi) { mutableStateOf(singleRoi) }
 
@@ -110,6 +113,14 @@ fun EmbeddedThermogramSection(
             File(thermogramRef!!.localImagePath).toUri()
         } else {
             null
+        }
+    }
+
+    val displayRealImageUri = remember(realImageUri, thermogram?.imageRefPath) {
+        when {
+            realImageUri != null -> realImageUri
+            !thermogram?.imageRefPath.isNullOrBlank() -> File(thermogram!!.imageRefPath).toUri()
+            else -> null
         }
     }
 
@@ -155,6 +166,12 @@ fun EmbeddedThermogramSection(
             onRefImageSelected(it)
             showRefThermogram = true
         } 
+    }
+
+    val galleryRealLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { onRealImageSelected(it) }
     }
 
     // Launcher para CÂMERA
@@ -321,6 +338,44 @@ fun EmbeddedThermogramSection(
                     }
                 }
             }
+
+            // Área para selecionar imagem REAL (visível) associada ao thermogram principal
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = "Imagem Real (visível)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    if (mode != ThermogramMode.VIEW) {
+                        IconButton(onClick = { refreshFlirGallery(); galleryRealLauncher.launch("image/*") }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Selecionar Imagem Real", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // Exibe a imagem real selecionada (ou placeholder)
+                ThermogramImage(imageUri = displayRealImageUri,
+                    onImageClick = { if (displayRealImageUri != null) showRealLightbox = true },
+                    modifier = Modifier.fillMaxWidth())
+
+                // Lightbox para a imagem real
+                if (showRealLightbox && displayRealImageUri != null) {
+                    Dialog(onDismissRequest = { showRealLightbox = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                        Surface(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), color = MaterialTheme.colorScheme.surface) {
+                            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
+                                AsyncImage(
+                                    model = displayRealImageUri,
+                                    contentDescription = "Imagem real ampliada",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                IconButton(onClick = { showRealLightbox = false }, modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Fechar imagem real", tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
         }
 
         thermogram?.let { thermo ->

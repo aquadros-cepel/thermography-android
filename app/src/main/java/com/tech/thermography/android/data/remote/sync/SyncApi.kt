@@ -70,6 +70,10 @@ interface SyncApi {
     @POST("http://34.39.196.181:5000/api/uploadThermogram")
     suspend fun uploadThermogram(@Part file: MultipartBody.Part): Response<UploadResponse>
 
+    @Multipart
+    @POST("http://34.39.196.181:5000/api/uploadImage")
+    suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
+
     @GET("thermographic-inspection-records")
     suspend fun getAllThermographicInspectionRecords(): List<ThermographicInspectionRecordCreateDTO>
 

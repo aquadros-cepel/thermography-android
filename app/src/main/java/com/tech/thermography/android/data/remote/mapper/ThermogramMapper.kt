@@ -10,6 +10,7 @@ object ThermogramMapper {
             localImagePath = "", // Remote DTO doesn't have local path
             imagePath = dto.imagePath,
             audioPath = dto.audioPath,
+            localImageRefPath = "", // Remote DTO doesn't have local path
             imageRefPath = dto.imageRefPath,
             minTemp = dto.minTemp,
             avgTemp = dto.avgTemp,

@@ -41,16 +41,31 @@ class ThermogramRepository @Inject constructor(
         val remoteEntities = syncApi.getAllThermograms()
         val entities = remoteEntities.map { dto -> 
             val entity = ThermogramMapper.dtoToEntity(dto)
-            // Tenta baixar a imagem se houver path remoto
+            
+            // Tenta baixar a imagem térmica se houver path remoto
             val localPath = entity.imagePath?.let { remotePath ->
                 val fullUrl = if (remotePath.startsWith("http")) {
                     remotePath
                 } else {
                     "${Constants.IMAGE_BASE_URL}$remotePath"
                 }
-                downloadAndSaveImage(fullUrl, entity.id)
+                downloadAndSaveImage(fullUrl, entity.id, "thermal")
             }
-            entity.copy(localImagePath = localPath ?: entity.localImagePath)
+            
+            // Tenta baixar a imagem real/referência se houver path remoto
+            val localRefPath = entity.imageRefPath?.let { remotePath ->
+                val fullUrl = if (remotePath.startsWith("http")) {
+                    remotePath
+                } else {
+                    "${Constants.IMAGE_BASE_URL}$remotePath"
+                }
+                downloadAndSaveImage(fullUrl, entity.id, "real")
+            }
+            
+            entity.copy(
+                localImagePath = localPath ?: entity.localImagePath,
+                localImageRefPath = localRefPath ?: entity.localImageRefPath
+            )
         }
         setCache(entities)
     }
@@ -59,9 +74,9 @@ class ThermogramRepository @Inject constructor(
         thermogramDao.insertThermograms(cache)
     }
 
-    private suspend fun downloadAndSaveImage(fullUrl: String, thermogramId: UUID): String? = withContext(Dispatchers.IO) {
+    private suspend fun downloadAndSaveImage(fullUrl: String, thermogramId: UUID, prefix: String = "thermal"): String? = withContext(Dispatchers.IO) {
         try {
-            Log.d("ThermogramRepository", "Baixando imagem de: $fullUrl")
+            Log.d("ThermogramRepository", "Baixando imagem ($prefix) de: $fullUrl")
             val response = syncApi.downloadFile(fullUrl)
             if (response.isSuccessful) {
                 val body = response.body() ?: return@withContext null
@@ -74,21 +89,21 @@ class ThermogramRepository @Inject constructor(
                     directory.mkdirs()
                 }
 
-                val fileName = "thermogram_${thermogramId}.jpg"
+                val fileName = "${prefix}_${thermogramId}.jpg"
                 val file = File(directory, fileName)
 
                 file.sink().buffer().use { sink ->
                     sink.writeAll(body.source())
                 }
 
-                Log.d("ThermogramRepository", "Imagem salva em: ${file.absolutePath}")
+                Log.d("ThermogramRepository", "Imagem ($prefix) salva em: ${file.absolutePath}")
                 return@withContext file.absolutePath
             } else {
-                Log.e("ThermogramRepository", "Erro ao baixar imagem: ${response.code()} em $fullUrl")
+                Log.e("ThermogramRepository", "Erro ao baixar imagem ($prefix): ${response.code()} em $fullUrl")
                 null
             }
         } catch (e: Exception) {
-            Log.e("ThermogramRepository", "Erro no download/salvamento da imagem para $fullUrl", e)
+            Log.e("ThermogramRepository", "Erro no download/salvamento da imagem ($prefix) para $fullUrl", e)
             null
         }
     }

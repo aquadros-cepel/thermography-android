@@ -152,8 +152,14 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                 
                 // Sincroniza imagem do termograma principal
                 syncThermogramImage(record.thermogramId)
+                // Sincroniza imagem real de referência do termograma principal
+                syncRealImageRef(record.thermogramId)
+
                 // Sincroniza imagem do termograma de referência (se existir)
-                record.thermogramRefId?.let { syncThermogramImage(it) }
+                record.thermogramRefId?.let { 
+                    syncThermogramImage(it)
+                    syncRealImageRef(it)
+                }
 
                 val fullRecord = getThermographicInspectionRecordFull(record.id)
                 
@@ -222,14 +228,60 @@ class ThermographicInspectionRecordRepository @Inject constructor(
     private suspend fun syncThermogramImage(thermogramId: UUID) {
         val thermogram = thermogramDao.getThermogramById(thermogramId) ?: return
         if (thermogram.imagePath.isNullOrEmpty() || thermogram.imagePath.isBlank()) {
-            Log.d("SyncDebug", "Iniciando upload de imagem para o termograma: ${thermogram.id}")
+            Log.d("SyncDebug", "Iniciando upload de imagem térmica para o termograma: ${thermogram.id}")
             
             val localPath = thermogram.localImagePath
-            val body = if (localPath.startsWith("/")) {
+            val body = prepareMultipartFile(localPath, "thermogram_${thermogram.id}.jpg") ?: return
+            
+            val uploadResponse = syncApi.uploadThermogram(body)
+            if (uploadResponse.isSuccessful && uploadResponse.body() != null) {
+                val result = uploadResponse.body()!!
+                Log.d("SyncDebug", "Upload térmico concluído. Novo imagePath: ${result.imagePath}")
+                
+                val updatedThermogram = thermogram.copy(
+                    imagePath = result.imagePath, 
+                    audioPath = result.audioPath
+                )
+                thermogramDao.updateThermogram(updatedThermogram)
+            } else {
+                Log.e("SyncDebug", "Falha no upload da imagem térmica. Código: ${uploadResponse.code()}")
+            }
+        }
+    }
+
+    private suspend fun syncRealImageRef(thermogramId: UUID) {
+        val thermogram = thermogramDao.getThermogramById(thermogramId) ?: return
+        
+        // Verifica se existe caminho local para a imagem real e se o caminho remoto ainda não foi preenchido
+        // Obs: Usamos imageRefPath como o campo remoto para a imagem real/visual
+        if (!thermogram.localImageRefPath.isNullOrBlank() && thermogram.imageRefPath.isNullOrBlank()) {
+            Log.d("SyncDebug", "Iniciando upload de imagem REAL para o termograma: ${thermogram.id}")
+            
+            val localPath = thermogram.localImageRefPath
+            val body = prepareMultipartFile(localPath, "real_${thermogram.id}.jpg") ?: return
+            
+            val uploadResponse = syncApi.uploadImage(body)
+            if (uploadResponse.isSuccessful && uploadResponse.body() != null) {
+                val result = uploadResponse.body()!!
+                Log.d("SyncDebug", "Upload de imagem REAL concluído. Novo imageRefPath: ${result.imagePath}")
+                
+                val updatedThermogram = thermogram.copy(
+                    imageRefPath = result.imagePath
+                )
+                thermogramDao.updateThermogram(updatedThermogram)
+            } else {
+                Log.e("SyncDebug", "Falha no upload da imagem REAL. Código: ${uploadResponse.code()}")
+            }
+        }
+    }
+
+    private fun prepareMultipartFile(localPath: String, defaultName: String): MultipartBody.Part? {
+        return try {
+            if (localPath.startsWith("/")) {
                 val file = File(localPath)
                 if (!file.exists()) {
                     Log.e("SyncDebug", "Arquivo não encontrado: $localPath")
-                    return
+                    return null
                 }
                 val requestFile = RequestBody.create("image/jpeg".toMediaTypeOrNull(), file)
                 MultipartBody.Part.createFormData("file", file.name, requestFile)
@@ -243,22 +295,11 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                         } ?: throw java.io.IOException("Não foi possível abrir a URI: $imageUri")
                     }
                 }
-                MultipartBody.Part.createFormData("file", "thermogram_${thermogram.id}.jpg", requestBody)
+                MultipartBody.Part.createFormData("file", defaultName, requestBody)
             }
-            
-            val uploadResponse = syncApi.uploadThermogram(body)
-            if (uploadResponse.isSuccessful && uploadResponse.body() != null) {
-                val result = uploadResponse.body()!!
-                Log.d("SyncDebug", "Upload concluído. Novo imagePath: ${result.imagePath}")
-                
-                val updatedThermogram = thermogram.copy(
-                    imagePath = result.imagePath, 
-                    audioPath = result.audioPath
-                )
-                thermogramDao.updateThermogram(updatedThermogram)
-            } else {
-                Log.e("SyncDebug", "Falha no upload da imagem. Código: ${uploadResponse.code()}")
-            }
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Erro ao preparar arquivo multipart", e)
+            null
         }
     }
 }
