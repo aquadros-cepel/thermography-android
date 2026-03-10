@@ -29,6 +29,7 @@ import androidx.navigation.NavHostController
 import com.tech.thermography.android.navigation.NavRoutes
 import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -87,38 +88,24 @@ fun InspectionRecordDetailScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // maintenance doc & description compact fields
-//                OutlinedTextField(
-//                    value = uiState.record?.maintenanceDocument ?: "",
-//                    onValueChange = {},
-//                    readOnly = true,
-//                    singleLine = true,
-//                    label = { Text("DOCUMENTO DE MANUTENÇÃO") },
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .height(52.dp),
-//                    shape = RoundedCornerShape(8.dp)
-//                )
-//
-//                Spacer(modifier = Modifier.height(8.dp))
-//
-//                OutlinedTextField(
-//                    value = uiState.record?.description ?: "",
-//                    onValueChange = {},
-//                    readOnly = true,
-//                    singleLine = true,
-//                    label = { Text("DESCRIÇÃO DO REGISTRO") },
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .height(52.dp),
-//                    shape = RoundedCornerShape(8.dp)
-//                )
-
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(text = "Início da inspeção: --", style = MaterialTheme.typography.bodySmall)
+                // START/END: show formatted dates if present (startedAt and finishedAt are Instant?)
+                val startedText = uiState.record?.startedAt?.let { startedInstant ->
+                    try {
+                        java.time.ZonedDateTime.ofInstant(startedInstant, ZoneId.systemDefault()).toLocalDate().format(dateFormatter)
+                    } catch (_: Exception) { "--" }
+                } ?: "--"
+
+                val finishedText = uiState.record?.finishedAt?.let { finishedInstant ->
+                    try {
+                        java.time.ZonedDateTime.ofInstant(finishedInstant, ZoneId.systemDefault()).toLocalDate().format(dateFormatter)
+                    } catch (_: Exception) { "--" }
+                } ?: "--"
+
+                Text(text = "Início da inspeção: $startedText", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Encerramento da inspeção: --", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Encerramento da inspeção: $finishedText", style = MaterialTheme.typography.bodySmall)
             }
         }
 
