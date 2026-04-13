@@ -84,10 +84,13 @@ fun AppNavHost() {
             }
         }
     ) { innerPadding ->
+        // Camera screen is fullscreen — system bar padding is handled internally
+        val isFullscreenRoute = currentDestination?.route == NavRoutes.THERMOGRAMS
+
         NavHost(
             navController = navController,
             startDestination = NavRoutes.LOGIN,
-            modifier = Modifier.padding(innerPadding)
+            modifier = if (isFullscreenRoute) Modifier else Modifier.padding(innerPadding)
         ) {
 
             composable(NavRoutes.LOGIN) {

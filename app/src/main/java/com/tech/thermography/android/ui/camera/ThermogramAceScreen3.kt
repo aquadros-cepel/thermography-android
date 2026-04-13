@@ -1,16 +1,17 @@
 package com.tech.thermography.android.ui.camera
 
+import android.content.Context
 import android.opengl.GLSurfaceView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material3.*
@@ -23,7 +24,19 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import kotlinx.coroutines.launch
+
+private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
+    var onSizeChangedCallback: ((Int, Int) -> Unit)? = null
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        onSizeChangedCallback?.invoke(w, h)
+    }
+}
 
 @Composable
 fun ThermogramsAceScreen3(
@@ -44,32 +57,63 @@ fun ThermogramsAceScreen3(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)
+    // Keep a reference to the GLSurfaceView so we can pause/resume it with the lifecycle
+    var glSurfaceViewRef by remember { mutableStateOf<GLSurfaceView?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Mirror GLSurfaceView lifecycle events (like Activity.onPause / onResume in the FLIR sample)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE  -> glSurfaceViewRef?.onPause()
+                Lifecycle.Event.ON_RESUME -> glSurfaceViewRef?.onResume()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+            contentAlignment = Alignment.Center
     ) {
         // GLSurfaceView with renderer
         AndroidView(
             factory = { context ->
-                GLSurfaceView(context).apply {
+                CustomGLSurfaceView(context).apply {
                     setEGLContextClientVersion(3)
                     preserveEGLContextOnPause = false
+                    onSizeChangedCallback = { w, h ->
+                        viewModel.onSurfaceSizeChanged(w, h)
+                    }
                     viewModel.attachGlSurface(this)
                     viewModel.start()
-                }
+//                    viewModel.startStream()
+                }.also { glSurfaceViewRef = it }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .background(color = Color.White)
         )
 
-        // snackbar host
-        Box(modifier = Modifier.fillMaxSize()) {
-            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.TopCenter))
-        }
-
+        // Stop stream and disconnect when leaving the screen
         DisposableEffect(Unit) {
             onDispose {
                 viewModel.stop()
             }
+        }
+
+        // Snackbar host
+        Box(modifier = Modifier.fillMaxSize()) {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+            )
         }
 
         Box(
@@ -79,7 +123,8 @@ fun ThermogramsAceScreen3(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight(),
+                    .wrapContentHeight()
+                    .navigationBarsPadding(),
                 verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -174,10 +219,11 @@ fun ThermogramsAceScreen3(
                         }
 
                         IconButton(onClick = {
-                            val nextState = !isFlashOn
-                            viewModel.setFlash(nextState) { success, msg ->
-                                if (success) isFlashOn = nextState
-                                else scope.launch { snackbarHostState.showSnackbar("Flash failed: $msg") }
+                            viewModel.toggleFlash { success, msg ->
+                                if (!success)
+                                    scope.launch { snackbarHostState.showSnackbar("Flash failed: $msg") }
+                                else
+                                    isFlashOn = !isFlashOn
                             }
                         }) {
                             Icon(
@@ -188,10 +234,11 @@ fun ThermogramsAceScreen3(
                         }
 
                         IconButton(onClick = {
-                            val nextState = !isLaserOn
-                            viewModel.setLaser(nextState) { success, msg ->
-                                if (success) isLaserOn = nextState
-                                else scope.launch { snackbarHostState.showSnackbar("Laser failed: $msg") }
+                            viewModel.toggleLaser { success, msg ->
+                                if (!success)
+                                    scope.launch { snackbarHostState.showSnackbar("Laser failed: $msg") }
+                                else
+                                    isLaserOn = !isLaserOn
                             }
                         }) {
                             Icon(

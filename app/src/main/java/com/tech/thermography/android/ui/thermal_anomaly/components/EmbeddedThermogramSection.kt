@@ -116,10 +116,14 @@ fun EmbeddedThermogramSection(
         }
     }
 
-    val displayRealImageUri = remember(realImageUri, thermogram?.imageRefPath) {
+    val displayRealImageUri = remember(realImageUri, thermogram?.localImageRefPath) {
         when {
             realImageUri != null -> realImageUri
-            !thermogram?.imageRefPath.isNullOrBlank() -> File(thermogram!!.imageRefPath).toUri()
+            !thermogram?.localImageRefPath.isNullOrBlank() -> {
+                val path = thermogram!!.localImageRefPath
+                if (path.startsWith("content://") || path.startsWith("file://")) Uri.parse(path)
+                else File(path).toUri()
+            }
             else -> null
         }
     }
@@ -339,10 +343,21 @@ fun EmbeddedThermogramSection(
                 }
             }
 
+            // Tabela de dados movida para antes da imagem real
+            thermogram?.let { thermo ->
+                ThermogramDataTable(
+                    thermogram = thermo,
+                    selectedRoi = selectedRoi,
+                    selectedRefRoi = selectedRefRoi,
+                    temperatureDifference = temperatureDifference,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             // Área para selecionar imagem REAL (visível) associada ao thermogram principal
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = "Imagem Real (visível)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(text = "Imagem Visível", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     if (mode != ThermogramMode.VIEW) {
                         IconButton(onClick = { refreshFlirGallery(); galleryRealLauncher.launch("image/*") }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.PhotoLibrary, contentDescription = "Selecionar Imagem Real", tint = MaterialTheme.colorScheme.primary)
@@ -374,12 +389,6 @@ fun EmbeddedThermogramSection(
                     }
                 }
             }
-
-
-        }
-
-        thermogram?.let { thermo ->
-            ThermogramDataTable(thermogram = thermo, selectedRoi = selectedRoi, selectedRefRoi = selectedRefRoi, temperatureDifference = temperatureDifference, modifier = Modifier.fillMaxWidth())
         }
     }
 

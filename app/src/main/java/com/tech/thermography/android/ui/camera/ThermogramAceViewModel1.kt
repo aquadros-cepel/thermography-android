@@ -4,7 +4,6 @@ import android.opengl.GLSurfaceView
 import androidx.lifecycle.ViewModel
 import com.flir.thermalsdk.live.remote.StoredImage
 import com.tech.thermography.android.flir.AceController
-import com.tech.thermography.android.flir.FlirAceCameraService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -17,6 +16,10 @@ class ThermogramAceViewModel1 @Inject constructor(
         controller.attachSurface(glView)
     }
 
+    fun onSurfaceSizeChanged(width: Int, height: Int) {
+        controller.onSurfaceSizeChanged(width, height)
+    }
+
     fun start() {
         controller.startCamera()
     }
@@ -25,28 +28,28 @@ class ThermogramAceViewModel1 @Inject constructor(
         controller.startStream()
     }
 
-    override fun onCleared() {
-
+    fun stop() {
+        controller.disconnect()
     }
 
-    fun stop() {
-
+    override fun onCleared() {
+        controller.disconnect()
     }
 
     /**
      * Requests the camera to store a snapshot. The callback returns (success, message, storedImage?)
      */
     fun takeSnapshot(callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }) {
-//        aceService.takeSnapshot { success, msg, storedImage ->
-//            callback(success, msg, storedImage)
-//        }
+        controller.takeSnapshot { success, msg, storedImage ->
+            callback(success, msg, storedImage)
+        }
     }
 
-    fun setLaser(enabled: Boolean, callback: (Boolean, String?) -> Unit = { _, _ -> }) {
-//        aceService.setLaser(enabled, callback)
+    fun toggleLaser(callback: (Boolean, String?) -> Unit = { _, _ -> }) {
+        controller.toggleLaser(callback)
     }
 
-    fun setFlash(enabled: Boolean, callback: (Boolean, String?) -> Unit = { _, _ -> }) {
-//        aceService.setFlash(enabled, callback)
+    fun toggleFlash(callback: (Boolean, String?) -> Unit = { _, _ -> }) {
+        controller.toggleFlash(callback)
     }
 }
