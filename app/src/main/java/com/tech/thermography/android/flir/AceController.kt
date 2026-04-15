@@ -137,6 +137,7 @@ class AceController @Inject constructor(
                 identity,
                 { ThermalLog.e(TAG, "Connection error: $it") },
                 ConnectParameters()
+
             )
 
             val cameraInfo = camera?.remoteControl?.cameraInformation()?.sync
@@ -234,6 +235,7 @@ class AceController @Inject constructor(
             }
         }
     }
+
     fun stopStream() {
         ThermalLog.d(TAG, "stopStream()")
         val cam = camera
@@ -363,28 +365,31 @@ class AceController @Inject constructor(
         }
     }
 
+    fun toggleLamp(callback: (Boolean, String?) -> Unit = { _, _ -> }) {
+        val next = !isFlashOn
+
+        try {
+            camera?.toggleLamp(next)
+            isFlashOn = next
+            ThermalLog.d(TAG, "Flash toggled → $isFlashOn")
+            callback(true, null)
+
+        } catch (e: Exception) {
+            ThermalLog.e(TAG, "Exception in toggleLamp: ${e.message}")
+            callback(false, e.message)
+        }
+    }
+
     fun toggleLaser(callback: (Boolean, String?) -> Unit = { _, _ -> }) {
         val next = !isLaserOn
         val rc = camera?.remoteControl ?: run { callback(false, "Remote control not available"); return }
         try {
             val prop = rc.laserOn() ?: run { callback(false, "Laser not supported"); return }
+            prop.setSync(next)
+            isLaserOn = next
+            ThermalLog.d(TAG, "Laser toggled → $isLaserOn")
+            callback(true, null)
 
-            val onComp = object : OnCompletion {
-                override fun onCompletion() {
-                    isLaserOn = next
-                    ThermalLog.d(TAG, "Laser toggled → $isLaserOn")
-                    callback(true, null)
-                }
-            }
-
-            val onErr = object : OnRemoteError {
-                override fun onRemoteError(error: ErrorCode) {
-                    ThermalLog.e(TAG, "Laser toggle failed: $error")
-                    callback(false, error.toString())
-                }
-            }
-
-            prop.set(next, onComp, onErr)
         } catch (e: Exception) {
             ThermalLog.e(TAG, "Exception in toggleLaser: ${e.message}")
             callback(false, e.message)
@@ -417,56 +422,5 @@ class AceController @Inject constructor(
         }
     }
 
-    fun toggleFlash(callback: (Boolean, String?) -> Unit = { _, _ -> }) {
-        val next = !isFlashOn
-        val rc = camera?.remoteControl
-        try {
-            val flashProp = if (rc != null) try { rc.javaClass.getMethod("flashLight").invoke(rc) } catch (_: Throwable) { null } else null
-            if (flashProp is Property<*>) {
-                @Suppress("UNCHECKED_CAST")
-                val p = flashProp as Property<Boolean>
 
-                val onComp = object : OnCompletion {
-                    override fun onCompletion() {
-                        isFlashOn = next
-                        ThermalLog.d(TAG, "Flash toggled → $isFlashOn")
-                        callback(true, null)
-                    }
-                }
-
-                val onErr = object : OnRemoteError {
-                    override fun onRemoteError(error: ErrorCode) {
-                        ThermalLog.e(TAG, "Flash toggle failed: $error")
-                        callback(false, error.toString())
-                    }
-                }
-
-                p.set(next, onComp, onErr)
-                return
-            }
-        } catch (_: Exception) {}
-
-        // Fallback: use Android CameraManager to toggle the physical torch
-        val cm = cameraManager ?: run { callback(false, "CameraManager not available"); return }
-        try {
-            val cameraIds: Array<String> = cm.cameraIdList
-            var selectedId: String? = null
-            for (id in cameraIds) {
-                val chars = cm.getCameraCharacteristics(id)
-                val facing: Int? = chars.get(CameraCharacteristics.LENS_FACING)
-                if (facing == CameraCharacteristics.LENS_FACING_BACK) {
-                    selectedId = id
-                    break
-                }
-            }
-            selectedId?.let {
-                cm.setTorchMode(it, next)
-                isFlashOn = next
-                ThermalLog.d(TAG, "Flash (torch) toggled → $isFlashOn")
-                callback(true, null)
-            } ?: callback(false, "No back-facing camera id found")
-        } catch (e: Exception) {
-            callback(false, e.message)
-        }
-    }
 }

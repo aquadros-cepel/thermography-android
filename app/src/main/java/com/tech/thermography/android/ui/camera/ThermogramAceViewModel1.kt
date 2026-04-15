@@ -50,6 +50,6 @@ class ThermogramAceViewModel1 @Inject constructor(
     }
 
     fun toggleFlash(callback: (Boolean, String?) -> Unit = { _, _ -> }) {
-        controller.toggleFlash(callback)
+        controller.toggleLamp(callback)
     }
 }
