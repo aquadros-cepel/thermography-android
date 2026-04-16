@@ -1,8 +1,6 @@
 package com.tech.thermography.android.flir
 
 import android.content.Context
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
 import android.opengl.GLSurfaceView
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.androidsdk.ThermalSdkAndroid
@@ -23,7 +21,6 @@ import com.flir.thermalsdk.image.PaletteManager
 import com.flir.thermalsdk.image.fusion.FusionMode
 import com.flir.thermalsdk.live.remote.OnCompletion
 import com.flir.thermalsdk.live.remote.OnRemoteError
-import com.flir.thermalsdk.live.remote.Property
 import com.flir.thermalsdk.live.remote.StoredImage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -33,6 +30,8 @@ import javax.inject.Singleton
 class AceController @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+
+    data class TemperatureRange(val min: Double, val max: Double)
 
     companion object {
         private const val TAG = "AceController"
@@ -66,12 +65,7 @@ class AceController @Inject constructor(
     private var currentPalette: Palette? = null
     private var colorSettings: ColorDistributionSettings = HistogramEqualizationSettings()
 
-    // Android CameraManager — used as fallback for torch/flash control
-    private val cameraManager: CameraManager? = try {
-        context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-    } catch (_: Exception) {
-        null
-    }
+    private val flirCameraService = FlirCameraService()
 
     // Toggle states
     private var isLaserOn = false
@@ -332,9 +326,28 @@ class AceController @Inject constructor(
 
         // Configure palette, fusion mode and color settings for each frame
         cam.glWithThermalImage { thermalImage ->
+
+            val stats = thermalImage.statistics
+
+            if (stats != null) {
+                val minTv = stats.min
+                val maxTv = stats.max
+
+                val min = minTv.asCelsius().value
+                val max = maxTv.asCelsius().value
+
+                val scale = thermalImage.scale
+
+                if (scale != null) {
+                    scale.setRange(minTv, maxTv)
+                }
+
+//                ThermalLog.d(TAG, "AUTO SCALE (stats): $min - $max")
+            }
             currentPalette?.let { thermalImage.setPalette(it) }
             thermalImage.fusion?.setFusionMode(FusionMode.THERMAL_ONLY)
             thermalImage.setColorDistributionSettings(colorSettings)
+            flirCameraService.updateRangeFromThermalImage(thermalImage)
         }
 
         cam.glOnDrawFrame()
@@ -397,6 +410,9 @@ class AceController @Inject constructor(
     }
 
     fun setShowTemperatureBar(enabled: Boolean, callback: (Boolean, String?) -> Unit = { _, _ -> }) {
+        val tr = camera?.remoteControl?.temperatureRange
+        ThermalLog.e(TAG, "Temperature range: $tr")
+
         val fc = camera?.remoteControl?.fireCameraControl ?: run { callback(false, "Remote control not available"); return }
         try {
             val prop = fc.showTemperatureBar() ?: run { callback(false, "Temperature bar not supported"); return }
@@ -422,5 +438,49 @@ class AceController @Inject constructor(
         }
     }
 
+    fun getTemperatureRange(): TemperatureRange? {
+        return flirCameraService.getLatestTemperatureRange() ?: getTemperatureRangeFromRemote()
+    }
+
+    private fun getTemperatureRangeFromRemote(): TemperatureRange? {
+        val tr = camera?.remoteControl?.temperatureRange ?: return null
+        val rangeObj = unwrapPropertyValue(tr) ?: tr
+        val min = readNumber(rangeObj, listOf("getMin", "getLower", "getLow", "getMinTemperature", "getLowerTemperature", "getMinTemp"))
+        val max = readNumber(rangeObj, listOf("getMax", "getUpper", "getHigh", "getMaxTemperature", "getUpperTemperature", "getMaxTemp"))
+        return if (min != null && max != null) TemperatureRange(min, max) else null
+    }
+
+
+    private fun unwrapPropertyValue(obj: Any): Any? {
+        val getter = obj.javaClass.methods.firstOrNull { it.name == "getValue" && it.parameterCount == 0 }
+            ?: obj.javaClass.methods.firstOrNull { it.name == "get" && it.parameterCount == 0 }
+            ?: obj.javaClass.methods.firstOrNull { it.name == "getSync" && it.parameterCount == 0 }
+        return try {
+            getter?.invoke(obj)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readNumber(obj: Any, methodNames: List<String>): Double? {
+        for (name in methodNames) {
+            val m = obj.javaClass.methods.firstOrNull { it.name == name && it.parameterCount == 0 }
+            if (m != null) {
+                val value = try { m.invoke(obj) } catch (_: Exception) { null }
+                if (value is Number) return value.toDouble()
+            }
+        }
+        // Fallback: try numeric fields
+        for (field in obj.javaClass.declaredFields) {
+            try {
+                field.isAccessible = true
+                val v = field.get(obj)
+                if (v is Number) return v.toDouble()
+            } catch (_: Exception) {
+                // ignore
+            }
+        }
+        return null
+    }
 
 }

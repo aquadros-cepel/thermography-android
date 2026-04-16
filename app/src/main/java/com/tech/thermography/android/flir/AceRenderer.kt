@@ -14,7 +14,6 @@ class AceRenderer(
     @Volatile private var palette: Palette? = null
     @Volatile private var colorSettings: ColorDistributionSettings? = null
     @Volatile private var settingsDirty: Boolean = true
-    @Volatile private var service: FlirAceCameraService2? = null
 
     private var surfaceWidth = 0
     private var surfaceHeight = 0
@@ -32,24 +31,6 @@ class AceRenderer(
 
     override fun onDrawFrame(gl: GL10?) {
         controller?.onGlDrawFrame()
-    }
-
-    fun attachService(service: FlirAceCameraService2) {
-        this.service = service
-    }
-
-    fun setController(controller: AceController) {
-        this.controller = controller
-    }
-
-    fun setPalette(palette: Palette) {
-        this.palette = palette
-        settingsDirty = true
-    }
-
-    fun setColorSettings(settings: ColorDistributionSettings) {
-        this.colorSettings = settings
-        settingsDirty = true
     }
 
 

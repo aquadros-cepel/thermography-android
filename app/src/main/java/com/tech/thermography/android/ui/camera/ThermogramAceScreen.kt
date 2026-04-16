@@ -14,20 +14,21 @@ import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
     var onSizeChangedCallback: ((Int, Int) -> Unit)? = null
@@ -41,7 +42,7 @@ private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
 @Composable
 fun ThermogramsAceScreen3(
     navController: NavHostController,
-    viewModel: ThermogramAceViewModel1 = hiltViewModel()
+    viewModel: ThermogramAceViewModel = hiltViewModel()
 ) {
 
     LaunchedEffect(navController) { /* no-op: keep navController referenced for now */ }
@@ -57,47 +58,133 @@ fun ThermogramsAceScreen3(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Keep a reference to the GLSurfaceView so we can pause/resume it with the lifecycle
-    var glSurfaceViewRef by remember { mutableStateOf<GLSurfaceView?>(null) }
-    val lifecycleOwner = LocalLifecycleOwner.current
+    var tempRange by remember { mutableStateOf(viewModel.getTemperatureRange()) }
 
-    // Mirror GLSurfaceView lifecycle events (like Activity.onPause / onResume in the FLIR sample)
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE  -> glSurfaceViewRef?.onPause()
-                Lifecycle.Event.ON_RESUME -> glSurfaceViewRef?.onResume()
-                else -> {}
-            }
+    LaunchedEffect(Unit) {
+        while (true) {
+            tempRange = viewModel.getTemperatureRange()
+            delay(500)
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
-            contentAlignment = Alignment.Center
+            .background(Color.White)
     ) {
+        val temperatureBarWidth = (maxWidth * 0.038f).coerceIn(14.dp, 18.dp)
+        val temperatureBarHeight = (maxHeight * 0.68f).coerceIn(300.dp, 460.dp)
+        val temperatureLabelShape = MaterialTheme.shapes.small
+
         // GLSurfaceView with renderer
         AndroidView(
-            factory = { context ->
+            factory = { context: Context ->
                 CustomGLSurfaceView(context).apply {
                     setEGLContextClientVersion(3)
                     preserveEGLContextOnPause = false
-                    onSizeChangedCallback = { w, h ->
+                    onSizeChangedCallback = { w: Int, h: Int ->
                         viewModel.onSurfaceSizeChanged(w, h)
                     }
                     viewModel.attachGlSurface(this)
                     viewModel.start()
 //                    viewModel.startStream()
-                }.also { glSurfaceViewRef = it }
+                }
             },
             modifier = Modifier
                 .fillMaxSize()
                 .background(color = Color.White)
         )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(end = 2.dp,top = 8.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp),
+                horizontalAlignment = Alignment.End
+
+            ) {
+                val maxText = tempRange?.max?.let { String.format(Locale.getDefault(), "%.1f", it) } ?: "--"
+                val minText = tempRange?.min?.let { String.format(Locale.getDefault(), "%.1f", it) } ?: "--"
+
+                Surface(
+                    color = Color(0xB0000000),
+                    shape = temperatureLabelShape,
+                    modifier = Modifier.border(1.dp, Color.White, temperatureLabelShape)
+                ) {
+                    Text(
+                        text = maxText,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Box(
+                    modifier = Modifier
+                        .width(temperatureBarWidth)
+                        .height(temperatureBarHeight)
+                        .clip(temperatureLabelShape)
+                        .border(1.dp, Color.White, temperatureLabelShape)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFFFFF6C2), // quase branco (topo)
+                                    Color(0xFFFFE066), // amarelo claro
+                                    Color(0xFFFFB347), // amarelo/laranja
+                                    Color(0xFFFF7A1A), // laranja forte
+                                    Color(0xFFE53935), // vermelho
+                                    Color(0xFF8E24AA), // roxo
+                                    Color(0xFF3949AB), // azul
+                                    Color(0xFF0D1B2A)  // azul escuro (base)
+                                )
+                            )
+                        )
+                ) {
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Surface(
+                    color = Color(0xB0000000),
+                    shape = temperatureLabelShape,
+                    modifier = Modifier.border(1.dp, Color.White, temperatureLabelShape)
+                ) {
+                    Text(
+                        text = minText,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Surface(
+                    color = Color(0xCC000000),
+                    shape = CircleShape,
+                    modifier = Modifier.border(1.dp, Color.White, CircleShape)
+                ) {
+                    IconButton(
+                        onClick = { /* placeholder only: configure min/max later */ },
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Tune,
+                            contentDescription = "Configure temperature range",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
 
         // Stop stream and disconnect when leaving the screen
         DisposableEffect(Unit) {
