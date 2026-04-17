@@ -78,7 +78,6 @@ class AceController @Inject constructor(
     private var snapshotRequested = false
     private var pendingSnapshotPath: String? = null
     private var pendingSnapshotCallback: ((Boolean, String?, StoredImage?) -> Unit)? = null
-    private var measurementSquaresDirty = false
 
     data class MeasurementSquareState(
         val label: String = "Bx1",
@@ -231,8 +230,6 @@ class AceController @Inject constructor(
                 // or deferred to onGlDrawFrame() if the surface wasn't ready yet.
 
                 ThermalLog.d(TAG, "Starting stream")
-                flirCameraService.resetMeasurementSquaresCache()
-                measurementSquaresDirty = true
                 activeStream = stream
                 stream.start(
                     {
@@ -277,7 +274,6 @@ class AceController @Inject constructor(
             stopStream()
             camera?.disconnect()
             camera = null
-            flirCameraService.resetMeasurementSquaresCache()
             state = State.Idle
             ThermalLog.d(TAG, "Disconnected. State: $state")
         }.start()
@@ -369,11 +365,6 @@ class AceController @Inject constructor(
             thermalImage.setColorDistributionSettings(colorSettings)
             flirCameraService.updateRangeFromThermalImage(thermalImage)
 
-            if (measurementSquaresDirty) {
-                flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
-                measurementSquaresDirty = false
-            }
-
             if (snapshotRequested) {
                 snapshotRequested = false
 
@@ -389,6 +380,7 @@ class AceController @Inject constructor(
                     ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
 
                     thermalImage.scale?.setRange(range.first, range.second)
+                    flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
 
                     val path = snapshotPath ?: throw IllegalStateException("Snapshot path not prepared")
                     thermalImage.saveAs(path)
@@ -406,7 +398,6 @@ class AceController @Inject constructor(
 
     fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
         measurementSquareStates = states
-        measurementSquaresDirty = true
         ThermalLog.d(TAG, "Measurement square states updated: $states")
     }
 
