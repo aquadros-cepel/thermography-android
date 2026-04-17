@@ -59,9 +59,35 @@ private fun MeasurementToolGlyph(centerColor: Color) {
 }
 
 @Composable
-fun ThermogramsAceScreen3(
+private fun TaskBarButton(
+    active: Boolean = false,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        shape = CircleShape,
+        color = if (active) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        tonalElevation = if (active) 5.dp else 1.dp,
+        shadowElevation = if (active) 2.dp else 0.dp,
+        modifier = Modifier.border(
+            width = 1.dp,
+            color = if (active) Color.Black.copy(alpha = 0.35f) else Color.Transparent,
+            shape = CircleShape
+        )
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(40.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun ThermogramsCameraScreen(
     navController: NavHostController,
-    viewModel: ThermogramAceViewModel = hiltViewModel()
+    viewModel: ThermogramCameraViewModel = hiltViewModel()
 ) {
 
     LaunchedEffect(navController) { /* no-op: keep navController referenced for now */ }
@@ -73,8 +99,8 @@ fun ThermogramsAceScreen3(
     var isThermalMode by remember { mutableStateOf(true) }
     var isFlashOn by remember { mutableStateOf(false) }
     var isLaserOn by remember { mutableStateOf(false) }
-    var bx1State by remember { mutableStateOf(ThermogramAceViewModel.MeasurementSquareState(label = "Bx1")) }
-    var bx2State by remember { mutableStateOf(ThermogramAceViewModel.MeasurementSquareState(label = "Bx2")) }
+    var bx1State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx1")) }
+    var bx2State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx2")) }
     var measurementOverlaySize by remember { mutableStateOf(IntSize.Zero) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -328,7 +354,7 @@ fun ThermogramsAceScreen3(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { isThermalMode = !isThermalMode }) {
+                        TaskBarButton(active = isThermalMode, onClick = { isThermalMode = !isThermalMode }) {
                             Icon(
                                 imageVector = Icons.Filled.CameraAlt,
                                 contentDescription = "Toggle camera view",
@@ -336,11 +362,11 @@ fun ThermogramsAceScreen3(
                             )
                         }
 
-                        IconButton(onClick = {
+                        TaskBarButton(active = bx1State.enabled, onClick = {
                             bx1State = bx1State.copy(
                                 enabled = !bx1State.enabled,
                                 centerXFraction = 0.5f,
-                                centerYFraction = 0.4f,
+                                centerYFraction = 0.35f,
                                 sizeFraction = bx1State.initialSizeFraction
                             )
                             syncMeasurementStates()
@@ -348,11 +374,11 @@ fun ThermogramsAceScreen3(
                             MeasurementToolGlyph(centerColor = Color.Red)
                         }
 
-                        IconButton(onClick = {
+                        TaskBarButton(active = bx2State.enabled, onClick = {
                             bx2State = bx2State.copy(
                                 enabled = !bx2State.enabled,
                                 centerXFraction = 0.5f,
-                                centerYFraction = 0.8f,
+                                centerYFraction = 0.7f,
                                 sizeFraction = bx2State.initialSizeFraction
                             )
                             syncMeasurementStates()
@@ -360,7 +386,7 @@ fun ThermogramsAceScreen3(
                             MeasurementToolGlyph(centerColor = Color(0xFF2196F3))
                         }
 
-                        IconButton(onClick = { /* palette selector */ }) {
+                        TaskBarButton(onClick = { /* palette selector */ }) {
                             Icon(
                                 imageVector = Icons.Filled.ColorLens,
                                 contentDescription = "Palette",
@@ -368,7 +394,7 @@ fun ThermogramsAceScreen3(
                             )
                         }
 
-                        IconButton(onClick = {
+                        TaskBarButton(active = isFlashOn, onClick = {
                             viewModel.toggleFlash { success, msg ->
                                 if (!success)
                                     scope.launch { snackbarHostState.showSnackbar("Flash failed: $msg") }
@@ -383,7 +409,7 @@ fun ThermogramsAceScreen3(
                             )
                         }
 
-                        IconButton(onClick = {
+                        TaskBarButton(active = isLaserOn, onClick = {
                             viewModel.toggleLaser { success, msg ->
                                 if (!success)
                                     scope.launch { snackbarHostState.showSnackbar("Laser failed: $msg") }

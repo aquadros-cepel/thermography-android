@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.LinkedCamera
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -36,7 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tech.thermography.android.ui.auth.login.LoginScreen
-import com.tech.thermography.android.ui.camera.ThermogramsAceScreen3
+import com.tech.thermography.android.ui.camera.ThermogramsCameraScreen
 import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
@@ -125,7 +123,7 @@ fun AppNavHost() {
             }
 
             composable(NavRoutes.THERMOGRAMS) {
-                ThermogramsAceScreen3(navController = navController)
+                ThermogramsCameraScreen(navController = navController)
             }
 
             // Backward-compatible route (3 segments) -> thermographicId will be null

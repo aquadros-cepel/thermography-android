@@ -6,8 +6,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,9 +29,9 @@ import kotlin.math.roundToInt
 
 @Composable
 fun MeasurementSquareOverlay(
-    state: ThermogramAceViewModel.MeasurementSquareState,
+    state: ThermogramCameraViewModel.MeasurementSquareState,
     overlaySize: IntSize,
-    onStateChange: (ThermogramAceViewModel.MeasurementSquareState) -> Unit,
+    onStateChange: (ThermogramCameraViewModel.MeasurementSquareState) -> Unit,
 ) {
     if (!state.enabled || overlaySize.width <= 0 || overlaySize.height <= 0) return
 

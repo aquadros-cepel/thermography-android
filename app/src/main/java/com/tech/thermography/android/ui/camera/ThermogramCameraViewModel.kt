@@ -8,7 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class ThermogramAceViewModel @Inject constructor(
+class ThermogramCameraViewModel @Inject constructor(
     private val controller: AceController
 ) : ViewModel() {
 
