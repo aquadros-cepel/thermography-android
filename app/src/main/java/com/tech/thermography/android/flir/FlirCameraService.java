@@ -1,13 +1,10 @@
 package com.tech.thermography.android.flir;
 
-import android.os.SystemClock;
-
 import androidx.annotation.NonNull;
 
 import com.flir.thermalsdk.image.Scale;
 import com.flir.thermalsdk.image.ThermalImage;
 import com.flir.thermalsdk.image.ThermalValue;
-import com.flir.thermalsdk.image.measurements.MeasurementRectangle;
 import com.flir.thermalsdk.image.measurements.MeasurementShapeCollection;
 import com.flir.thermalsdk.log.ThermalLog;
 
@@ -19,22 +16,13 @@ import java.util.List;
 public final class FlirCameraService {
 
     private static final String TAG = "FlirCameraService";
-    private static final long RANGE_THROTTLE_MS = 400L;
-
     private AceController.TemperatureRange latestTemperatureRange;
-    private long lastRangeUpdateMs;
-    private String lastMeasurementSquaresSignature = "";
 
     public AceController.TemperatureRange getLatestTemperatureRange() {
         return latestTemperatureRange;
     }
 
     public AceController.TemperatureRange updateRangeFromThermalImage(@NonNull ThermalImage thermalImage) {
-        long now = SystemClock.elapsedRealtime();
-        if (now - lastRangeUpdateMs < RANGE_THROTTLE_MS) {
-            return latestTemperatureRange;
-        }
-
         try {
             Scale scale = thermalImage.getScale();
             if (scale == null) {
@@ -52,7 +40,6 @@ public final class FlirCameraService {
             double min = minValue.asCelsius().value;
             double max = maxValue.asCelsius().value;
             latestTemperatureRange = new AceController.TemperatureRange(min, max);
-            lastRangeUpdateMs = now;
 
 //            ThermalLog.d(TAG, "Range (Celsius): " + min + "°C - " + max + "°C");
             return latestTemperatureRange;
@@ -60,10 +47,6 @@ public final class FlirCameraService {
             ThermalLog.e(TAG, "Failed to read range from thermal image: " + e.getMessage());
             return latestTemperatureRange;
         }
-    }
-
-    public void resetMeasurementSquaresCache() {
-        lastMeasurementSquaresSignature = "";
     }
 
     public void applyMeasurementSquares(@NonNull ThermalImage thermalImage, @NonNull List<AceController.MeasurementSquareState> states) {
@@ -74,77 +57,16 @@ public final class FlirCameraService {
                 return;
             }
 
-            String signature = buildMeasurementSquaresSignature(states);
-            if (signature.equals(lastMeasurementSquaresSignature)) {
-                return;
-            }
-
-            clearRectangles(measurements);
-
             for (AceController.MeasurementSquareState state : states) {
                 if (state != null && state.getEnabled()) {
                     applyMeasurementSquare(measurements, thermalImage, state);
                 }
             }
-
-            lastMeasurementSquaresSignature = signature;
         } catch (Exception e) {
             ThermalLog.e(TAG, "Failed to apply measurement squares: " + e.getMessage());
         }
     }
 
-    @NonNull
-    private String buildMeasurementSquaresSignature(@NonNull List<AceController.MeasurementSquareState> states) {
-        StringBuilder builder = new StringBuilder();
-        for (AceController.MeasurementSquareState state : states) {
-            if (state == null) {
-                continue;
-            }
-            builder.append(state.getLabel())
-                    .append(':')
-                    .append(state.getEnabled())
-                    .append(':')
-                    .append(state.getCenterXFraction())
-                    .append(':')
-                    .append(state.getCenterYFraction())
-                    .append(':')
-                    .append(state.getSizeFraction())
-                    .append('|');
-        }
-        return builder.toString();
-    }
-
-    private void clearRectangles(@NonNull MeasurementShapeCollection measurements) {
-        try {
-            boolean cleared = false;
-            List<MeasurementRectangle> rects = measurements.getRectangles();
-            if (rects != null) {
-                try {
-                    rects.clear();
-                    cleared = true;
-                } catch (Throwable ignored) {
-                    // fall through to iterative removal
-                }
-
-                if (!cleared) {
-                    try {
-                        for (MeasurementRectangle rect : rects.toArray(new MeasurementRectangle[0])) {
-                            rects.remove(rect);
-                        }
-                        cleared = true;
-                    } catch (Throwable ignored) {
-                        // ignore and continue with the fallback below
-                    }
-                }
-            }
-
-            if (!cleared) {
-                ThermalLog.w(TAG, "Unable to fully clear measurement rectangles");
-            }
-        } catch (Exception e) {
-            ThermalLog.w(TAG, "Unable to clear measurement rectangles: " + e.getMessage());
-        }
-    }
 
     private void applyMeasurementSquare(
             @NonNull MeasurementShapeCollection measurements,
