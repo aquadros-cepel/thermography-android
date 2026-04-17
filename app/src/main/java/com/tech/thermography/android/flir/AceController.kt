@@ -1,9 +1,12 @@
 package com.tech.thermography.android.flir
 
 import android.content.Context
+import android.os.Environment
 import android.opengl.GLSurfaceView
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.androidsdk.ThermalSdkAndroid
+import com.flir.thermalsdk.image.TemperatureUnit
+import com.flir.thermalsdk.image.ThermalValue
 import com.flir.thermalsdk.live.Camera
 import com.flir.thermalsdk.live.Identity
 import com.flir.thermalsdk.live.CameraType
@@ -19,10 +22,12 @@ import com.flir.thermalsdk.image.HistogramEqualizationSettings
 import com.flir.thermalsdk.image.Palette
 import com.flir.thermalsdk.image.PaletteManager
 import com.flir.thermalsdk.image.fusion.FusionMode
+import com.flir.thermalsdk.utils.Pair
 import com.flir.thermalsdk.live.remote.OnCompletion
 import com.flir.thermalsdk.live.remote.OnRemoteError
 import com.flir.thermalsdk.live.remote.StoredImage
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -70,6 +75,10 @@ class AceController @Inject constructor(
     // Toggle states
     private var isLaserOn = false
     private var isFlashOn = false
+    private var snapshotRequested = false
+    private var pendingSnapshotPath: String? = null
+    private var pendingSnapshotCallback: ((Boolean, String?, StoredImage?) -> Unit)? = null
+    private var measurementSquaresDirty = false
 
     data class MeasurementSquareState(
         val label: String = "Bx1",
@@ -223,6 +232,7 @@ class AceController @Inject constructor(
 
                 ThermalLog.d(TAG, "Starting stream")
                 flirCameraService.resetMeasurementSquaresCache()
+                measurementSquaresDirty = true
                 activeStream = stream
                 stream.start(
                     {
@@ -358,7 +368,37 @@ class AceController @Inject constructor(
             thermalImage.fusion?.setFusionMode(FusionMode.THERMAL_ONLY)
             thermalImage.setColorDistributionSettings(colorSettings)
             flirCameraService.updateRangeFromThermalImage(thermalImage)
-            flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
+
+            if (measurementSquaresDirty) {
+                flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
+                measurementSquaresDirty = false
+            }
+
+            if (snapshotRequested) {
+                snapshotRequested = false
+
+                val callback = pendingSnapshotCallback
+                val snapshotPath = pendingSnapshotPath
+                pendingSnapshotCallback = null
+                pendingSnapshotPath = null
+
+                try {
+                    thermalImage.setTemperatureUnit(TemperatureUnit.CELSIUS)
+
+                    val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
+                    ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
+
+                    thermalImage.scale?.setRange(range.first, range.second)
+
+                    val path = snapshotPath ?: throw IllegalStateException("Snapshot path not prepared")
+                    thermalImage.saveAs(path)
+                    ThermalLog.d(TAG, "Snapshot stored under: $path")
+                    callback?.invoke(true, path, null)
+                } catch (e: Exception) {
+                    ThermalLog.e(TAG, "Unable to take snapshot: ${e.message}")
+                    callback?.invoke(false, e.message, null)
+                }
+            }
         }
 
         cam.glOnDrawFrame()
@@ -366,31 +406,43 @@ class AceController @Inject constructor(
 
     fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
         measurementSquareStates = states
+        measurementSquaresDirty = true
         ThermalLog.d(TAG, "Measurement square states updated: $states")
     }
 
     fun takeSnapshot(callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }) {
-        val cam = camera ?: run { callback(false, "Camera not connected", null); return }
-        try {
-            val storage = cam.remoteControl?.storage ?: run { callback(false, "Storage not available", null); return }
-            val cmd = storage.snapshot()
+        if (camera == null || activeStream == null) {
+            callback(false, "Camera not connected or stream not active", null)
+            return
+        }
 
-            val onCompletion = object : OnCompletion {
-                override fun onCompletion() {
-                    try {
-                        val lastProp = cam.remoteControl?.storage?.lastStoredImage()
-                        val lastValue = try { lastProp?.let { it.javaClass.getMethod("getValue").invoke(it) as? StoredImage } } catch (_: Exception) { null }
-                        callback(true, null, lastValue)
-                    } catch (e: Exception) {
-                        callback(false, e.message, null)
-                    }
-                }
-            }
+        if (snapshotRequested) {
+            callback(false, "Snapshot already requested", null)
+            return
+        }
 
-            cmd.javaClass.getMethod("run", OnCompletion::class.java).invoke(cmd, onCompletion)
+        val snapshotFile = buildSnapshotFile() ?: run {
+            callback(false, "Unable to prepare snapshot file", null)
+            return
+        }
 
+        pendingSnapshotPath = snapshotFile.absolutePath
+        pendingSnapshotCallback = callback
+        snapshotRequested = true
+        ThermalLog.d(TAG, "Snapshot requested: ${snapshotFile.absolutePath}")
+        glView?.requestRender()
+    }
+
+    private fun buildSnapshotFile(): File? {
+        return try {
+            val picturesDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                ?: return null
+            val destDir = File(picturesDir, "thermalEnergy")
+            if (!destDir.exists()) destDir.mkdirs()
+            File(destDir, "snapshot_${System.currentTimeMillis()}.jpg")
         } catch (e: Exception) {
-            callback(false, e.message, null)
+            ThermalLog.e(TAG, "Failed to prepare snapshot file: ${e.message}")
+            null
         }
     }
 
