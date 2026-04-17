@@ -77,7 +77,8 @@ class AceController @Inject constructor(
         val enabled: Boolean = false,
         val centerXFraction: Float = 0.5f,
         val centerYFraction: Float = 0.5f,
-        val sizeFraction: Float = 0.18f
+        val sizeFraction: Float = 0.18f,
+        val initialSizeFraction: Float = 0.18f
     )
 
     private var measurementSquareStates: List<MeasurementSquareState> = emptyList()

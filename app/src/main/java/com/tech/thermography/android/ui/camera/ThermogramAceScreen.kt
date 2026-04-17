@@ -121,7 +121,8 @@ fun ThermogramsAceScreen3(
                 .background(color = Color.White)
         )
 
-        val measurementModeBottomPadding = 176.dp
+        // Reserve less space so the measurement boxes can be dragged closer to the bottom edge.
+        val measurementModeBottomPadding = 96.dp
 
         Box(
             modifier = Modifier
@@ -339,7 +340,8 @@ fun ThermogramsAceScreen3(
                             bx1State = bx1State.copy(
                                 enabled = !bx1State.enabled,
                                 centerXFraction = 0.5f,
-                                centerYFraction = 0.5f
+                                centerYFraction = 0.4f,
+                                sizeFraction = bx1State.initialSizeFraction
                             )
                             syncMeasurementStates()
                         }) {
@@ -350,7 +352,8 @@ fun ThermogramsAceScreen3(
                             bx2State = bx2State.copy(
                                 enabled = !bx2State.enabled,
                                 centerXFraction = 0.5f,
-                                centerYFraction = 0.5f
+                                centerYFraction = 0.8f,
+                                sizeFraction = bx2State.initialSizeFraction
                             )
                             syncMeasurementStates()
                         }) {

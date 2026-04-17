@@ -2,7 +2,8 @@ package com.tech.thermography.android.ui.camera
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -38,16 +39,20 @@ fun MeasurementSquareOverlay(
 
     val currentState = rememberUpdatedState(state)
     val currentOnStateChange = rememberUpdatedState(onStateChange)
+    val density = LocalDensity.current
 
     val squareSizePx = (minOf(overlaySize.width, overlaySize.height) * state.sizeFraction)
         .roundToInt()
         .coerceAtLeast(24)
     val halfSquarePx = squareSizePx / 2
+    val interactionPaddingPx = with(density) { 12.dp.roundToPx() }
+    val interactionSizePx = squareSizePx + (interactionPaddingPx * 2)
     val centerX = (state.centerXFraction * overlaySize.width).roundToInt()
     val centerY = (state.centerYFraction * overlaySize.height).roundToInt()
-    val left = (centerX - halfSquarePx).coerceIn(0, (overlaySize.width - squareSizePx).coerceAtLeast(0))
-    val top = (centerY - halfSquarePx).coerceIn(0, (overlaySize.height - squareSizePx).coerceAtLeast(0))
-    val density = LocalDensity.current
+    val left = (centerX - halfSquarePx - interactionPaddingPx)
+        .coerceIn(0, (overlaySize.width - interactionSizePx).coerceAtLeast(0))
+    val top = (centerY - halfSquarePx - interactionPaddingPx)
+        .coerceIn(0, (overlaySize.height - interactionSizePx).coerceAtLeast(0))
 
     Column(
         modifier = Modifier
@@ -57,31 +62,54 @@ fun MeasurementSquareOverlay(
     ) {
         Box(
             modifier = Modifier
-                .size(with(density) { squareSizePx.toDp() })
-                .border(2.dp, Color.White)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Color(0x22FFFFFF))
-                .pointerInput(overlaySize, state.enabled, state.sizeFraction) {
-                    detectDragGestures { _, dragAmount ->
+                .size(with(density) { interactionSizePx.toDp() })
+                .pointerInput(overlaySize, state.enabled) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            val latestState = currentState.value
+                            currentOnStateChange.value(
+                                latestState.copy(sizeFraction = latestState.initialSizeFraction)
+                            )
+                        }
+                    )
+                }
+                .pointerInput(overlaySize, state.enabled) {
+                    detectTransformGestures { _, pan, zoom, _ ->
                         val width = overlaySize.width.toFloat().coerceAtLeast(1f)
                         val height = overlaySize.height.toFloat().coerceAtLeast(1f)
                         val latestState = currentState.value
-                        val newCenterX = ((latestState.centerXFraction * width) + dragAmount.x)
-                            .coerceIn(halfSquarePx.toFloat(), width - halfSquarePx.toFloat())
-                        val newCenterY = ((latestState.centerYFraction * height) + dragAmount.y)
-                            .coerceIn(halfSquarePx.toFloat(), height - halfSquarePx.toFloat())
+                        val newSizeFraction = (latestState.sizeFraction * zoom).coerceIn(0.08f, 0.6f)
+                        val newSquareSizePx = (minOf(overlaySize.width, overlaySize.height) * newSizeFraction)
+                            .roundToInt()
+                            .coerceAtLeast(24)
+                        val halfNewSquarePx = newSquareSizePx / 2
+
+                        val newCenterX = ((latestState.centerXFraction * width) + pan.x)
+                            .coerceIn(halfNewSquarePx.toFloat(), width - halfNewSquarePx.toFloat())
+                        val newCenterY = ((latestState.centerYFraction * height) + pan.y)
+                            .coerceIn(halfNewSquarePx.toFloat(), height - halfNewSquarePx.toFloat())
 
                         currentOnStateChange.value(
                             latestState.copy(
                                 centerXFraction = newCenterX / width,
-                                centerYFraction = newCenterY / height
+                                centerYFraction = newCenterY / height,
+                                sizeFraction = newSizeFraction
                             )
                         )
                     }
                 }
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
+                .clip(RoundedCornerShape(2.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(with(density) { squareSizePx.toDp() })
+                    .border(2.dp, Color.White)
+                    .clip(RoundedCornerShape(2.dp))
+            )
+        }
+//
+//        Spacer(modifier = Modifier.height(0.dp))
 
         Surface(
             color = Color(0xCC000000),
@@ -99,6 +127,3 @@ fun MeasurementSquareOverlay(
         }
     }
 }
-
-
-
