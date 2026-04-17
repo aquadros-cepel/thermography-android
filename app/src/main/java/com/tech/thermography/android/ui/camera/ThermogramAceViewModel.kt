@@ -12,6 +12,14 @@ class ThermogramAceViewModel @Inject constructor(
     private val controller: AceController
 ) : ViewModel() {
 
+    data class MeasurementSquareState(
+        val label: String = "Bx1",
+        val enabled: Boolean = false,
+        val centerXFraction: Float = 0.5f,
+        val centerYFraction: Float = 0.5f,
+        val sizeFraction: Float = 0.3f
+    )
+
     fun attachGlSurface(glView: GLSurfaceView) {
         controller.attachSurface(glView)
     }
@@ -22,10 +30,6 @@ class ThermogramAceViewModel @Inject constructor(
 
     fun start() {
         controller.startCamera()
-    }
-
-    fun startStream() {
-        controller.startStream()
     }
 
     fun stop() {
@@ -55,5 +59,23 @@ class ThermogramAceViewModel @Inject constructor(
 
     fun getTemperatureRange(): AceController.TemperatureRange? {
         return controller.getTemperatureRange()
+    }
+
+    fun setMeasurementSquareState(state: MeasurementSquareState) {
+        setMeasurementSquareStates(listOf(state))
+    }
+
+    fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
+        controller.setMeasurementSquareStates(
+            states.map {
+                AceController.MeasurementSquareState(
+                    label = it.label,
+                    enabled = it.enabled,
+                    centerXFraction = it.centerXFraction,
+                    centerYFraction = it.centerYFraction,
+                    sizeFraction = it.sizeFraction
+                )
+            }
+        )
     }
 }

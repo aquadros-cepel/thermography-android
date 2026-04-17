@@ -11,9 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -29,13 +31,30 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
-
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
     var onSizeChangedCallback: ((Int, Int) -> Unit)? = null
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         onSizeChangedCallback?.invoke(w, h)
+    }
+}
+
+@Composable
+private fun MeasurementToolGlyph(centerColor: Color) {
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = Icons.Filled.CenterFocusStrong,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(centerColor)
+                .border(1.dp, Color.White, CircleShape)
+        )
     }
 }
 
@@ -54,9 +73,16 @@ fun ThermogramsAceScreen3(
     var isThermalMode by remember { mutableStateOf(true) }
     var isFlashOn by remember { mutableStateOf(false) }
     var isLaserOn by remember { mutableStateOf(false) }
+    var bx1State by remember { mutableStateOf(ThermogramAceViewModel.MeasurementSquareState(label = "Bx1")) }
+    var bx2State by remember { mutableStateOf(ThermogramAceViewModel.MeasurementSquareState(label = "Bx2")) }
+    var measurementOverlaySize by remember { mutableStateOf(IntSize.Zero) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    fun syncMeasurementStates() {
+        viewModel.setMeasurementSquareStates(listOf(bx1State, bx2State))
+    }
 
     var tempRange by remember { mutableStateOf(viewModel.getTemperatureRange()) }
 
@@ -94,6 +120,26 @@ fun ThermogramsAceScreen3(
                 .fillMaxSize()
                 .background(color = Color.White)
         )
+
+        val measurementModeBottomPadding = 176.dp
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = measurementModeBottomPadding)
+                .onSizeChanged { measurementOverlaySize = it }
+        ) {
+            MeasurementSquareOverlay(
+                state = bx1State,
+                overlaySize = measurementOverlaySize,
+                onStateChange = { bx1State = it; syncMeasurementStates() }
+            )
+            MeasurementSquareOverlay(
+                state = bx2State,
+                overlaySize = measurementOverlaySize,
+                onStateChange = { bx2State = it; syncMeasurementStates() }
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -238,9 +284,9 @@ fun ThermogramsAceScreen3(
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(50.dp)
                             .clip(CircleShape)
-                            .background(Color.White)
+                            .background(Color.Black)
                             .border(width = 2.dp, color = Color.LightGray, shape = CircleShape)
                     ) {
                         IconButton(onClick = {
@@ -256,10 +302,10 @@ fun ThermogramsAceScreen3(
                             }
                         }) {
                             Icon(
-                                imageVector = Icons.Filled.CenterFocusStrong,
+                                imageVector = Icons.Filled.Camera,
                                 contentDescription = "Snapshot",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(36.dp)
+                                tint = Color.White,
+                                modifier = Modifier.size(50.dp)
                             )
                         }
                     }
@@ -289,12 +335,26 @@ fun ThermogramsAceScreen3(
                             )
                         }
 
-                        IconButton(onClick = { /* measurement tools */ }) {
-                            Icon(
-                                imageVector = Icons.Filled.Build,
-                                contentDescription = "Measurement tools",
-                                tint = MaterialTheme.colorScheme.onSurface
+                        IconButton(onClick = {
+                            bx1State = bx1State.copy(
+                                enabled = !bx1State.enabled,
+                                centerXFraction = 0.5f,
+                                centerYFraction = 0.5f
                             )
+                            syncMeasurementStates()
+                        }) {
+                            MeasurementToolGlyph(centerColor = Color.Red)
+                        }
+
+                        IconButton(onClick = {
+                            bx2State = bx2State.copy(
+                                enabled = !bx2State.enabled,
+                                centerXFraction = 0.5f,
+                                centerYFraction = 0.5f
+                            )
+                            syncMeasurementStates()
+                        }) {
+                            MeasurementToolGlyph(centerColor = Color(0xFF2196F3))
                         }
 
                         IconButton(onClick = { /* palette selector */ }) {
