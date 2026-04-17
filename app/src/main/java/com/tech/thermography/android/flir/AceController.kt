@@ -25,7 +25,6 @@ import com.flir.thermalsdk.live.remote.StoredImage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.roundToInt
 
 @Singleton
 class AceController @Inject constructor(
@@ -223,6 +222,7 @@ class AceController @Inject constructor(
                 // or deferred to onGlDrawFrame() if the surface wasn't ready yet.
 
                 ThermalLog.d(TAG, "Starting stream")
+                flirCameraService.resetMeasurementSquaresCache()
                 activeStream = stream
                 stream.start(
                     {
@@ -267,6 +267,7 @@ class AceController @Inject constructor(
             stopStream()
             camera?.disconnect()
             camera = null
+            flirCameraService.resetMeasurementSquaresCache()
             state = State.Idle
             ThermalLog.d(TAG, "Disconnected. State: $state")
         }.start()
@@ -357,14 +358,10 @@ class AceController @Inject constructor(
             thermalImage.fusion?.setFusionMode(FusionMode.THERMAL_ONLY)
             thermalImage.setColorDistributionSettings(colorSettings)
             flirCameraService.updateRangeFromThermalImage(thermalImage)
-            applyMeasurementSquares(thermalImage)
+            flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
         }
 
         cam.glOnDrawFrame()
-    }
-
-    fun setMeasurementSquareState(state: MeasurementSquareState) {
-        setMeasurementSquareStates(listOf(state))
     }
 
     fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
@@ -496,114 +493,6 @@ class AceController @Inject constructor(
                 if (v is Number) return v.toDouble()
             } catch (_: Exception) {
                 // ignore
-            }
-        }
-        return null
-    }
-
-    private fun applyMeasurementSquares(thermalImage: Any) {
-        val measurements = invokeAnyGetter(thermalImage, listOf("getMeasurements", "measurements")) ?: return
-
-        clearRectangles(measurements)
-
-        measurementSquareStates
-            .filter { it.enabled }
-            .forEach { state ->
-                applyMeasurementSquare(measurements, thermalImage, state)
-            }
-    }
-
-    private fun applyMeasurementSquare(measurements: Any, thermalImage: Any, state: MeasurementSquareState) {
-
-        val imageWidth = readInt(thermalImage, listOf("getWidth", "width")) ?: return
-        val imageHeight = readInt(thermalImage, listOf("getHeight", "height")) ?: return
-
-        val baseSize = minOf(imageWidth, imageHeight)
-        val squareSize = (baseSize * state.sizeFraction).roundToInt().coerceAtLeast(24)
-        val halfSize = squareSize / 2
-
-        val centerX = (imageWidth * state.centerXFraction).roundToInt()
-        val centerY = (imageHeight * state.centerYFraction).roundToInt()
-        val left = (centerX - halfSize).coerceIn(0, (imageWidth - squareSize).coerceAtLeast(0))
-        val top = (centerY - halfSize).coerceIn(0, (imageHeight - squareSize).coerceAtLeast(0))
-
-        val added = invokeAnyMethod(
-            measurements,
-            listOf("addRectangle", "addRect"),
-            arrayOf(left, top, squareSize, squareSize)
-        )
-
-        if (added == null) {
-            ThermalLog.w(TAG, "Unable to add rectangle measurement to current frame (${state.label})")
-        } else {
-            ThermalLog.d(TAG, "Measurement rectangle applied (${state.label}) at [$left,$top] size=$squareSize")
-        }
-    }
-
-    private fun clearRectangles(measurements: Any) {
-        val directClear = invokeAnyMethod(
-            measurements,
-            listOf("clearRectangles", "removeAllRectangles", "resetRectangles", "clear"),
-            emptyArray()
-        )
-        if (directClear != null) return
-
-        val rectangles = invokeAnyGetter(measurements, listOf("getRectangles", "rectangles"))
-        if (rectangles is MutableCollection<*>) {
-            try {
-                @Suppress("UNCHECKED_CAST")
-                (rectangles as MutableCollection<Any?>).clear()
-            } catch (_: Exception) {
-                // ignore and let the next frame try again
-            }
-        }
-    }
-
-    private fun readInt(obj: Any, methodNames: List<String>): Int? {
-        for (name in methodNames) {
-            val m = obj.javaClass.methods.firstOrNull { it.name == name && it.parameterCount == 0 }
-            if (m != null) {
-                val value = try { m.invoke(obj) } catch (_: Exception) { null }
-                when (value) {
-                    is Int -> return value
-                    is Number -> return value.toInt()
-                }
-            }
-        }
-
-        for (field in obj.javaClass.declaredFields) {
-            try {
-                field.isAccessible = true
-                val v = field.get(obj)
-                when (v) {
-                    is Int -> return v
-                    is Number -> return v.toInt()
-                }
-            } catch (_: Exception) {
-                // ignore
-            }
-        }
-
-        return null
-    }
-
-    private fun invokeAnyGetter(obj: Any, methodNames: List<String>): Any? {
-        for (name in methodNames) {
-            val m = obj.javaClass.methods.firstOrNull { it.name == name && it.parameterCount == 0 }
-            if (m != null) {
-                return try { m.invoke(obj) } catch (_: Exception) { null }
-            }
-        }
-        return null
-    }
-
-    private fun invokeAnyMethod(target: Any, methodNames: List<String>, args: Array<Any?>): Any? {
-        for (name in methodNames) {
-            val method = target.javaClass.methods.firstOrNull {
-                it.name == name && it.parameterCount == args.size
-            }
-            if (method != null) {
-                return try { method.invoke(target, *args) } catch (_: Exception) { null }
             }
         }
         return null
