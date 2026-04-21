@@ -3,6 +3,7 @@ package com.tech.thermography.android.navigation
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -35,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tech.thermography.android.ui.auth.login.LoginScreen
 import com.tech.thermography.android.ui.camera.ThermogramsCameraScreen
+import com.tech.thermography.android.ui.camera.ThermogramImageScreen
 import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
@@ -124,6 +126,21 @@ fun AppNavHost() {
 
             composable(NavRoutes.THERMOGRAMS) {
                 ThermogramsCameraScreen(navController = navController)
+            }
+
+            composable("${NavRoutes.THERMOGRAM_IMAGE}/{${NavRoutes.THERMOGRAM_IMAGE_ARG}}") { backStackEntry ->
+                val encodedPath = backStackEntry.arguments?.getString(NavRoutes.THERMOGRAM_IMAGE_ARG).orEmpty()
+                val decodedPath = Uri.decode(encodedPath)
+                val recentList = navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<ArrayList<String>>("thermogram_recent_list")
+                    ?.toList()
+                    ?: emptyList()
+                ThermogramImageScreen(
+                    imagePath = decodedPath,
+                    imagePaths = recentList,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             // Backward-compatible route (3 segments) -> thermographicId will be null

@@ -57,7 +57,7 @@ class SnapshotManager @Inject constructor() {
             
             // ===== STEP 1: Capture GL framebuffer (thermal stream) =====
             ThermalLog.d(TAG, "Step 1: Capturing GL framebuffer (thermal)...")
-            val thermalBitmap = captureGLFramebuffer(width, height)
+            val thermalBitmap = captureGLFramebuffer(width, height -250)
             if (thermalBitmap == null) {
                 ThermalLog.e(TAG, "Failed to capture GL framebuffer")
                 return null
@@ -182,7 +182,7 @@ class SnapshotManager @Inject constructor() {
             val decorView = window.decorView
             
             val captureWidth = decorView.width
-            val captureHeight = decorView.height - 120
+            val captureHeight = decorView.height
             
             if (captureWidth <= 0 || captureHeight <= 0) {
                 ThermalLog.w(TAG, "Invalid window size: ${captureWidth}x${captureHeight}")
@@ -225,14 +225,14 @@ class SnapshotManager @Inject constructor() {
             }
             
             // Resize if needed
-            val finalBitmap = if (captureWidth != targetWidth || captureHeight != targetHeight) {
-                Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true).also {
-                    bitmap.recycle()
-                }
-            } else {
-                bitmap
-            }
-            
+//            val finalBitmap = if (captureWidth != targetWidth || captureHeight != targetHeight) {
+//                Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true).also {
+//                    bitmap.recycle()
+//                }
+//            } else {
+//                bitmap
+//            }
+            val finalBitmap = bitmap
             ThermalLog.d(TAG, "Compose UI captured: ${finalBitmap.width}x${finalBitmap.height}")
             return finalBitmap
             

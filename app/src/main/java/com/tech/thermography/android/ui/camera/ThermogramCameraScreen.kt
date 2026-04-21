@@ -2,12 +2,19 @@ package com.tech.thermography.android.ui.camera
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.opengl.GLSurfaceView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
@@ -16,6 +23,7 @@ import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
@@ -30,8 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.compose.ui.viewinterop.AndroidView
+import com.tech.thermography.android.navigation.NavRoutes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
     var onSizeChangedCallback: ((Int, Int) -> Unit)? = null
@@ -87,6 +99,60 @@ private fun TaskBarButton(
 }
 
 @Composable
+private fun RecentThermogramThumbnail(
+    imagePath: String,
+    onOpen: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val imageBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, key1 = imagePath) {
+        value = withContext(Dispatchers.IO) {
+            BitmapFactory.decodeFile(imagePath)?.asImageBitmap()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .size(72.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onOpen)
+    ) {
+        if (imageBitmap != null) {
+            Image(
+                bitmap = imageBitmap!!,
+                contentDescription = "Thumbnail",
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            }
+        }
+
+        Surface(
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.65f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .size(18.dp)
+                .clickable(onClick = onRemove)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Remover",
+                    tint = Color.White,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun ThermogramsCameraScreen(
     navController: NavHostController,
     viewModel: ThermogramCameraViewModel = hiltViewModel()
@@ -102,6 +168,7 @@ fun ThermogramsCameraScreen(
 
     // snapshot counter local state
     var snapshotCount by remember { mutableStateOf(0) }
+    val recentThermograms by viewModel.recentThermograms.collectAsState()
 
     // Toggle states for toolbar buttons
     var isThermalMode by remember { mutableStateOf(true) }
@@ -127,6 +194,10 @@ fun ThermogramsCameraScreen(
         }
     }
 
+    LaunchedEffect(recentThermograms) {
+        viewModel.pruneMissingRecentThermograms()
+    }
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -135,6 +206,9 @@ fun ThermogramsCameraScreen(
         val temperatureBarWidth = (maxWidth * 0.038f).coerceIn(14.dp, 18.dp)
         val temperatureBarHeight = (maxHeight * 0.68f).coerceIn(300.dp, 460.dp)
         val temperatureLabelShape = MaterialTheme.shapes.small
+        val toolbarHeight = 56.dp
+        val recentStripHeight = 90.dp
+        val bottomReservedHeight = toolbarHeight + recentStripHeight
 
         // GLSurfaceView with renderer
         AndroidView(
@@ -155,8 +229,8 @@ fun ThermogramsCameraScreen(
                 .background(color = Color.White)
         )
 
-        // Reserve less space so the measurement boxes can be dragged closer to the bottom edge.
-        val measurementModeBottomPadding = 96.dp
+        // Keep overlays above toolbar + recent strip area.
+        val measurementModeBottomPadding = bottomReservedHeight + 16.dp
 
         Box(
             modifier = Modifier
@@ -285,76 +359,76 @@ fun ThermogramsCameraScreen(
         }
 
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = bottomReservedHeight + 8.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .navigationBarsPadding(),
-                verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Box(contentAlignment = Alignment.Center) {
-                    if (snapshotCount > 0) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0x99000000),
-                            tonalElevation = 2.dp,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .offset(y = (-36).dp)
-                        ) {
-                            Text(
-                                text = snapshotCount.toString(),
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    Box(
-                        contentAlignment = Alignment.Center,
+            Box(contentAlignment = Alignment.Center) {
+                if (snapshotCount > 0) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0x99000000),
+                        tonalElevation = 2.dp,
                         modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black)
-                            .border(width = 2.dp, color = Color.LightGray, shape = CircleShape)
+                            .align(Alignment.TopCenter)
+                            .offset(y = (-36).dp)
                     ) {
-                        IconButton(onClick = {
-                            // Captures 2 files: thermal.jpg + overlay.png
-                            viewModel.takeSnapshotWithOverlay(activity) { success, msg, _ ->
-                                scope.launch {
-                                    if (success) {
-                                        snapshotCount++
-                                        snackbarHostState.showSnackbar("Snapshot with overlay saved")
-                                    } else {
-                                        snackbarHostState.showSnackbar("Snapshot failed: ${msg ?: "unknown"}")
-                                    }
-                                }
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Camera,
-                                contentDescription = "Snapshot",
-                                tint = Color.White,
-                                modifier = Modifier.size(50.dp)
-                            )
-                        }
+                        Text(
+                            text = snapshotCount.toString(),
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black)
+                        .border(width = 2.dp, color = Color.LightGray, shape = CircleShape)
+                ) {
+                    IconButton(onClick = {
+                        viewModel.takeSnapshotWithOverlay(activity) { success, msg, _ ->
+                            scope.launch {
+                                if (success) {
+                                    snapshotCount++
+                                    snackbarHostState.showSnackbar("Snapshot with overlay saved")
+                                } else {
+                                    snackbarHostState.showSnackbar("Snapshot failed: ${msg ?: "unknown"}")
+                                }
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.Camera,
+                            contentDescription = "Snapshot",
+                            tint = Color.White,
+                            modifier = Modifier.size(50.dp)
+                        )
+                    }
+                }
+            }
+        }
 
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Surface(
                     tonalElevation = 8.dp,
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(72.dp)
+                        .height(toolbarHeight)
                 ) {
                     Row(
                         modifier = Modifier
@@ -405,10 +479,11 @@ fun ThermogramsCameraScreen(
 
                         TaskBarButton(active = isFlashOn, onClick = {
                             viewModel.toggleFlash { success, msg ->
-                                if (!success)
+                                if (!success) {
                                     scope.launch { snackbarHostState.showSnackbar("Flash failed: $msg") }
-                                else
+                                } else {
                                     isFlashOn = !isFlashOn
+                                }
                             }
                         }) {
                             Icon(
@@ -420,10 +495,11 @@ fun ThermogramsCameraScreen(
 
                         TaskBarButton(active = isLaserOn, onClick = {
                             viewModel.toggleLaser { success, msg ->
-                                if (!success)
+                                if (!success) {
                                     scope.launch { snackbarHostState.showSnackbar("Laser failed: $msg") }
-                                else
+                                } else {
                                     isLaserOn = !isLaserOn
+                                }
                             }
                         }) {
                             Icon(
@@ -431,6 +507,51 @@ fun ThermogramsCameraScreen(
                                 contentDescription = "Laser",
                                 tint = if (isLaserOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
+                        }
+                    }
+                }
+
+                // Always show the recent thermograms area with dark gray background and placeholder if empty
+                val recentBarHeight = 72.dp
+                Surface(
+                    color = Color(0xFF23272A), // dark gray
+                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(recentBarHeight)
+                ) {
+                    if (recentThermograms.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "últimos snapshots",
+                                color = Color.LightGray,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    } else {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp)
+                            ) {
+                                items(recentThermograms) { imagePath ->
+                                    RecentThermogramThumbnail(
+                                        imagePath = imagePath,
+                                        onOpen = {
+                                            navController.currentBackStackEntry
+                                                ?.savedStateHandle
+                                                ?.set("thermogram_recent_list", ArrayList(recentThermograms))
+                                            navController.navigate("${NavRoutes.THERMOGRAM_IMAGE}/${Uri.encode(imagePath)}")
+                                        },
+                                        onRemove = {
+                                            viewModel.removeRecentThermogram(imagePath, deleteFile = true)
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
