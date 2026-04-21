@@ -167,8 +167,8 @@ fun ThermogramsCameraScreen(
     }
 
     // snapshot counter local state
-    var snapshotCount by remember { mutableStateOf(0) }
     val recentThermograms by viewModel.recentThermograms.collectAsState()
+    var showSnapshotButton by remember { mutableStateOf(true) }
 
     // Toggle states for toolbar buttons
     var isThermalMode by remember { mutableStateOf(true) }
@@ -365,49 +365,36 @@ fun ThermogramsCameraScreen(
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(contentAlignment = Alignment.Center) {
-                if (snapshotCount > 0) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0x99000000),
-                        tonalElevation = 2.dp,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .offset(y = (-36).dp)
-                    ) {
-                        Text(
-                            text = snapshotCount.toString(),
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
 
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black)
-                        .border(width = 2.dp, color = Color.LightGray, shape = CircleShape)
-                ) {
-                    IconButton(onClick = {
-                        viewModel.takeSnapshotWithOverlay(activity) { success, msg, _ ->
-                            scope.launch {
-                                if (success) {
-                                    snapshotCount++
-                                    snackbarHostState.showSnackbar("Snapshot with overlay saved")
-                                } else {
-                                    snackbarHostState.showSnackbar("Snapshot failed: ${msg ?: "unknown"}")
+                if (showSnapshotButton) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black)
+                            .border(width = 2.dp, color = Color.LightGray, shape = CircleShape)
+                    ) {
+                        IconButton(onClick = {
+                            showSnapshotButton = false
+                            viewModel.takeSnapshotWithOverlay(activity) { success, msg, _ ->
+                                scope.launch {
+                                    showSnapshotButton = true
+                                    if (success) {
+//                                                snackbarHostState.showSnackbar("Snapshot with overlay saved")
+                                    } else {
+                                        snackbarHostState.showSnackbar("Snapshot failed: ${msg ?: "unknown"}")
+                                    }
                                 }
                             }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.Camera,
+                                contentDescription = "Snapshot",
+                                tint = Color.White,
+                                modifier = Modifier.size(50.dp)
+                            )
                         }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.Camera,
-                            contentDescription = "Snapshot",
-                            tint = Color.White,
-                            modifier = Modifier.size(50.dp)
-                        )
                     }
                 }
             }
@@ -526,7 +513,7 @@ fun ThermogramsCameraScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "últimos snapshots",
+                                text = "Termogramas Recentes...",
                                 color = Color.LightGray,
                                 style = MaterialTheme.typography.bodyMedium
                             )
