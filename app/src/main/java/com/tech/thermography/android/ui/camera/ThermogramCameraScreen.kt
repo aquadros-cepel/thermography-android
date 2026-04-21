@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -129,25 +131,7 @@ private fun RecentThermogramThumbnail(
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             }
         }
-
-        Surface(
-            shape = CircleShape,
-            color = Color.Black.copy(alpha = 0.65f),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .size(18.dp)
-                .clickable(onClick = onRemove)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Remover",
-                    tint = Color.White,
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        }
+        // Removed delete button (x)
     }
 }
 
@@ -204,7 +188,7 @@ fun ThermogramsCameraScreen(
             .background(Color.White)
     ) {
         val temperatureBarWidth = (maxWidth * 0.038f).coerceIn(14.dp, 18.dp)
-        val temperatureBarHeight = (maxHeight * 0.68f).coerceIn(300.dp, 460.dp)
+        val temperatureBarHeight = (maxHeight * 0.60f).coerceIn(270.dp, 414.dp) // Reduzido em ~12%
         val temperatureLabelShape = MaterialTheme.shapes.small
         val toolbarHeight = 56.dp
         val recentStripHeight = 90.dp
@@ -502,7 +486,6 @@ fun ThermogramsCameraScreen(
                 val recentBarHeight = 72.dp
                 Surface(
                     color = Color(0xFF23272A), // dark gray
-                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(recentBarHeight)
@@ -544,5 +527,30 @@ fun ThermogramsCameraScreen(
                 }
             }
         }
+
+        // Overlay watermark in bottom start above toolbar
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomStart
+        ) {
+            WatermarkOverlay()
+        }
+    }
+}
+
+@Composable
+private fun WatermarkOverlay(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .padding(start = 8.dp, bottom = 120.dp) // 100dp to sit above toolbar and recent bar
+//            .background(Color(0x80000000), shape = RoundedCornerShape(12.dp))
+            .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            painter = painterResource(id = com.tech.thermography.android.R.drawable.logo_thermal_energy_vb),
+            contentDescription = "Logo Thermal Energy",
+            modifier = Modifier.size(60.dp)
+        )
     }
 }

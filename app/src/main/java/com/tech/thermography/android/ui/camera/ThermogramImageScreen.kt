@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,9 +39,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,8 +71,10 @@ fun ThermogramImageScreen(
         }.distinct()
     }
     val initialIndex = remember(images, imagePath) { images.indexOf(imagePath).takeIf { it >= 0 } ?: 0 }
-    val pagerState = rememberPagerState(initialPage = initialIndex, pageCount = { images.size })
+    var imagesState by remember { mutableStateOf(images) }
+    val pagerState = rememberPagerState(initialPage = initialIndex, pageCount = { imagesState.size })
     val scope = rememberCoroutineScope()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -76,6 +83,11 @@ fun ThermogramImageScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Excluir termograma")
                     }
                 }
             )
@@ -87,7 +99,7 @@ fun ThermogramImageScreen(
                 .background(Color.Black)
                 .padding(innerPadding)
         ) {
-            if (images.isEmpty()) {
+            if (imagesState.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Imagem nao encontrada", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -98,7 +110,7 @@ fun ThermogramImageScreen(
                         .weight(1f)
                         .fillMaxWidth()
                 ) { page ->
-                    val pagePath = images[page]
+                    val pagePath = imagesState[page]
                     val imageBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
                         initialValue = null,
                         key1 = pagePath
@@ -129,7 +141,7 @@ fun ThermogramImageScreen(
                         .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    images.forEachIndexed { index, _ ->
+                    imagesState.forEachIndexed { index, _ ->
                         val selected = index == pagerState.currentPage
                         val dotSize by animateDpAsState(
                             targetValue = if (selected) 10.dp else 7.dp,
@@ -158,9 +170,9 @@ fun ThermogramImageScreen(
                 ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        itemsIndexed(images) { index, path ->
+                        itemsIndexed(imagesState) { index, path ->
                             val thumb by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
                                 initialValue = null,
                                 key1 = path
@@ -200,6 +212,42 @@ fun ThermogramImageScreen(
                 }
             }
         }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Excluir termograma?") },
+                text = { Text("Deseja realmente excluir este termograma?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        scope.launch {
+                            try {
+                                val toDelete = imagesState.getOrNull(pagerState.currentPage)
+                                if (toDelete != null) {
+                                    java.io.File(toDelete).delete()
+                                    val newList = imagesState.filter { it != toDelete }
+                                    imagesState = newList
+                                    // Ajusta o pager para índice válido
+                                    if (newList.isNotEmpty()) {
+                                        val newIndex = pagerState.currentPage.coerceAtMost(newList.lastIndex)
+                                        pagerState.scrollToPage(newIndex)
+                                    } else {
+                                        onBack()
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }) {
+                        Text("Excluir")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
     }
 }
-
