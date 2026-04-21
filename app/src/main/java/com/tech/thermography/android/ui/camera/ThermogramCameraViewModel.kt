@@ -1,5 +1,6 @@
 package com.tech.thermography.android.ui.camera
 
+import android.app.Activity
 import android.opengl.GLSurfaceView
 import androidx.lifecycle.ViewModel
 import com.flir.thermalsdk.live.remote.StoredImage
@@ -46,6 +47,20 @@ class ThermogramCameraViewModel @Inject constructor(
      */
     fun takeSnapshot(callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }) {
         controller.takeSnapshot { success, msg, storedImage ->
+            callback(success, msg, storedImage)
+        }
+    }
+    
+    /**
+     * Requests the camera to store a snapshot WITH screen overlay (saved as separate PNG).
+     * Creates 2 files: snapshot_XXX.jpg (thermal) + snapshot_XXX_overlay.png (UI)
+     * The callback returns (success, message, storedImage?)
+     */
+    fun takeSnapshotWithOverlay(
+        activity: Activity,
+        callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }
+    ) {
+        controller.takeSnapshotWithOverlay(activity) { success, msg, storedImage ->
             callback(success, msg, storedImage)
         }
     }

@@ -1,5 +1,6 @@
 package com.tech.thermography.android.ui.camera
 
+import android.app.Activity
 import android.content.Context
 import android.opengl.GLSurfaceView
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -91,6 +93,12 @@ fun ThermogramsCameraScreen(
 ) {
 
     LaunchedEffect(navController) { /* no-op: keep navController referenced for now */ }
+    
+    // Get the activity context
+    val context = LocalContext.current
+    val activity = remember(context) { 
+        context as? Activity ?: error("Context must be an Activity for screen capture")
+    }
 
     // snapshot counter local state
     var snapshotCount by remember { mutableStateOf(0) }
@@ -317,11 +325,12 @@ fun ThermogramsCameraScreen(
                             .border(width = 2.dp, color = Color.LightGray, shape = CircleShape)
                     ) {
                         IconButton(onClick = {
-                            viewModel.takeSnapshot { success, msg, _ ->
+                            // Captures 2 files: thermal.jpg + overlay.png
+                            viewModel.takeSnapshotWithOverlay(activity) { success, msg, _ ->
                                 scope.launch {
                                     if (success) {
                                         snapshotCount++
-                                        snackbarHostState.showSnackbar("Snapshot saved")
+                                        snackbarHostState.showSnackbar("Snapshot with overlay saved")
                                     } else {
                                         snackbarHostState.showSnackbar("Snapshot failed: ${msg ?: "unknown"}")
                                     }

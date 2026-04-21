@@ -33,7 +33,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AceController @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val snapshotManager: SnapshotManager
 ) {
 
     data class TemperatureRange(val min: Double, val max: Double)
@@ -78,6 +79,15 @@ class AceController @Inject constructor(
     private var snapshotRequested = false
     private var pendingSnapshotPath: String? = null
     private var pendingSnapshotCallback: ((Boolean, String?, StoredImage?) -> Unit)? = null
+    
+    // Overlay snapshot support
+    private var pendingOverlaySnapshot: OverlaySnapshotRequest? = null
+    
+    private data class OverlaySnapshotRequest(
+        val activity: android.app.Activity,
+        val file: File,
+        val callback: (Boolean, String?, StoredImage?) -> Unit
+    )
 
     data class MeasurementSquareState(
         val label: String = "Bx1",
@@ -365,7 +375,47 @@ class AceController @Inject constructor(
             thermalImage.setColorDistributionSettings(colorSettings)
             flirCameraService.updateRangeFromThermalImage(thermalImage)
 
-            if (snapshotRequested) {
+            // Handle overlay snapshot first (requires full screen capture)
+            val overlayRequest = pendingOverlaySnapshot
+            if (overlayRequest != null) {
+                pendingOverlaySnapshot = null
+                
+                try {
+                    thermalImage.setTemperatureUnit(TemperatureUnit.CELSIUS)
+                    
+                    val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
+                    ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
+                    
+                    thermalImage.scale?.setRange(range.first, range.second)
+                    flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
+                    
+                    // Capture FULL SCREEN (GL + Compose UI) - blocks until complete
+                    val overlay = snapshotManager.captureGLFramebufferAsOverlay(
+                        overlayRequest.activity,
+                        surfaceWidth,
+                        surfaceHeight
+                    )
+                    
+                    if (overlay != null) {
+                        // Save with overlay in ONE file
+                        thermalImage.saveAs(overlayRequest.file.absolutePath, overlay)
+                        ThermalLog.i(TAG, "Snapshot with overlay saved: ${overlayRequest.file.absolutePath}")
+                        overlayRequest.callback(true, overlayRequest.file.absolutePath, null)
+                    } else {
+                        // Fallback: save without overlay
+                        thermalImage.saveAs(overlayRequest.file.absolutePath)
+                        ThermalLog.w(TAG, "Snapshot saved without overlay (overlay creation failed)")
+                        overlayRequest.callback(true, overlayRequest.file.absolutePath, null)
+                    }
+                    
+                } catch (e: Exception) {
+                    ThermalLog.e(TAG, "Unable to save snapshot with overlay: ${e.message}")
+                    e.printStackTrace()
+                    overlayRequest.callback(false, e.message, null)
+                }
+            }
+            // Handle regular snapshot (no overlay)
+            else if (snapshotRequested) {
                 snapshotRequested = false
 
                 val callback = pendingSnapshotCallback
@@ -421,6 +471,44 @@ class AceController @Inject constructor(
         pendingSnapshotCallback = callback
         snapshotRequested = true
         ThermalLog.d(TAG, "Snapshot requested: ${snapshotFile.absolutePath}")
+        glView?.requestRender()
+    }
+    
+    /**
+     * Take a snapshot with screen overlay (saved as separate PNG file).
+     * Creates 2 files:
+     * - snapshot_XXX.jpg (thermal data)
+     * - snapshot_XXX_overlay.png (screen capture with UI)
+     * 
+     * @param activity The activity to capture the screen from
+     * @param callback Result callback (success, message, storedImage)
+     */
+    fun takeSnapshotWithOverlay(
+        activity: android.app.Activity,
+        callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }
+    ) {
+        if (camera == null || activeStream == null) {
+            callback(false, "Camera not connected or stream not active", null)
+            return
+        }
+
+        if (pendingOverlaySnapshot != null) {
+            callback(false, "Overlay snapshot already requested", null)
+            return
+        }
+
+        val snapshotFile = buildSnapshotFile() ?: run {
+            callback(false, "Unable to prepare snapshot file", null)
+            return
+        }
+
+        pendingOverlaySnapshot = OverlaySnapshotRequest(
+            activity = activity,
+            file = snapshotFile,
+            callback = callback
+        )
+        
+        ThermalLog.d(TAG, "Overlay snapshot requested: ${snapshotFile.absolutePath}")
         glView?.requestRender()
     }
 
