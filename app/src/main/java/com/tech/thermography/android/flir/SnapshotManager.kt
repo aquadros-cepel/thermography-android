@@ -79,19 +79,19 @@ class SnapshotManager @Inject constructor() {
             }
             
             // ===== DEBUG: Save composite to verify =====
-            try {
-                val debugFile = File(
-                    android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES),
-                    "debug_composite_${System.currentTimeMillis()}.jpg"
-                )
-                debugFile.outputStream().use { out ->
-                    compositeBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                }
-                ThermalLog.i(TAG, "🔍 DEBUG: Composite saved to: ${debugFile.absolutePath}")
-                ThermalLog.i(TAG, "🔍 DEBUG: Should show thermal + toolbar + temperature bar + Bx1 + Bx2")
-            } catch (e: Exception) {
-                ThermalLog.w(TAG, "Failed to save debug composite: ${e.message}")
-            }
+//            try {
+//                val debugFile = File(
+//                    android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES),
+//                    "debug_composite_${System.currentTimeMillis()}.jpg"
+//                )
+//                debugFile.outputStream().use { out ->
+//                    compositeBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+//                }
+//                ThermalLog.i(TAG, "🔍 DEBUG: Composite saved to: ${debugFile.absolutePath}")
+//                ThermalLog.i(TAG, "🔍 DEBUG: Should show thermal + toolbar + temperature bar + Bx1 + Bx2")
+//            } catch (e: Exception) {
+//                ThermalLog.w(TAG, "Failed to save debug composite: ${e.message}")
+//            }
             // ===== END DEBUG =====
             
             // ===== STEP 4: Convert to JavaImageBuffer =====
@@ -182,7 +182,7 @@ class SnapshotManager @Inject constructor() {
             val decorView = window.decorView
             
             val captureWidth = decorView.width
-            val captureHeight = decorView.height
+            val captureHeight = decorView.height - 120
             
             if (captureWidth <= 0 || captureHeight <= 0) {
                 ThermalLog.w(TAG, "Invalid window size: ${captureWidth}x${captureHeight}")
