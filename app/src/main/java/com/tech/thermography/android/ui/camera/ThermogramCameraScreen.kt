@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +34,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -47,6 +45,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.tech.thermography.android.ui.camera.components.MeasurementSpotGlyph
+import com.tech.thermography.android.ui.camera.components.MeasurementSpotOverlay
+import com.tech.thermography.android.ui.camera.components.MeasurementSquareOverlay
+import com.tech.thermography.android.ui.camera.ThermogramCameraViewModel.MeasurementSpotState
+
+
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
     var onSizeChangedCallback: ((Int, Int) -> Unit)? = null
 
@@ -132,6 +136,7 @@ private fun RecentThermogramThumbnail(
             }
         }
         // Removed delete button (x)
+        // onRemove não é usado, mas mantido para compatibilidade de assinatura
     }
 }
 
@@ -158,7 +163,8 @@ fun ThermogramsCameraScreen(
     var isThermalMode by remember { mutableStateOf(true) }
     var isFlashOn by remember { mutableStateOf(false) }
     var isLaserOn by remember { mutableStateOf(false) }
-    var bx1State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx1")) }
+    var sp1State by remember { mutableStateOf(MeasurementSpotState(enabled = true)) }
+    var bx1State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx1", enabled = false)) }
     var bx2State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx2")) }
     var measurementOverlaySize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -166,7 +172,9 @@ fun ThermogramsCameraScreen(
     val scope = rememberCoroutineScope()
 
     fun syncMeasurementStates() {
+        // Se necessário, envie o estado do spot para o ViewModel
         viewModel.setMeasurementSquareStates(listOf(bx1State, bx2State))
+        // TODO: Se o ViewModel suportar spots, envie sp1State também
     }
 
     var tempRange by remember { mutableStateOf(viewModel.getTemperatureRange()) }
@@ -222,6 +230,16 @@ fun ThermogramsCameraScreen(
                 .padding(bottom = measurementModeBottomPadding)
                 .onSizeChanged { measurementOverlaySize = it }
         ) {
+            if (sp1State.enabled) {
+                MeasurementSpotOverlay(
+                    state = sp1State,
+                    overlaySize = measurementOverlaySize,
+                    onStateChange = { newState ->
+                        sp1State = newState
+                        syncMeasurementStates()
+                    }
+                )
+            }
             MeasurementSquareOverlay(
                 state = bx1State,
                 overlaySize = measurementOverlaySize,
@@ -416,13 +434,26 @@ fun ThermogramsCameraScreen(
                             )
                         }
 
+                        // MeasurementSpot toggle button (Sp1)
+                        TaskBarButton(active = sp1State.enabled, onClick = {
+                            val newEnabled = !sp1State.enabled
+                            sp1State = sp1State.copy(enabled = newEnabled)
+                            if (newEnabled) {
+                                bx1State = bx1State.copy(enabled = false)
+                            }
+                            syncMeasurementStates()
+                        }) {
+                            MeasurementSpotGlyph()
+                        }
+
+                        // MeasurementRectangle toggle button (Bx1)
                         TaskBarButton(active = bx1State.enabled, onClick = {
                             bx1State = bx1State.copy(
-                                enabled = !bx1State.enabled,
-                                centerXFraction = 0.5f,
-                                centerYFraction = 0.35f,
-                                sizeFraction = bx1State.initialSizeFraction
+                                enabled = !bx1State.enabled
                             )
+                            if (bx1State.enabled) {
+                                sp1State = sp1State.copy(enabled = false)
+                            }
                             syncMeasurementStates()
                         }) {
                             MeasurementToolGlyph(centerColor = Color.Red)
@@ -430,10 +461,7 @@ fun ThermogramsCameraScreen(
 
                         TaskBarButton(active = bx2State.enabled, onClick = {
                             bx2State = bx2State.copy(
-                                enabled = !bx2State.enabled,
-                                centerXFraction = 0.5f,
-                                centerYFraction = 0.7f,
-                                sizeFraction = bx2State.initialSizeFraction
+                                enabled = !bx2State.enabled
                             )
                             syncMeasurementStates()
                         }) {

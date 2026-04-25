@@ -1,4 +1,4 @@
-package com.tech.thermography.android.ui.camera
+package com.tech.thermography.android.ui.camera.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.tech.thermography.android.ui.camera.ThermogramCameraViewModel
 import kotlin.math.roundToInt
 
 @Composable

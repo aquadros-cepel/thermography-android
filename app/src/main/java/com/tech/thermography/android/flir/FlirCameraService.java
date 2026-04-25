@@ -67,7 +67,6 @@ public final class FlirCameraService {
         }
     }
 
-
     private void applyMeasurementSquare(
             @NonNull MeasurementShapeCollection measurements,
             @NonNull ThermalImage thermalImage,

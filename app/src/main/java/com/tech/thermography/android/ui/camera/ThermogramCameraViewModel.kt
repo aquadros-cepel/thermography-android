@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.flir.thermalsdk.live.remote.StoredImage
 import com.tech.thermography.android.flir.AceController
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -46,6 +47,13 @@ class ThermogramCameraViewModel @Inject constructor(
         val initialSizeFraction: Float = 0.3f
     )
 
+    // MeasurementSpot state data class
+    data class MeasurementSpotState(
+        val enabled: Boolean = true,
+        val centerXFraction: Float = 0.5f,
+        val centerYFraction: Float = 0.5f,
+        val label: String = "Sp1"
+    )
     fun attachGlSurface(glView: GLSurfaceView) {
         controller.attachSurface(glView)
     }
