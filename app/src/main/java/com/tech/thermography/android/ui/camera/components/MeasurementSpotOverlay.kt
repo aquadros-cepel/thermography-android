@@ -203,21 +203,21 @@ fun MeasurementSpotOverlay(
         contentAlignment = Alignment.Center
     ) {
         MeasurementSpotGlyph()
-        Surface(
-            color = Color(0xCC000000),
-            shape = MaterialTheme.shapes.large,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .border(1.dp, Color.White, MaterialTheme.shapes.large)
-        ) {
-            Text(
-                text = state.label,
-                color = Color.White,
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier
-                    .background(Color.Transparent)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
+//        Surface(
+//            color = Color(0xCC000000),
+//            shape = MaterialTheme.shapes.large,
+//            modifier = Modifier
+//                .align(Alignment.BottomCenter)
+//                .border(1.dp, Color.White, MaterialTheme.shapes.large)
+//        ) {
+//            Text(
+//                text = state.label,
+//                color = Color.White,
+//                style = MaterialTheme.typography.labelLarge,
+//                modifier = Modifier
+//                    .background(Color.Transparent)
+//                    .padding(horizontal = 6.dp, vertical = 5.dp)
+//            )
+//        }
     }
 }

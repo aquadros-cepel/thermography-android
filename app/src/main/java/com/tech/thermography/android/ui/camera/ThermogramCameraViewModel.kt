@@ -52,7 +52,7 @@ class ThermogramCameraViewModel @Inject constructor(
         val enabled: Boolean = true,
         val centerXFraction: Float = 0.5f,
         val centerYFraction: Float = 0.5f,
-        val label: String = "Sp1"
+        val label: String = ""
     )
     fun attachGlSurface(glView: GLSurfaceView) {
         controller.attachSurface(glView)

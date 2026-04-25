@@ -164,8 +164,8 @@ fun ThermogramsCameraScreen(
     var isFlashOn by remember { mutableStateOf(false) }
     var isLaserOn by remember { mutableStateOf(false) }
     var sp1State by remember { mutableStateOf(MeasurementSpotState(enabled = true)) }
-    var bx1State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx1", enabled = false)) }
-    var bx2State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Bx2")) }
+    var bx1State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "", enabled = false)) }
+    var bx2State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Ref")) }
     var measurementOverlaySize by remember { mutableStateOf(IntSize.Zero) }
 
     val snackbarHostState = remember { SnackbarHostState() }
