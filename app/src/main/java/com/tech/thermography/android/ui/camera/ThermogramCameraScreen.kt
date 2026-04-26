@@ -140,6 +140,16 @@ private fun RecentThermogramThumbnail(
     }
 }
 
+fun syncMeasurementStates(
+    viewModel: ThermogramCameraViewModel,
+    sp1State: ThermogramCameraViewModel.MeasurementSpotState,
+    bx1State: ThermogramCameraViewModel.MeasurementSquareState,
+    bx2State: ThermogramCameraViewModel.MeasurementSquareState
+) {
+    // Só envia os MeasurementSquares para o controller
+    viewModel.setMeasurementSquareStates(listOf(bx1State, bx2State))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThermogramsCameraScreen(
@@ -171,20 +181,8 @@ fun ThermogramsCameraScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    fun syncMeasurementStates() {
-        // Se necessário, envie o estado do spot para o ViewModel
-        viewModel.setMeasurementSquareStates(listOf(bx1State, bx2State))
-        // TODO: Se o ViewModel suportar spots, envie sp1State também
-    }
-
-    var tempRange by remember { mutableStateOf(viewModel.getTemperatureRange()) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            tempRange = viewModel.getTemperatureRange()
-            delay(500)
-        }
-    }
+    val measurementTemperatures by viewModel.measurementTemperatures.collectAsState()
+    val tempRange by viewModel.temperatureRange.collectAsState()
 
     LaunchedEffect(recentThermograms) {
         viewModel.pruneMissingRecentThermograms()
@@ -234,24 +232,23 @@ fun ThermogramsCameraScreen(
                 MeasurementSpotOverlay(
                     state = sp1State,
                     overlaySize = measurementOverlaySize,
-                    onStateChange = { newState ->
-                        sp1State = newState
-                        syncMeasurementStates()
+                    onStateChange = { sp1State = it;syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                     }
                 )
             }
             MeasurementSquareOverlay(
                 state = bx1State,
                 overlaySize = measurementOverlaySize,
-                onStateChange = { bx1State = it; syncMeasurementStates() }
+                onStateChange = { bx1State = it; syncMeasurementStates(viewModel, sp1State, bx1State, bx2State) }
             )
             MeasurementSquareOverlay(
                 state = bx2State,
                 overlaySize = measurementOverlaySize,
-                onStateChange = { bx2State = it; syncMeasurementStates() }
+                onStateChange = { bx2State = it; syncMeasurementStates(viewModel, sp1State, bx1State, bx2State) }
             )
         }
 
+        //Barra lateral com o range temperaturas
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -360,6 +357,7 @@ fun ThermogramsCameraScreen(
             )
         }
 
+        //Botão de Snapshot
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -402,6 +400,7 @@ fun ThermogramsCameraScreen(
             }
         }
 
+        //Toolbar
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -441,33 +440,41 @@ fun ThermogramsCameraScreen(
                             if (newEnabled) {
                                 bx1State = bx1State.copy(enabled = false)
                             }
-                            syncMeasurementStates()
+                            syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
                             MeasurementSpotGlyph()
                         }
 
                         // MeasurementRectangle toggle button (Bx1)
                         TaskBarButton(active = bx1State.enabled, onClick = {
+                            val newEnabled = !bx1State.enabled
                             bx1State = bx1State.copy(
-                                enabled = !bx1State.enabled
+                                enabled = newEnabled,
+                                add = newEnabled,
+                                remove = !newEnabled
                             )
-                            if (bx1State.enabled) {
+                            if (newEnabled) {
                                 sp1State = sp1State.copy(enabled = false)
                             }
-                            syncMeasurementStates()
+                            syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
                             MeasurementToolGlyph(centerColor = Color.Red)
                         }
 
+                        // MeasurementRectangle button (Bx2)
                         TaskBarButton(active = bx2State.enabled, onClick = {
+                            val newEnabled = !bx2State.enabled
                             bx2State = bx2State.copy(
-                                enabled = !bx2State.enabled
+                                enabled = newEnabled,
+                                add = newEnabled,
+                                remove = !newEnabled
                             )
-                            syncMeasurementStates()
+                            syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
                             MeasurementToolGlyph(centerColor = Color(0xFF2196F3))
                         }
 
+                        // Palette selector
                         TaskBarButton(onClick = { /* palette selector */ }) {
                             Icon(
                                 imageVector = Icons.Filled.ColorLens,
@@ -476,6 +483,7 @@ fun ThermogramsCameraScreen(
                             )
                         }
 
+                        // Flashlight toggle button
                         TaskBarButton(active = isFlashOn, onClick = {
                             viewModel.toggleFlash { success, msg ->
                                 if (!success) {
@@ -492,6 +500,7 @@ fun ThermogramsCameraScreen(
                             )
                         }
 
+                        // Laser toggle button
                         TaskBarButton(active = isLaserOn, onClick = {
                             viewModel.toggleLaser { success, msg ->
                                 if (!success) {
@@ -562,6 +571,43 @@ fun ThermogramsCameraScreen(
             contentAlignment = Alignment.BottomStart
         ) {
             WatermarkOverlay()
+        }
+
+        Box(
+            modifier = Modifier
+                .padding(start = 8.dp, top = 8.dp)
+                .background(Color(0xCC000000), shape = RoundedCornerShape(8.dp))
+                .border(1.dp, Color.White, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            contentAlignment = Alignment.TopStart
+        ) {
+            Column {
+                // Se bx2 (Ref) estiver ativo, mostrar Ref e AT
+                if (bx2State.enabled && measurementTemperatures.bx2 != null) {
+                    Text(
+                        text = "Ref: " + (measurementTemperatures.bx2?.let { String.format(Locale.getDefault(), "%.1f°C", it) } ?: "--"),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
+                    val at = if (objTemp != null && measurementTemperatures.bx2 != null) objTemp - measurementTemperatures.bx2!! else null
+                    Text(
+                        text = "AT: " + (at?.let { String.format(Locale.getDefault(), "%.1f°C", it) } ?: "--"),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                } else {
+                    // Caso contrário, mostrar Obj
+                    val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
+                    if (objTemp != null) {
+                        Text(
+                            text = "Obj: " + String.format(Locale.getDefault(), "%.1f°C", objTemp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+            }
         }
     }
 }

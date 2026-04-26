@@ -26,6 +26,7 @@ import com.flir.thermalsdk.utils.Pair
 import com.flir.thermalsdk.live.remote.OnCompletion
 import com.flir.thermalsdk.live.remote.OnRemoteError
 import com.flir.thermalsdk.live.remote.StoredImage
+import com.tech.thermography.android.ui.camera.MeasurementTemperatures
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -36,13 +37,13 @@ class AceController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val snapshotManager: SnapshotManager
 ) {
-
-    data class TemperatureRange(val min: Double, val max: Double)
-
     companion object {
         private const val TAG = "AceController"
         private val ACE_INTERFACE = CommunicationInterface.ACE
     }
+    // Removido: Não é seguro manter referência global para ThermalImage
+
+    data class TemperatureRange(val min: Double, val max: Double)
 
     private enum class State {
         Idle,
@@ -95,10 +96,17 @@ class AceController @Inject constructor(
         val centerXFraction: Float = 0.5f,
         val centerYFraction: Float = 0.5f,
         val sizeFraction: Float = 0.18f,
-        val initialSizeFraction: Float = 0.18f
+        val initialSizeFraction: Float = 0.18f,
+        val add: Boolean = false,
+        val remove: Boolean = false
     )
 
     private var measurementSquareStates: List<MeasurementSquareState> = emptyList()
+
+    // Callback para listeners de temperatura
+    interface MeasurementTemperatureListener {
+        fun onMeasurementTemperatures(spot: Double?, bx1: Double?, bx2: Double?)
+    }
 
     // ---------- PUBLIC ----------
 
@@ -253,6 +261,7 @@ class AceController @Inject constructor(
 
                 state = State.Streaming
                 ThermalLog.d(TAG, "State updated to: $state")
+
             } catch (e: Exception) {
                 ThermalLog.e(TAG, "Exception during stream setup: ${e.message}")
             }
@@ -261,6 +270,7 @@ class AceController @Inject constructor(
 
     fun stopStream() {
         ThermalLog.d(TAG, "stopStream()")
+
         val cam = camera
         if (cam == null) {
             ThermalLog.w(TAG, "stopStream() — camera was null")
@@ -342,72 +352,62 @@ class AceController @Inject constructor(
 
     fun onGlDrawFrame() {
         val cam = camera ?: return
-
         if (!cam.glIsGlContextReady()) {
             ThermalLog.w(TAG, "Skip onDrawFrame — GL context not ready")
             return
         }
-
-        // Apply delayed or updated surface size if needed
         if (surfaceWidth > 0 && surfaceHeight > 0) {
             applySurfaceSize(cam, "draw")
         }
-
-        // Configure palette, fusion mode and color settings for each frame
         cam.glWithThermalImage { thermalImage ->
+            // Se algum measurement está marcado para add/remove, aplica e reseta
+            if (measurementSquareStates.any { it.add || it.remove }) {
+                flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
+                // Após aplicar, resetar add/remove localmente
+                measurementSquareStates = measurementSquareStates.map {
+                    it.copy(add = false, remove = false)
+                }
+            }
 
             val stats = thermalImage.statistics
-
             if (stats != null) {
                 val minTv = stats.min
                 val maxTv = stats.max
-
                 val scale = thermalImage.scale
-
                 if (scale != null) {
                     scale.setRange(minTv, maxTv)
                 }
-
-//                ThermalLog.d(TAG, "AUTO SCALE (stats): $min - $max")
             }
             currentPalette?.let { thermalImage.setPalette(it) }
             thermalImage.fusion?.setFusionMode(FusionMode.THERMAL_ONLY)
             thermalImage.setColorDistributionSettings(colorSettings)
             flirCameraService.updateRangeFromThermalImage(thermalImage)
+            flirCameraService.updateMeasurementTemperaturesFromThermalImage(thermalImage)
 
             // Handle overlay snapshot first (requires full screen capture)
             val overlayRequest = pendingOverlaySnapshot
             if (overlayRequest != null) {
                 pendingOverlaySnapshot = null
-                
                 try {
                     thermalImage.setTemperatureUnit(TemperatureUnit.CELSIUS)
-                    
                     val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
                     ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
-                    
                     thermalImage.scale?.setRange(range.first, range.second)
-                    flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
-                    
-                    // Capture FULL SCREEN (GL + Compose UI) - blocks until complete
+
                     val overlay = snapshotManager.captureGLFramebufferAsOverlay(
                         overlayRequest.activity,
                         surfaceWidth,
                         surfaceHeight
                     )
-                    
                     if (overlay != null) {
-                        // Save with overlay in ONE file
                         thermalImage.saveAs(overlayRequest.file.absolutePath, overlay)
                         ThermalLog.i(TAG, "Snapshot with overlay saved: ${overlayRequest.file.absolutePath}")
                         overlayRequest.callback(true, overlayRequest.file.absolutePath, null)
                     } else {
-                        // Fallback: save without overlay
                         thermalImage.saveAs(overlayRequest.file.absolutePath)
                         ThermalLog.w(TAG, "Snapshot saved without overlay (overlay creation failed)")
                         overlayRequest.callback(true, overlayRequest.file.absolutePath, null)
                     }
-                    
                 } catch (e: Exception) {
                     ThermalLog.e(TAG, "Unable to save snapshot with overlay: ${e.message}")
                     e.printStackTrace()
@@ -417,21 +417,16 @@ class AceController @Inject constructor(
             // Handle regular snapshot (no overlay)
             else if (snapshotRequested) {
                 snapshotRequested = false
-
                 val callback = pendingSnapshotCallback
                 val snapshotPath = pendingSnapshotPath
                 pendingSnapshotCallback = null
                 pendingSnapshotPath = null
-
                 try {
                     thermalImage.setTemperatureUnit(TemperatureUnit.CELSIUS)
-
                     val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
                     ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
-
                     thermalImage.scale?.setRange(range.first, range.second)
                     flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
-
                     val path = snapshotPath ?: throw IllegalStateException("Snapshot path not prepared")
                     thermalImage.saveAs(path)
                     ThermalLog.d(TAG, "Snapshot stored under: $path")
@@ -442,7 +437,6 @@ class AceController @Inject constructor(
                 }
             }
         }
-
         cam.glOnDrawFrame()
     }
 
@@ -586,9 +580,12 @@ class AceController @Inject constructor(
     }
 
     fun getTemperatureRange(): TemperatureRange? {
-        return flirCameraService.getLatestTemperatureRange() ?: getTemperatureRangeFromRemote()
+        return flirCameraService.latestTemperatureRange ?: getTemperatureRangeFromRemote()
     }
 
+    fun getMeasurementTemperatures(): MeasurementTemperatures {
+       return flirCameraService.latestMeasurementTemperatures ?: MeasurementTemperatures()
+    }
     private fun getTemperatureRangeFromRemote(): TemperatureRange? {
         val tr = camera?.remoteControl?.temperatureRange ?: return null
         val rangeObj = unwrapPropertyValue(tr) ?: tr
@@ -628,5 +625,4 @@ class AceController @Inject constructor(
         }
         return null
     }
-
 }

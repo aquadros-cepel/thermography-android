@@ -13,8 +13,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.flir.thermalsdk.live.remote.StoredImage
 import com.tech.thermography.android.flir.AceController
+import com.tech.thermography.android.flir.AceController.TemperatureRange
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.json.JSONArray
 import java.io.File
 import javax.inject.Inject
@@ -33,18 +36,50 @@ class ThermogramCameraViewModel @Inject constructor(
     private val _recentThermograms = MutableStateFlow<List<String>>(emptyList())
     val recentThermograms: StateFlow<List<String>> = _recentThermograms.asStateFlow()
 
+
+    //Atualização do estado de temperatura
+    private val _measurementTemperatures = MutableStateFlow(MeasurementTemperatures())
+    val measurementTemperatures: StateFlow<MeasurementTemperatures> = _measurementTemperatures.asStateFlow()
+
+    //Atualização do range de temperatura
+    private val _temperatureRange = MutableStateFlow(getTemperatureRange())
+    val temperatureRange: StateFlow<TemperatureRange?> = _temperatureRange.asStateFlow()
+
+
     init {
         _recentThermograms.value = loadRecentThermograms().filter { File(it).exists() }
         persistRecentThermograms(_recentThermograms.value)
+
+        startTemperaturesRangeUpdates()
+        startMeasurementTemperaturesUpdates()
     }
 
+    private fun startTemperaturesRangeUpdates() {
+        viewModelScope.launch {
+            while (isActive) {
+                _temperatureRange.value = getTemperatureRange()
+                delay(500)
+            }
+        }
+    }
+
+    private fun startMeasurementTemperaturesUpdates() {
+        viewModelScope.launch {
+            while (isActive) {
+                _measurementTemperatures.value = getMeasurementTemperatures()!!
+                delay(500)
+            }
+        }
+    }
     data class MeasurementSquareState(
         val label: String = "Bx1",
         val enabled: Boolean = false,
         val centerXFraction: Float = 0.5f,
         val centerYFraction: Float = 0.5f,
         val sizeFraction: Float = 0.3f,
-        val initialSizeFraction: Float = 0.3f
+        val initialSizeFraction: Float = 0.3f,
+        val add: Boolean = false,
+        val remove: Boolean = false
     )
 
     // MeasurementSpot state data class
@@ -74,15 +109,7 @@ class ThermogramCameraViewModel @Inject constructor(
         controller.disconnect()
     }
 
-    /**
-     * Requests the camera to store a snapshot. The callback returns (success, message, storedImage?)
-     */
-    fun takeSnapshot(callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }) {
-        controller.takeSnapshot { success, msg, storedImage ->
-            callback(success, msg, storedImage)
-        }
-    }
-    
+
     /**
      * Requests the camera to store a snapshot WITH screen overlay (saved as separate PNG).
      * Creates 2 files: snapshot_XXX.jpg (thermal) + snapshot_XXX_overlay.png (UI)
@@ -162,8 +189,8 @@ class ThermogramCameraViewModel @Inject constructor(
         return controller.getTemperatureRange()
     }
 
-    fun setMeasurementSquareState(state: MeasurementSquareState) {
-        setMeasurementSquareStates(listOf(state))
+    fun getMeasurementTemperatures(): MeasurementTemperatures? {
+        return controller.getMeasurementTemperatures()
     }
 
     fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
@@ -175,9 +202,15 @@ class ThermogramCameraViewModel @Inject constructor(
                     centerXFraction = it.centerXFraction,
                     centerYFraction = it.centerYFraction,
                     sizeFraction = it.sizeFraction,
-                    initialSizeFraction = it.initialSizeFraction
+                    initialSizeFraction = it.initialSizeFraction,
+                    add = it.add,
+                    remove = it.remove
                 )
             }
         )
     }
 }
+
+
+
+

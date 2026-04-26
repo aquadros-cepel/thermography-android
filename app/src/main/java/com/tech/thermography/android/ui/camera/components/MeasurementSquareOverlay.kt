@@ -107,10 +107,7 @@ fun MeasurementSquareOverlay(
                     .clip(RoundedCornerShape(2.dp))
             )
         }
-//
-//        Spacer(modifier = Modifier.height(0.dp))
 
-        // Exibe o label apenas se não for vazio
         if (state.label.isNotEmpty()) {
             Surface(
                 color = Color(0xCC000000),
