@@ -21,6 +21,9 @@ import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Flare
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
@@ -40,7 +43,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.compose.ui.viewinterop.AndroidView
 import com.tech.thermography.android.navigation.NavRoutes
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -61,10 +63,28 @@ private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
 }
 
 @Composable
-private fun MeasurementToolGlyph(centerColor: Color) {
+private fun MeasurementSquareToolGlyph(centerColor: Color) {
     Box(contentAlignment = Alignment.Center) {
         Icon(
             imageVector = Icons.Filled.CenterFocusStrong,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(centerColor)
+                .border(1.dp, Color.White, CircleShape)
+        )
+    }
+}
+
+@Composable
+private fun MeasurementSpotToolGlyph(centerColor: Color = Color.Red) {
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = Icons.Filled.GpsFixed,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurface
         )
@@ -442,7 +462,7 @@ fun ThermogramsCameraScreen(
                             }
                             syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
-                            MeasurementSpotGlyph()
+                            MeasurementSpotToolGlyph(centerColor = Color.Red)
                         }
 
                         // MeasurementRectangle toggle button (Bx1)
@@ -458,7 +478,7 @@ fun ThermogramsCameraScreen(
                             }
                             syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
-                            MeasurementToolGlyph(centerColor = Color.Red)
+                            MeasurementSquareToolGlyph(centerColor = Color.Red)
                         }
 
                         // MeasurementRectangle button (Bx2)
@@ -471,7 +491,7 @@ fun ThermogramsCameraScreen(
                             )
                             syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
-                            MeasurementToolGlyph(centerColor = Color(0xFF2196F3))
+                            MeasurementSquareToolGlyph(centerColor = Color(0xFF2196F3))
                         }
 
                         // Palette selector
@@ -494,7 +514,8 @@ fun ThermogramsCameraScreen(
                             }
                         }) {
                             Icon(
-                                imageVector = Icons.Filled.FlashOn,
+//                                imageVector = if (isFlashOn) Icons.Filled.FlashlightOn else Icons.Filled.FlashlightOn,
+                                imageVector = Icons.Filled.FlashlightOn,
                                 contentDescription = "Flashlight",
                                 tint = if (isFlashOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
@@ -511,9 +532,9 @@ fun ThermogramsCameraScreen(
                             }
                         }) {
                             Icon(
-                                imageVector = Icons.Filled.GpsFixed,
+                                imageVector = Icons.Filled.Flare,
                                 contentDescription = "Laser",
-                                tint = if (isLaserOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                tint = if (isLaserOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -582,30 +603,29 @@ fun ThermogramsCameraScreen(
             contentAlignment = Alignment.TopStart
         ) {
             Column {
+                val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
+                if (objTemp != null) {
+                    Text(
+                        text = "Obj\t" + String.format(Locale.getDefault(), "%.1f\t°C", objTemp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+
                 // Se bx2 (Ref) estiver ativo, mostrar Ref e AT
                 if (bx2State.enabled && measurementTemperatures.bx2 != null) {
                     Text(
-                        text = "Ref: " + (measurementTemperatures.bx2?.let { String.format(Locale.getDefault(), "%.1f°C", it) } ?: "--"),
+                        text = "Ref\t" + (measurementTemperatures.bx2?.let { String.format(Locale.getDefault(), "%.1f\t°C", it) } ?: "--"),
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge
                     )
                     val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
                     val at = if (objTemp != null && measurementTemperatures.bx2 != null) objTemp - measurementTemperatures.bx2!! else null
                     Text(
-                        text = "AT: " + (at?.let { String.format(Locale.getDefault(), "%.1f°C", it) } ?: "--"),
+                        text = "ΔT\t\t" + (at?.let { String.format(Locale.getDefault(), "%.1f\t°C", it) } ?: "--"),
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge
                     )
-                } else {
-                    // Caso contrário, mostrar Obj
-                    val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
-                    if (objTemp != null) {
-                        Text(
-                            text = "Obj: " + String.format(Locale.getDefault(), "%.1f°C", objTemp),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
                 }
             }
         }
