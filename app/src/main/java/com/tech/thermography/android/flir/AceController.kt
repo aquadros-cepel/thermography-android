@@ -27,6 +27,9 @@ import com.flir.thermalsdk.live.remote.OnCompletion
 import com.flir.thermalsdk.live.remote.OnRemoteError
 import com.flir.thermalsdk.live.remote.StoredImage
 import com.tech.thermography.android.ui.camera.MeasurementTemperatures
+import com.tech.thermography.android.ui.camera.MeasurementState
+import com.tech.thermography.android.ui.camera.MeasurementSpotState
+import com.tech.thermography.android.ui.camera.MeasurementSquareState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -90,26 +93,9 @@ class AceController @Inject constructor(
         val callback: (Boolean, String?, StoredImage?) -> Unit
     )
 
-    data class MeasurementSquareState(
-        val label: String = "Bx1",
-        val enabled: Boolean = false,
-        val centerXFraction: Float = 0.5f,
-        val centerYFraction: Float = 0.5f,
-        val sizeFraction: Float = 0.18f,
-        val initialSizeFraction: Float = 0.18f,
-        val add: Boolean = false,
-        val remove: Boolean = false
-    )
-
-    private var measurementSquareStates: List<MeasurementSquareState> = emptyList()
-
-    // Callback para listeners de temperatura
-    interface MeasurementTemperatureListener {
-        fun onMeasurementTemperatures(spot: Double?, bx1: Double?, bx2: Double?)
-    }
+    private var measurementStates: List<MeasurementState> = emptyList()
 
     // ---------- PUBLIC ----------
-
     fun attachSurface(view: GLSurfaceView) {
         glView = view
 
@@ -361,12 +347,19 @@ class AceController @Inject constructor(
         }
         cam.glWithThermalImage { thermalImage ->
             // Se algum measurement está marcado para add/remove, aplica e reseta
-            if (measurementSquareStates.any { it.add || it.remove }) {
-                flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
+            if (measurementStates.any { it.add || it.remove }) {
+                flirCameraService.applyMeasurements(thermalImage, measurementStates)
                 // Após aplicar, resetar add/remove localmente
-                measurementSquareStates = measurementSquareStates.map {
-                    it.copy(add = false, remove = false)
+                measurementStates = measurementStates.map { state ->
+                    when (state) {
+                        is MeasurementSpotState ->
+                            state.copy(add = false, remove = false)
+
+                        is MeasurementSquareState ->
+                            state.copy(add = false, remove = false)
+                    }
                 }
+
             }
 
             val stats = thermalImage.statistics
@@ -426,7 +419,7 @@ class AceController @Inject constructor(
                     val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
                     ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
                     thermalImage.scale?.setRange(range.first, range.second)
-                    flirCameraService.applyMeasurementSquares(thermalImage, measurementSquareStates)
+                    flirCameraService.applyMeasurements(thermalImage, measurementStates)
                     val path = snapshotPath ?: throw IllegalStateException("Snapshot path not prepared")
                     thermalImage.saveAs(path)
                     ThermalLog.d(TAG, "Snapshot stored under: $path")
@@ -440,8 +433,8 @@ class AceController @Inject constructor(
         cam.glOnDrawFrame()
     }
 
-    fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
-        measurementSquareStates = states
+    fun setMeasurementStates(states: List<MeasurementState>) {
+        measurementStates = states
         ThermalLog.d(TAG, "Measurement square states updated: $states")
     }
 

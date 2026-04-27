@@ -71,24 +71,7 @@ class ThermogramCameraViewModel @Inject constructor(
             }
         }
     }
-    data class MeasurementSquareState(
-        val label: String = "Bx1",
-        val enabled: Boolean = false,
-        val centerXFraction: Float = 0.5f,
-        val centerYFraction: Float = 0.5f,
-        val sizeFraction: Float = 0.3f,
-        val initialSizeFraction: Float = 0.3f,
-        val add: Boolean = false,
-        val remove: Boolean = false
-    )
 
-    // MeasurementSpot state data class
-    data class MeasurementSpotState(
-        val enabled: Boolean = true,
-        val centerXFraction: Float = 0.5f,
-        val centerYFraction: Float = 0.5f,
-        val label: String = ""
-    )
     fun attachGlSurface(glView: GLSurfaceView) {
         controller.attachSurface(glView)
     }
@@ -193,23 +176,11 @@ class ThermogramCameraViewModel @Inject constructor(
         return controller.getMeasurementTemperatures()
     }
 
-    fun setMeasurementSquareStates(states: List<MeasurementSquareState>) {
-        controller.setMeasurementSquareStates(
-            states.map {
-                AceController.MeasurementSquareState(
-                    label = it.label,
-                    enabled = it.enabled,
-                    centerXFraction = it.centerXFraction,
-                    centerYFraction = it.centerYFraction,
-                    sizeFraction = it.sizeFraction,
-                    initialSizeFraction = it.initialSizeFraction,
-                    add = it.add,
-                    remove = it.remove
-                )
-            }
-        )
+    fun setMeasurementSquareStates(states: List<MeasurementState>) {
+        controller.setMeasurementStates(states)
     }
 }
+
 
 
 

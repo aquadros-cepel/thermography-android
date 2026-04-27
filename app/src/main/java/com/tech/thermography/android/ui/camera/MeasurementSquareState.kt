@@ -1,12 +1,12 @@
-package com.tech.thermography.android.ui.camera.components
+package com.tech.thermography.android.ui.camera
 
 data class MeasurementSquareState(
-    val label: String = "Bx1",
-    val enabled: Boolean = false,
-    val centerXFraction: Float = 0.5f,
-    val centerYFraction: Float = 0.5f,
-    val sizeFraction: Float = 0.18f,
-    val initialSizeFraction: Float = 0.18f,
-    val add: Boolean = false,
-    val remove: Boolean = false
-)
+    override val label: String = "Bx1",
+    override val enabled: Boolean = false,
+    override val centerXFraction: Float = 0.5f,
+    override val centerYFraction: Float = 0.5f,
+    val sizeFraction: Float = 0.25f,
+    val initialSizeFraction: Float = 0.25f,
+    override val add: Boolean = false,
+    override val remove: Boolean = false
+) : MeasurementState()

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Flare
 import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -50,7 +51,7 @@ import java.util.Locale
 import com.tech.thermography.android.ui.camera.components.MeasurementSpotGlyph
 import com.tech.thermography.android.ui.camera.components.MeasurementSpotOverlay
 import com.tech.thermography.android.ui.camera.components.MeasurementSquareOverlay
-import com.tech.thermography.android.ui.camera.ThermogramCameraViewModel.MeasurementSpotState
+import com.tech.thermography.android.ui.camera.MeasurementSpotState
 
 
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
@@ -162,12 +163,12 @@ private fun RecentThermogramThumbnail(
 
 fun syncMeasurementStates(
     viewModel: ThermogramCameraViewModel,
-    sp1State: ThermogramCameraViewModel.MeasurementSpotState,
-    bx1State: ThermogramCameraViewModel.MeasurementSquareState,
-    bx2State: ThermogramCameraViewModel.MeasurementSquareState
+    sp1State: MeasurementSpotState,
+    bx1State: MeasurementSquareState,
+    bx2State: MeasurementSquareState
 ) {
     // Só envia os MeasurementSquares para o controller
-    viewModel.setMeasurementSquareStates(listOf(bx1State, bx2State))
+    viewModel.setMeasurementSquareStates(listOf(sp1State, bx1State, bx2State))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -190,12 +191,12 @@ fun ThermogramsCameraScreen(
     var showSnapshotButton by remember { mutableStateOf(true) }
 
     // Toggle states for toolbar buttons
-    var isThermalMode by remember { mutableStateOf(true) }
+    var isThermalMode by remember { mutableStateOf(false) }
     var isFlashOn by remember { mutableStateOf(false) }
     var isLaserOn by remember { mutableStateOf(false) }
-    var sp1State by remember { mutableStateOf(MeasurementSpotState(enabled = true)) }
-    var bx1State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "", enabled = false)) }
-    var bx2State by remember { mutableStateOf(ThermogramCameraViewModel.MeasurementSquareState(label = "Ref")) }
+    var sp1State by remember { mutableStateOf(MeasurementSpotState(label = "Sp1",enabled = true)) }
+    var bx1State by remember { mutableStateOf(MeasurementSquareState(label = "Bx1", enabled = false)) }
+    var bx2State by remember { mutableStateOf(MeasurementSquareState(label = "Ref")) }
     var measurementOverlaySize by remember { mutableStateOf(IntSize.Zero) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -445,13 +446,6 @@ fun ThermogramsCameraScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TaskBarButton(active = isThermalMode, onClick = { isThermalMode = !isThermalMode }) {
-                            Icon(
-                                imageVector = Icons.Filled.CameraAlt,
-                                contentDescription = "Toggle camera view",
-                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
 
                         // MeasurementSpot toggle button (Sp1)
                         TaskBarButton(active = sp1State.enabled, onClick = {
@@ -537,6 +531,14 @@ fun ThermogramsCameraScreen(
                                 tint = if (isLaserOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             )
                         }
+
+                        TaskBarButton(active = isThermalMode, onClick = { isThermalMode = !isThermalMode }) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
 
@@ -604,9 +606,10 @@ fun ThermogramsCameraScreen(
         ) {
             Column {
                 val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
+                val objLabel = if (sp1State.enabled) sp1State.label else bx1State.label
                 if (objTemp != null) {
                     Text(
-                        text = "Obj\t" + String.format(Locale.getDefault(), "%.1f\t°C", objTemp),
+                        text = "$objLabel\t" + String.format(Locale.getDefault(), "%.1f\t°C", objTemp),
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge
                     )

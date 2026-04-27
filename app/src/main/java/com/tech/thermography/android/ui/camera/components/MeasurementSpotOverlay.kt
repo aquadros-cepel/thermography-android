@@ -1,17 +1,11 @@
 package com.tech.thermography.android.ui.camera.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -25,7 +19,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.tech.thermography.android.ui.camera.ThermogramCameraViewModel
+import com.tech.thermography.android.ui.camera.MeasurementSpotState
 import kotlin.math.roundToInt
 
 
@@ -138,9 +132,9 @@ fun MeasurementSpotGlyph(
 }
 @Composable
 fun MeasurementSpotOverlay(
-    state: ThermogramCameraViewModel.MeasurementSpotState,
+    state: MeasurementSpotState,
     overlaySize: IntSize,
-    onStateChange: (ThermogramCameraViewModel.MeasurementSpotState) -> Unit,
+    onStateChange: (MeasurementSpotState) -> Unit,
 ) {
     if (!state.enabled || overlaySize.width <= 0 || overlaySize.height <= 0) return
 

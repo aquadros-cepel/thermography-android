@@ -7,7 +7,10 @@ import com.flir.thermalsdk.image.ThermalImage;
 import com.flir.thermalsdk.image.ThermalValue;
 import com.flir.thermalsdk.image.measurements.MeasurementShapeCollection;
 import com.flir.thermalsdk.log.ThermalLog;
+import com.tech.thermography.android.ui.camera.MeasurementSpotState;
+import com.tech.thermography.android.ui.camera.MeasurementState;
 import com.tech.thermography.android.ui.camera.MeasurementTemperatures;
+import com.tech.thermography.android.ui.camera.MeasurementSquareState;
 
 import java.util.List;
 
@@ -121,7 +124,10 @@ public final class FlirCameraService {
     public MeasurementTemperatures getLatestMeasurementTemperatures() {
         return latestsMeasurementTemperatures;
     }
-    public void applyMeasurementSquares(@NonNull ThermalImage thermalImage, @NonNull List<AceController.MeasurementSquareState> states) {
+    public void applyMeasurements(
+            @NonNull ThermalImage thermalImage,
+            @NonNull List<MeasurementState> states
+    ) {
         try {
             MeasurementShapeCollection measurements = thermalImage.getMeasurements();
             if (measurements == null) {
@@ -130,22 +136,45 @@ public final class FlirCameraService {
             }
 
             measurements.clear();
-            for (AceController.MeasurementSquareState state : states) {
-                if (state != null && (state.getEnabled() || !state.getRemove())) {
-                    ThermalLog.w(TAG, "Apply measurement Square: $state");
-                    applyMeasurementSquare(measurements, thermalImage, state);
+
+            for (MeasurementState state : states) {
+                if (state == null) continue;
+
+                if (state.getEnabled() || !state.getRemove()) {
+
+                    ThermalLog.w(TAG, "Applying measurement: " + state);
+
+                    if (state instanceof MeasurementSquareState) {
+                        applyMeasurementSquare(
+                                measurements,
+                                thermalImage,
+                                (MeasurementSquareState) state
+                        );
+
+                    } else if (state instanceof MeasurementSpotState) {
+                        applyMeasurementSpot(
+                                measurements,
+                                thermalImage,
+                                (MeasurementSpotState) state
+                        );
+                    }
                 }
             }
-            // O reset de add/remove será feito no AceController após aplicar
+
         } catch (Exception e) {
-            ThermalLog.e(TAG, "Failed to apply measurement squares: " + e.getMessage());
+            ThermalLog.e(TAG, "Failed to apply measurements: " + e.getMessage());
         }
     }
 
+    private void applyMeasurementSpot(
+            @NonNull MeasurementShapeCollection measurements,
+            @NonNull ThermalImage thermalImage,
+            @NonNull MeasurementSpotState state
+    ){}
     private void applyMeasurementSquare(
             @NonNull MeasurementShapeCollection measurements,
             @NonNull ThermalImage thermalImage,
-            @NonNull AceController.MeasurementSquareState state
+            @NonNull MeasurementSquareState state
     ) {
         try {
             int imageWidth = thermalImage.getWidth();

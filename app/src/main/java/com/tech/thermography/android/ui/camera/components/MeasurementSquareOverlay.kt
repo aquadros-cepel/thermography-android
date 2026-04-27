@@ -25,14 +25,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.tech.thermography.android.ui.camera.ThermogramCameraViewModel
+import com.tech.thermography.android.ui.camera.MeasurementSquareState
 import kotlin.math.roundToInt
 
 @Composable
 fun MeasurementSquareOverlay(
-    state: ThermogramCameraViewModel.MeasurementSquareState,
+    state: MeasurementSquareState,
     overlaySize: IntSize,
-    onStateChange: (ThermogramCameraViewModel.MeasurementSquareState) -> Unit,
+    onStateChange: (MeasurementSquareState) -> Unit,
 ) {
     if (!state.enabled || overlaySize.width <= 0 || overlaySize.height <= 0) return
 
