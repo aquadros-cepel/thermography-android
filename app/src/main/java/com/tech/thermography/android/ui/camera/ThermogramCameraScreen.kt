@@ -253,19 +253,23 @@ fun ThermogramsCameraScreen(
                 MeasurementSpotOverlay(
                     state = sp1State,
                     overlaySize = measurementOverlaySize,
-                    onStateChange = { sp1State = it;syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
+                    onStateChange = {
+                        sp1State = it;
+                        syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                     }
                 )
             }
             MeasurementSquareOverlay(
                 state = bx1State,
                 overlaySize = measurementOverlaySize,
-                onStateChange = { bx1State = it; syncMeasurementStates(viewModel, sp1State, bx1State, bx2State) }
+                onStateChange = { bx1State = it;
+                    syncMeasurementStates(viewModel, sp1State, bx1State, bx2State) }
             )
             MeasurementSquareOverlay(
                 state = bx2State,
                 overlaySize = measurementOverlaySize,
-                onStateChange = { bx2State = it; syncMeasurementStates(viewModel, sp1State, bx1State, bx2State) }
+                onStateChange = { bx2State = it;
+                    syncMeasurementStates(viewModel, sp1State, bx1State, bx2State) }
             )
         }
 
@@ -452,7 +456,11 @@ fun ThermogramsCameraScreen(
                             val newEnabled = !sp1State.enabled
                             sp1State = sp1State.copy(enabled = newEnabled)
                             if (newEnabled) {
-                                bx1State = bx1State.copy(enabled = false)
+                                bx1State = bx1State.copy(
+                                    enabled = false,
+                                    add = false,
+                                    remove = true
+                                )
                             }
                             syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
@@ -468,7 +476,11 @@ fun ThermogramsCameraScreen(
                                 remove = !newEnabled
                             )
                             if (newEnabled) {
-                                sp1State = sp1State.copy(enabled = false)
+                                sp1State = sp1State.copy(
+                                    enabled = false,
+                                    add = false,
+                                    remove = true
+                                )
                             }
                             syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                         }) {
