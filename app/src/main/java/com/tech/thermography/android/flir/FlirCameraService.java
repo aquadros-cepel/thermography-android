@@ -170,7 +170,22 @@ public final class FlirCameraService {
             @NonNull MeasurementShapeCollection measurements,
             @NonNull ThermalImage thermalImage,
             @NonNull MeasurementSpotState state
-    ){}
+    ){
+        try {
+            int imageWidth = thermalImage.getWidth();
+            int imageHeight = thermalImage.getHeight();
+
+            int centerX = Math.round(imageWidth * state.getCenterXFraction());
+            int centerY = Math.round(imageHeight * state.getCenterYFraction());
+
+            measurements.addSpot(centerX, centerY);
+
+            ThermalLog.d(TAG, "Measurement Spot applied (" + state.getLabel() + ") at [" + centerX + "," + centerY + "]");
+        } catch (Exception e) {
+            ThermalLog.w(TAG, "Unable to add Spot measurement (" + state.getLabel() + "): " + e.getMessage());
+        }
+
+    }
     private void applyMeasurementSquare(
             @NonNull MeasurementShapeCollection measurements,
             @NonNull ThermalImage thermalImage,

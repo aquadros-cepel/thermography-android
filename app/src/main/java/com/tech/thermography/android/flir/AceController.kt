@@ -435,7 +435,7 @@ class AceController @Inject constructor(
 
     fun setMeasurementStates(states: List<MeasurementState>) {
         measurementStates = states
-        ThermalLog.d(TAG, "Measurement square states updated: $states")
+        ThermalLog.d(TAG, "Measurement states updated: $states")
     }
 
     fun takeSnapshot(callback: (Boolean, String?, StoredImage?) -> Unit = { _, _, _ -> }) {
