@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -519,27 +520,44 @@ fun ThermogramsCameraScreen(
                         DropdownMenu(
                             expanded = paletteMenuExpanded,
                             onDismissRequest = { paletteMenuExpanded = false },
-                            // Remove o background padrão do menu
-                            modifier = Modifier
-                                .background(Color.Transparent)
-                                .border(0.dp, Color.Transparent)
+                            containerColor = Color.Transparent, // 👈 ESSENCIAL
+                            tonalElevation = 0.dp,              // 👈 remove sombra tonal
+                            shadowElevation = 0.dp,             // 👈 remove sombra
+                            offset = DpOffset(x = 0.dp, y = (-100).dp) // 👈 sobe o menu 20dp
                         ) {
                             filteredPalettesWithLabel.forEach { (palette, label) ->
                                 DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        viewModel.selectPalette(palette)
-                                        // Não fecha o dropdown ao selecionar
-                                    },
-                                    leadingIcon = {
-                                        // Opcional: pode-se adicionar um preview gráfico da palette aqui
-                                    },
                                     trailingIcon = {
                                         if (palette == currentPalette) {
-                                            Icon(Icons.Filled.Check, contentDescription = null)
+                                            Icon(
+                                                Icons.Filled.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .background(
+                                                        color = Color.Black.copy(alpha = 0.5f), // 50% de transparência
+                                                        shape = RoundedCornerShape(6.dp)
+                                                    )
+                                            )
                                         }
                                     },
-                                    modifier = Modifier.background(Color.Transparent)
+                                    text = {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    color = Color.Black.copy(alpha = 0.5f), // 50% de transparência
+                                                    shape = RoundedCornerShape(6.dp)
+                                                )
+                                                .padding(horizontal = 8.dp, vertical = 0.dp)
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                color = Color.White
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.selectPalette(palette)
+                                    }
                                 )
                             }
                         }
