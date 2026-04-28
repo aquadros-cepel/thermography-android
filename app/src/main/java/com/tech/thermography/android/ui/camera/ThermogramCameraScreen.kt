@@ -56,8 +56,13 @@ import com.tech.thermography.android.ui.camera.components.MeasurementSpotOverlay
 import com.tech.thermography.android.ui.camera.components.MeasurementSquareOverlay
 import com.tech.thermography.android.ui.camera.MeasurementSpotState
 
-import com.flir.thermalsdk.image.Palette;
-import com.flir.thermalsdk.image.PaletteManager;
+
+import com.flir.thermalsdk.image.Palette
+import com.flir.thermalsdk.image.PaletteManager
+import com.flir.thermalsdk.image.ThermalValue
+import com.flir.thermalsdk.image.TemperatureUnit
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.tech.thermography.android.ui.components.CompactUiWrapper
 
 
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
@@ -196,6 +201,7 @@ fun ThermogramsCameraScreen(
     val recentThermograms by viewModel.recentThermograms.collectAsState()
     var showSnapshotButton by remember { mutableStateOf(true) }
 
+
     // Toggle states for toolbar buttons
     var isThermalMode by remember { mutableStateOf(false) }
     var isFlashOn by remember { mutableStateOf(false) }
@@ -211,6 +217,9 @@ fun ThermogramsCameraScreen(
     val measurementTemperatures by viewModel.measurementTemperatures.collectAsState()
     val tempRange by viewModel.temperatureRange.collectAsState()
 
+    // Thermal parameters overlay state (corrigido escopo)
+    var showThermalParams by remember { mutableStateOf(false) }
+    val thermalParamsUi by viewModel.thermalParametersUi.collectAsState()
 
     LaunchedEffect(recentThermograms) {
         viewModel.pruneMissingRecentThermograms()
@@ -655,13 +664,14 @@ fun ThermogramsCameraScreen(
                             )
                         }
 
-//                        TaskBarButton(active = isThermalMode, onClick = { isThermalMode = !isThermalMode }) {
-//                            Icon(
-//                                imageVector = Icons.Filled.Settings,
-//                                contentDescription = "Settings",
-//                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-//                            )
-//                        }
+                        // Toolbar: adicionar overlay de configuração
+                        TaskBarButton(active = isThermalMode, onClick = { showThermalParams = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
 
@@ -755,6 +765,18 @@ fun ThermogramsCameraScreen(
                 }
             }
         }
+
+        if (showThermalParams) {
+            ThermalParametersOverlay(
+                parameters = thermalParamsUi,
+                onValueChange = { viewModel.updateThermalParametersUi { _ -> it } },
+                onSave = {
+                    viewModel.saveThermalParameters()
+                    showThermalParams = false
+                },
+                onDismiss = { showThermalParams = false }
+            )
+        }
     }
 }
 
@@ -772,5 +794,119 @@ private fun WatermarkOverlay(modifier: Modifier = Modifier) {
             contentDescription = "Logo Thermal Energy",
             modifier = Modifier.size(60.dp)
         )
+    }
+}
+
+@Composable
+private fun ThermalParametersOverlay(
+    parameters: ThermogramCameraViewModel.ThermalParametersUi,
+    onValueChange: (ThermogramCameraViewModel.ThermalParametersUi) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable(onClick = onDismiss, indication = null, interactionSource = remember { MutableInteractionSource() })
+            .offset(y = (-60).dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .background(Color.Black.copy(alpha = 0.5f), shape = RoundedCornerShape(16.dp))
+                .padding(24.dp)
+                .widthIn(min = 160.dp, max = 240.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Parâmetros Térmicos", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(16.dp))
+                CompactUiWrapper {
+                    OutlinedTextField(
+                        value = parameters.distance.toString(),
+                        onValueChange = { v ->
+                            v.toDoubleOrNull()?.let {
+                                onValueChange(parameters.copy(distance = it))
+                            }
+                        },
+                        label = { Text("DISTÂNCIA (m)") },
+                        singleLine = true
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                CompactUiWrapper {
+                    OutlinedTextField(
+                        value = parameters.emissivity.toString(),
+                        onValueChange = { v ->
+                            v.toDoubleOrNull()?.let {
+                                if (it in 0.0..1.0) onValueChange(parameters.copy(emissivity = it))
+                            }
+                        },
+                        label = { Text("EMISSIVIDADE (0.0 - 1.0)") },
+                        singleLine = true
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                CompactUiWrapper {
+                    OutlinedTextField(
+                        value = parameters.reflectedTemperature.value.toString(),
+                        onValueChange = { v ->
+                            v.toDoubleOrNull()?.let {
+                                onValueChange(
+                                    parameters.copy(
+                                        reflectedTemperature = ThermalValue(
+                                            it,
+                                            TemperatureUnit.CELSIUS
+                                        )
+                                    )
+                                )
+                            }
+                        },
+                        label = { Text("TEMP. REFLETIDA (°C)") },
+                        singleLine = true
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                CompactUiWrapper {
+                    OutlinedTextField(
+                        value = parameters.atmosphericTemperature.value.toString(),
+                        onValueChange = { v ->
+                            v.toDoubleOrNull()?.let {
+                                 onValueChange(parameters.copy(atmosphericTemperature = ThermalValue(it, TemperatureUnit.CELSIUS)))
+                            }
+                        },
+                        label = { Text("TEMP. ATMOSFÉRICA (°C)") },
+                        singleLine = true
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+
+                CompactUiWrapper {
+                    OutlinedTextField(
+                        value = parameters.relativeHumidity.toString(),
+                        onValueChange = { v ->
+                            v.toDoubleOrNull()?.let {
+                                if (it in 0.0..100.0) onValueChange(parameters.copy(relativeHumidity = it))
+                            }
+                        },
+                        label = { Text("UMIDADE RELATIVA (%)") },
+                        singleLine = true
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                ) {
+                    Button(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text("Cancelar")
+                    }
+                    Button(onClick = onSave, modifier = Modifier.weight(1f)) {
+                        Text("Salvar")
+                    }
+                }
+            Spacer(Modifier.height(8.dp))                
+            }
+        }
     }
 }

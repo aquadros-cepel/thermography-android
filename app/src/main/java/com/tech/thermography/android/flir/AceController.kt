@@ -26,6 +26,7 @@ import com.flir.thermalsdk.utils.Pair
 import com.flir.thermalsdk.live.remote.OnCompletion
 import com.flir.thermalsdk.live.remote.OnRemoteError
 import com.flir.thermalsdk.live.remote.StoredImage
+import com.tech.thermography.android.ui.camera.ThermalParametersConfig
 import com.tech.thermography.android.ui.camera.MeasurementTemperatures
 import com.tech.thermography.android.ui.camera.MeasurementState
 import com.tech.thermography.android.ui.camera.MeasurementSpotState
@@ -96,6 +97,9 @@ class AceController @Inject constructor(
     )
 
     private var measurementStates: List<MeasurementState> = emptyList()
+
+    // Parâmetros térmicos
+    private var thermalParameters: ThermalParametersConfig? = null
 
     // ---------- PUBLIC ----------
 
@@ -373,6 +377,20 @@ class AceController @Inject constructor(
 
             }
 
+            // Aplicar parâmetros térmicos, se disponíveis
+            if (thermalParameters != null) {
+                val params = thermalImage.thermalParameters
+                try {
+                    params.objectDistance = thermalParameters!!.distance
+                    params.objectDistance = thermalParameters!!.emissivity
+                    params.objectReflectedTemperature = thermalParameters!!.reflectedTemperature
+                    params.atmosphericTemperature = thermalParameters!!.atmosphericTemperature
+                    params.relativeHumidity = thermalParameters!!.relativeHumidity
+                } catch (e: Exception) {
+                    ThermalLog.e(TAG, "Erro ao aplicar parâmetros térmicos: ${e.message}")
+                }
+            }
+
             val stats = thermalImage.statistics
             if (stats != null) {
                 val minTv = stats.min
@@ -628,5 +646,21 @@ class AceController @Inject constructor(
             }
         }
         return null
+    }
+
+    fun setThermalParameters(
+        distance: Double,
+        emissivity: Double,
+        reflectedTemperature: ThermalValue,
+        atmosphericTemperature: ThermalValue,
+        relativeHumidity: Double
+    ) {
+        thermalParameters = ThermalParametersConfig(
+            distance,
+            emissivity,
+            reflectedTemperature,
+            atmosphericTemperature,
+            relativeHumidity
+        )
     }
 }

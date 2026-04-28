@@ -5,7 +5,10 @@ import android.content.Context
 import android.opengl.GLSurfaceView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flir.thermalsdk.image.TemperatureUnit
+import com.flir.thermalsdk.image.ThermalValue
 import com.flir.thermalsdk.image.fusion.FusionMode
+import com.tech.thermography.android.ui.camera.ThermalParametersConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,6 +93,17 @@ class ThermogramCameraViewModel @Inject constructor(
     private val _temperatureRange = MutableStateFlow(getTemperatureRange())
     val temperatureRange: StateFlow<TemperatureRange?> = _temperatureRange.asStateFlow()
 
+    // Parâmetros térmicos UI
+    data class ThermalParametersUi(
+        val distance: Double = 1.0,
+        val emissivity: Double = 0.95,
+        val reflectedTemperature: ThermalValue = ThermalValue(20.0, TemperatureUnit.CELSIUS),
+        val atmosphericTemperature: ThermalValue = ThermalValue(20.0, TemperatureUnit.CELSIUS),
+        val relativeHumidity: Double = 50.0
+    )
+
+    private val _thermalParametersUi = MutableStateFlow(ThermalParametersUi())
+    val thermalParametersUi: StateFlow<ThermalParametersUi> = _thermalParametersUi
 
     init {
         // Inicializa lista de palettes e seleciona a primeira como padrão
@@ -241,5 +255,22 @@ class ThermogramCameraViewModel @Inject constructor(
 
     fun setMeasurementSquareStates(states: List<MeasurementState>) {
         controller.setMeasurementStates(states)
+    }
+
+    // Atualiza os parâmetros térmicos UI
+    fun updateThermalParametersUi(update: (ThermalParametersUi) -> ThermalParametersUi) {
+        _thermalParametersUi.value = update(_thermalParametersUi.value)
+    }
+
+    // Salva os parâmetros térmicos no controlador
+    fun saveThermalParameters() {
+        val params = _thermalParametersUi.value
+        controller.setThermalParameters(
+            distance = params.distance,
+            emissivity = params.emissivity,
+            reflectedTemperature = params.reflectedTemperature,
+            atmosphericTemperature = params.atmosphericTemperature,
+            relativeHumidity = params.relativeHumidity
+        )
     }
 }
