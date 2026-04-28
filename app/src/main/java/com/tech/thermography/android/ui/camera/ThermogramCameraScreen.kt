@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,6 +53,9 @@ import com.tech.thermography.android.ui.camera.components.MeasurementSpotGlyph
 import com.tech.thermography.android.ui.camera.components.MeasurementSpotOverlay
 import com.tech.thermography.android.ui.camera.components.MeasurementSquareOverlay
 import com.tech.thermography.android.ui.camera.MeasurementSpotState
+
+import com.flir.thermalsdk.image.Palette;
+import com.flir.thermalsdk.image.PaletteManager;
 
 
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
@@ -204,6 +208,7 @@ fun ThermogramsCameraScreen(
 
     val measurementTemperatures by viewModel.measurementTemperatures.collectAsState()
     val tempRange by viewModel.temperatureRange.collectAsState()
+
 
     LaunchedEffect(recentThermograms) {
         viewModel.pruneMissingRecentThermograms()
@@ -501,12 +506,42 @@ fun ThermogramsCameraScreen(
                         }
 
                         // Palette selector
-                        TaskBarButton(onClick = { /* palette selector */ }) {
+                        var paletteMenuExpanded by remember { mutableStateOf(false) }
+                        val currentPalette by viewModel.currentPalette.collectAsState()
+                        val filteredPalettesWithLabel = viewModel.filteredPalettesWithLabel
+                        TaskBarButton(onClick = { paletteMenuExpanded = true }, active = false) {
                             Icon(
                                 imageVector = Icons.Filled.ColorLens,
                                 contentDescription = "Palette",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
+                        }
+                        DropdownMenu(
+                            expanded = paletteMenuExpanded,
+                            onDismissRequest = { paletteMenuExpanded = false },
+                            // Remove o background padrão do menu
+                            modifier = Modifier
+                                .background(Color.Transparent)
+                                .border(0.dp, Color.Transparent)
+                        ) {
+                            filteredPalettesWithLabel.forEach { (palette, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        viewModel.selectPalette(palette)
+                                        // Não fecha o dropdown ao selecionar
+                                    },
+                                    leadingIcon = {
+                                        // Opcional: pode-se adicionar um preview gráfico da palette aqui
+                                    },
+                                    trailingIcon = {
+                                        if (palette == currentPalette) {
+                                            Icon(Icons.Filled.Check, contentDescription = null)
+                                        }
+                                    },
+                                    modifier = Modifier.background(Color.Transparent)
+                                )
+                            }
                         }
 
                         // Flashlight toggle button

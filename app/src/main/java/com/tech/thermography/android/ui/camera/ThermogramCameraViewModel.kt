@@ -27,14 +27,48 @@ class ThermogramCameraViewModel @Inject constructor(
     private val controller: AceController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
+    // Palettes disponíveis
+    private val _palettes = MutableStateFlow<List<com.flir.thermalsdk.image.Palette>>(emptyList())
+    val palettes: StateFlow<List<com.flir.thermalsdk.image.Palette>> = _palettes.asStateFlow()
+
+    // Palette selecionada
+    private val _currentPalette = MutableStateFlow<com.flir.thermalsdk.image.Palette?>(null)
+    val currentPalette: StateFlow<com.flir.thermalsdk.image.Palette?> = _currentPalette.asStateFlow()
 
     companion object {
         private const val PREFS_NAME = "recent_thermograms"
         private const val KEY_RECENT = "recent_paths"
+        // Mapa de nomes de palette para labels amigáveis
+        val PALETTE_LABELS = mapOf(
+            "iron" to "Ferro",
+            "lava" to "Lava",
+            "rainbow" to "Arco-Íris",
+            "rainhc" to "Elevado Contraste de Arco-Íris",
+            "artic" to "Ártico",
+            "whitehot" to "Incandescente Branco",
+            "blackhot" to "Incandescente Preto"
+        )
     }
 
     private val _recentThermograms = MutableStateFlow<List<String>>(emptyList())
     val recentThermograms: StateFlow<List<String>> = _recentThermograms.asStateFlow()
+
+    // Lista reduzida de palettes com label amigável, ordenada conforme a ordem do mapa
+    val filteredPalettesWithLabel: List<Pair<com.flir.thermalsdk.image.Palette, String>>
+        get() {
+            val paletteOrder = PALETTE_LABELS.keys.toList()
+            val filtered = _palettes.value.mapNotNull { palette ->
+                val nameKey = palette.name?.replace(" ", "")?.lowercase() ?: return@mapNotNull null
+                val label = PALETTE_LABELS[nameKey]
+                if (label != null) palette to label else null
+            }
+            // Ordena conforme a ordem do mapa
+            return paletteOrder.flatMap { key ->
+                filtered.filter { (palette, _) ->
+                    palette.name?.replace(" ", "")?.lowercase() == key
+                }
+            }
+        }
 
 
     //Atualização do estado de temperatura
@@ -47,11 +81,21 @@ class ThermogramCameraViewModel @Inject constructor(
 
 
     init {
+        // Inicializa lista de palettes e seleciona a primeira como padrão
+        val defaultPalettes = com.flir.thermalsdk.image.PaletteManager.getDefaultPalettes()
+        _palettes.value = defaultPalettes
+        _currentPalette.value = defaultPalettes.firstOrNull()
+        _currentPalette.value?.let { controller.setCurrentPalette(it) }
         _recentThermograms.value = loadRecentThermograms().filter { File(it).exists() }
         persistRecentThermograms(_recentThermograms.value)
 
         startTemperaturesRangeUpdates()
         startMeasurementTemperaturesUpdates()
+    }
+
+    fun selectPalette(palette: com.flir.thermalsdk.image.Palette) {
+        _currentPalette.value = palette
+        controller.setCurrentPalette(palette)
     }
 
     private fun startTemperaturesRangeUpdates() {
@@ -180,6 +224,8 @@ class ThermogramCameraViewModel @Inject constructor(
         controller.setMeasurementStates(states)
     }
 }
+
+
 
 
 

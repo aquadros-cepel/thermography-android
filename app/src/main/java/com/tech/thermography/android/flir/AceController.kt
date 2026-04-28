@@ -73,6 +73,10 @@ class AceController @Inject constructor(
 
     // Palette and color settings — initialized after SDK init
     private var currentPalette: Palette? = null
+
+    fun setCurrentPalette(palette: Palette) {
+        currentPalette = palette
+    }
     private var colorSettings: ColorDistributionSettings = HistogramEqualizationSettings()
 
     private val flirCameraService = FlirCameraService()
