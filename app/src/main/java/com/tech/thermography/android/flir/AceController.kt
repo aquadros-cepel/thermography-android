@@ -73,10 +73,8 @@ class AceController @Inject constructor(
 
     // Palette and color settings — initialized after SDK init
     private var currentPalette: Palette? = null
+    private var currentFusionMode: FusionMode = FusionMode.THERMAL_ONLY
 
-    fun setCurrentPalette(palette: Palette) {
-        currentPalette = palette
-    }
     private var colorSettings: ColorDistributionSettings = HistogramEqualizationSettings()
 
     private val flirCameraService = FlirCameraService()
@@ -100,6 +98,15 @@ class AceController @Inject constructor(
     private var measurementStates: List<MeasurementState> = emptyList()
 
     // ---------- PUBLIC ----------
+
+    fun setCurrentPalette(palette: Palette) {
+        currentPalette = palette
+    }
+
+    fun setCurrentFusionMode(fusionMode: FusionMode) {
+        currentFusionMode = fusionMode
+    }
+
     fun attachSurface(view: GLSurfaceView) {
         glView = view
 
@@ -376,7 +383,7 @@ class AceController @Inject constructor(
                 }
             }
             currentPalette?.let { thermalImage.setPalette(it) }
-            thermalImage.fusion?.setFusionMode(FusionMode.THERMAL_ONLY)
+            thermalImage.fusion?.setFusionMode(currentFusionMode)
             thermalImage.setColorDistributionSettings(colorSettings)
             flirCameraService.updateRangeFromThermalImage(thermalImage)
             flirCameraService.updateMeasurementTemperaturesFromThermalImage(thermalImage)

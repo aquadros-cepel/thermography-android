@@ -5,22 +5,23 @@ import android.content.Context
 import android.opengl.GLSurfaceView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flir.thermalsdk.image.fusion.FusionMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.io.File
+import javax.inject.Inject
 import com.flir.thermalsdk.live.remote.StoredImage
 import com.tech.thermography.android.flir.AceController
 import com.tech.thermography.android.flir.AceController.TemperatureRange
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import org.json.JSONArray
-import java.io.File
-import javax.inject.Inject
 
 @HiltViewModel
 class ThermogramCameraViewModel @Inject constructor(
@@ -34,6 +35,16 @@ class ThermogramCameraViewModel @Inject constructor(
     // Palette selecionada
     private val _currentPalette = MutableStateFlow<com.flir.thermalsdk.image.Palette?>(null)
     val currentPalette: StateFlow<com.flir.thermalsdk.image.Palette?> = _currentPalette.asStateFlow()
+
+    // Modos de fusão disponíveis
+    val fusionModesWithLabel = listOf(
+        FusionMode.THERMAL_ONLY to "Térmica",
+        FusionMode.MSX to "MSX",
+        FusionMode.VISUAL_ONLY to "Câmera Digital"
+    )
+
+    private val _currentFusionMode = kotlinx.coroutines.flow.MutableStateFlow(FusionMode.THERMAL_ONLY)
+    val currentFusionMode: kotlinx.coroutines.flow.StateFlow<FusionMode> = _currentFusionMode.asStateFlow()
 
     companion object {
         private const val PREFS_NAME = "recent_thermograms"
@@ -91,11 +102,19 @@ class ThermogramCameraViewModel @Inject constructor(
 
         startTemperaturesRangeUpdates()
         startMeasurementTemperaturesUpdates()
+
+        // Inicializa modo de fusão padrão
+        controller.setCurrentFusionMode(FusionMode.THERMAL_ONLY)
     }
 
     fun selectPalette(palette: com.flir.thermalsdk.image.Palette) {
         _currentPalette.value = palette
         controller.setCurrentPalette(palette)
+    }
+
+    fun selectFusionMode(mode: FusionMode) {
+        _currentFusionMode.value = mode
+        controller.setCurrentFusionMode(mode)
     }
 
     private fun startTemperaturesRangeUpdates() {
@@ -224,10 +243,3 @@ class ThermogramCameraViewModel @Inject constructor(
         controller.setMeasurementStates(states)
     }
 }
-
-
-
-
-
-
-

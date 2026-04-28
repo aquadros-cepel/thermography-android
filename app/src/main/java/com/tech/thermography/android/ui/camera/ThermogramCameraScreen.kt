@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -562,6 +563,63 @@ fun ThermogramsCameraScreen(
                             }
                         }
 
+                        // Fusion mode selector
+                        var fusionMenuExpanded by remember { mutableStateOf(false) }
+                        val currentFusionMode by viewModel.currentFusionMode.collectAsState()
+                        val fusionModesWithLabel = viewModel.fusionModesWithLabel
+                        TaskBarButton(onClick = { fusionMenuExpanded = true }, active = false) {
+                            Icon(
+                                imageVector = Icons.Filled.Image,
+                                contentDescription = "Image Mode",
+                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = fusionMenuExpanded,
+                            onDismissRequest = { fusionMenuExpanded = false },
+                            containerColor = Color.Transparent,
+                            tonalElevation = 0.dp,
+                            shadowElevation = 0.dp,
+                            offset = DpOffset(x = 0.dp, y = (-100).dp)
+                        ) {
+                            fusionModesWithLabel.forEach { (mode, label) ->
+                                DropdownMenuItem(
+                                    trailingIcon = {
+                                        if (mode == currentFusionMode) {
+                                            Icon(
+                                                Icons.Filled.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .background(
+                                                        color = Color.Black.copy(alpha = 0.5f),
+                                                        shape = RoundedCornerShape(6.dp)
+                                                    )
+                                            )
+                                        }
+                                    },
+                                    text = {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    color = Color.Black.copy(alpha = 0.5f),
+                                                    shape = RoundedCornerShape(6.dp)
+                                                )
+                                                .padding(horizontal = 8.dp, vertical = 0.dp)
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                color = Color.White
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.selectFusionMode(mode)
+                                        // Removido: fusionMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                        
                         // Flashlight toggle button
                         TaskBarButton(active = isFlashOn, onClick = {
                             viewModel.toggleFlash { success, msg ->
@@ -597,13 +655,13 @@ fun ThermogramsCameraScreen(
                             )
                         }
 
-                        TaskBarButton(active = isThermalMode, onClick = { isThermalMode = !isThermalMode }) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = "Settings",
-                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+//                        TaskBarButton(active = isThermalMode, onClick = { isThermalMode = !isThermalMode }) {
+//                            Icon(
+//                                imageVector = Icons.Filled.Settings,
+//                                contentDescription = "Settings",
+//                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+//                            )
+//                        }
                     }
                 }
 
