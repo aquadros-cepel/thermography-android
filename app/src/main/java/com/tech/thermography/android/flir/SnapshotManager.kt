@@ -57,7 +57,7 @@ class SnapshotManager @Inject constructor() {
             
             // ===== STEP 1: Capture GL framebuffer (thermal stream) =====
             ThermalLog.d(TAG, "Step 1: Capturing GL framebuffer (thermal)...")
-            val thermalBitmap = captureGLFramebuffer(width, height -250)
+            val thermalBitmap = captureGLFramebuffer(width, height)
             if (thermalBitmap == null) {
                 ThermalLog.e(TAG, "Failed to capture GL framebuffer")
                 return null
@@ -169,6 +169,8 @@ class SnapshotManager @Inject constructor() {
     
     /**
      * Capture Compose UI using PixelCopy (synchronously).
+     * Only captures the thermal area (top portion of the window = targetHeight rows),
+     * excluding the toolbar and recent-images strip at the bottom.
      * Returns UI elements as Bitmap, or null if failed.
      */
     private fun captureComposeUI(activity: Activity, targetWidth: Int, targetHeight: Int): Bitmap? {
@@ -176,32 +178,46 @@ class SnapshotManager @Inject constructor() {
             ThermalLog.w(TAG, "PixelCopy requires Android 8.0+, skipping UI capture")
             return null
         }
-        
+
         try {
             val window = activity.window
             val decorView = window.decorView
-            
-            val captureWidth = decorView.width
-            val captureHeight = decorView.height
-            
-            if (captureWidth <= 0 || captureHeight <= 0) {
-                ThermalLog.w(TAG, "Invalid window size: ${captureWidth}x${captureHeight}")
+
+            val windowWidth  = decorView.width
+            val windowHeight = decorView.height
+
+            if (windowWidth <= 0 || windowHeight <= 0) {
+                ThermalLog.w(TAG, "Invalid window size: ${windowWidth}x${windowHeight}")
                 return null
             }
-            
-            // Create bitmap
-            val bitmap = Bitmap.createBitmap(captureWidth, captureHeight, Bitmap.Config.ARGB_8888)
-            
-            // Use CountDownLatch for synchronous operation
+
+            // Determine the Y offset where the thermal area starts (below the system status bar).
+            val statusBarHeight: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                decorView.rootWindowInsets
+                    ?.getInsets(android.view.WindowInsets.Type.statusBars())?.top ?: 0
+            } else {
+                @Suppress("DEPRECATION")
+                decorView.rootWindowInsets?.systemWindowInsetTop ?: 0
+            }
+
+            // Source rect = only the thermal area (skip status bar on top; skip toolbar+recent below).
+            val srcTop    = statusBarHeight
+            val srcBottom = (statusBarHeight + targetHeight).coerceAtMost(windowHeight)
+            val srcRect   = Rect(0, srcTop, windowWidth, srcBottom)
+
+            ThermalLog.d(TAG, "PixelCopy srcRect=$srcRect window=${windowWidth}x${windowHeight} statusBar=$statusBarHeight")
+
+            // Bitmap height = cropped thermal height
+            val bitmap = Bitmap.createBitmap(windowWidth, srcBottom - srcTop, Bitmap.Config.ARGB_8888)
+
             val latch = CountDownLatch(1)
             var pixelCopyResult = -1
-            
-            // Post to Main thread
+
             Handler(Looper.getMainLooper()).post {
                 try {
                     PixelCopy.request(
                         window,
-                        Rect(0, 0, captureWidth, captureHeight),
+                        srcRect,
                         bitmap,
                         { result ->
                             pixelCopyResult = result
@@ -214,28 +230,27 @@ class SnapshotManager @Inject constructor() {
                     latch.countDown()
                 }
             }
-            
-            // Wait for completion
+
             val timeout = latch.await(2, TimeUnit.SECONDS)
-            
+
             if (!timeout || pixelCopyResult != PixelCopy.SUCCESS) {
                 bitmap.recycle()
-                ThermalLog.w(TAG, "PixelCopy failed or timeout, skipping UI")
+                ThermalLog.w(TAG, "PixelCopy failed or timeout (result=$pixelCopyResult), skipping UI")
                 return null
             }
-            
-            // Resize if needed
-//            val finalBitmap = if (captureWidth != targetWidth || captureHeight != targetHeight) {
-//                Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true).also {
-//                    bitmap.recycle()
-//                }
-//            } else {
-//                bitmap
-//            }
-            val finalBitmap = bitmap
-            ThermalLog.d(TAG, "Compose UI captured: ${finalBitmap.width}x${finalBitmap.height}")
+
+            // Scale only if dimensions differ from the GL surface size
+            val finalBitmap = if (bitmap.width != targetWidth || bitmap.height != targetHeight) {
+                ThermalLog.d(TAG, "Scaling UI bitmap from ${bitmap.width}x${bitmap.height} to ${targetWidth}x${targetHeight}")
+                Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true).also {
+                    bitmap.recycle()
+                }
+            } else {
+                bitmap
+            }
+            ThermalLog.d(TAG, "Compose UI captured (thermal area only): ${finalBitmap.width}x${finalBitmap.height}")
             return finalBitmap
-            
+
         } catch (e: Exception) {
             ThermalLog.e(TAG, "Failed to capture Compose UI: ${e.message}")
             return null
@@ -886,17 +901,3 @@ class SnapshotManager @Inject constructor() {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

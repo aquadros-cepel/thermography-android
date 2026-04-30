@@ -55,7 +55,7 @@ fun MeasurementSquareOverlay(
 
     Column(
         modifier = Modifier
-            .offset { IntOffset(left, top) }
+            .offset { IntOffset(left - interactionPaddingPx, top - interactionPaddingPx) }
             .wrapContentSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

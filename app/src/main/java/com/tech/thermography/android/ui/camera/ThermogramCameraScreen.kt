@@ -163,7 +163,7 @@ private fun RecentThermogramThumbnail(
 
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(82.dp)
             .clip(RoundedCornerShape(8.dp))
             .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
             .background(Color.Black.copy(alpha = 0.5f))
@@ -242,46 +242,48 @@ fun ThermogramsCameraScreen(
         viewModel.pruneMissingRecentThermograms()
     }
 
-    BoxWithConstraints(
+    val toolbarHeight = 56.dp
+    val recentBarHeight = 100.dp
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        val temperatureBarWidth = (maxWidth * 0.038f).coerceIn(14.dp, 18.dp)
-        val temperatureBarHeight = (maxHeight * 0.60f).coerceIn(270.dp, 414.dp) // Reduzido em ~12%
-        val temperatureLabelShape = MaterialTheme.shapes.small
-        val toolbarHeight = 56.dp
-        val recentStripHeight = 90.dp
-        val bottomReservedHeight = toolbarHeight + recentStripHeight
-
-        // GLSurfaceView with renderer
-        AndroidView(
-            factory = { context: Context ->
-                CustomGLSurfaceView(context).apply {
-                    setEGLContextClientVersion(3)
-                    preserveEGLContextOnPause = false
-                    onSizeChangedCallback = { w: Int, h: Int ->
-                        viewModel.onSurfaceSizeChanged(w, h)
-                    }
-                    viewModel.attachGlSurface(this)
-                    viewModel.start()
-//                    viewModel.startStream()
-                }
-            },
+        // ===== ÁREA TÉRMICA (sem toolbar) =====
+        BoxWithConstraints(
             modifier = Modifier
-                .fillMaxSize()
-                .background(color = Color.White)
-        )
-
-        // Keep overlays above toolbar + recent strip area.
-        val measurementModeBottomPadding = bottomReservedHeight + 16.dp
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = measurementModeBottomPadding)
-                .onSizeChanged { measurementOverlaySize = it }
+                .fillMaxWidth()
+                .weight(1f)
         ) {
+            val temperatureBarWidth = (maxWidth * 0.038f).coerceIn(14.dp, 18.dp)
+            val temperatureBarHeight = (maxHeight * 0.75f).coerceIn(270.dp, 414.dp)
+            val temperatureLabelShape = MaterialTheme.shapes.small
+
+            // GLSurfaceView ocupa apenas a área térmica (acima da toolbar)
+            AndroidView(
+                factory = { context: Context ->
+                    CustomGLSurfaceView(context).apply {
+                        setEGLContextClientVersion(3)
+                        preserveEGLContextOnPause = false
+                        onSizeChangedCallback = { w: Int, h: Int ->
+                            viewModel.onSurfaceSizeChanged(w, h)
+                        }
+                        viewModel.attachGlSurface(this)
+                        viewModel.start()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color = Color.White)
+            )
+
+            // Overlays de medição preenchem toda a área térmica
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { measurementOverlaySize = it }
+            ) {
             if (sp1State.enabled) {
                 MeasurementSpotOverlay(
                     state = sp1State,
@@ -419,7 +421,7 @@ fun ThermogramsCameraScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = bottomReservedHeight + 8.dp),
+                .padding(bottom = 24.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -458,317 +460,7 @@ fun ThermogramsCameraScreen(
             }
         }
 
-        //Toolbar
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .navigationBarsPadding(),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    tonalElevation = 8.dp,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(toolbarHeight)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        // Botão único para alternância Sp1 <-> Bx1 <-> Sp1 desabilitado
-                        TaskBarButton(
-                            active = sp1State.enabled || bx1State.enabled,
-                            onClick = {
-                                when {
-                                    // Se Sp1 está habilitado, ativa Bx1 e desabilita Sp1
-                                    sp1State.enabled -> {
-                                        sp1State = sp1State.copy(enabled = false, add = false, remove = true)
-                                        bx1State = bx1State.copy(enabled = true, add = true, remove = false)
-                                    }
-                                    // Se Bx1 está habilitado, desabilita Sp1 e coloca Bx1 como remove
-                                    bx1State.enabled -> {
-                                        sp1State = sp1State.copy(enabled = false, add = false, remove = true)
-                                        bx1State = bx1State.copy(enabled = false, add = false, remove = true)
-                                    }
-                                    // Se ambos desabilitados, volta para Sp1 habilitado
-                                    else -> {
-                                        sp1State = sp1State.copy(enabled = true, add = true, remove = false)
-                                        bx1State = bx1State.copy(enabled = false, add = false, remove = true)
-                                    }
-                                }
-                                syncMeasurementStates(viewModel, sp1State, bx1State, deltaState)
-                            }
-                        ) {
-                            when {
-                                sp1State.enabled -> MeasurementSpotToolGlyph(centerColor = Color(0xFFE63600)
-                                )
-                                bx1State.enabled -> MeasurementSquareToolGlyph(centerColor = Color(0xFFE63600))
-                                else -> MeasurementSpotToolGlyph(centerColor = Color.LightGray)
-                            }
-                        }
-
-                        // MeasurementRectangle button (delta) só habilitado se Sp1 ou Bx1 estiverem habilitados
-                        // Estado derivado para habilitação do botão delta
-                        val deltaEnabled by remember(sp1State.enabled, bx1State.enabled) {
-                            mutableStateOf(sp1State.enabled || bx1State.enabled)
-                        }
-
-                        // Efeito colateral para garantir que deltaState seja desabilitado e removido quando deltaEnabled ficar falso
-                        DisposableEffect(deltaEnabled) {
-                            if (!deltaEnabled && deltaState.enabled) {
-                                deltaState = deltaState.copy(enabled = false, remove = true)
-                                syncMeasurementStates(viewModel, sp1State, bx1State, deltaState)
-                            }
-                            onDispose { }
-                        }
-
-                        Box(
-                            modifier = Modifier.alpha(if (deltaEnabled) 1f else 0.4f)
-                        ) {
-                                TaskBarButton(
-                                    active = deltaState.enabled,
-                                    onClick = {
-                                        if (deltaEnabled) {
-                                            val newEnabled = !deltaState.enabled
-                                            if (newEnabled) {
-                                                // Ao habilitar, posiciona logo abaixo do Bx1
-                                                val offsetY = bx1State.sizeFraction * 1.2f // deslocamento vertical proporcional ao tamanho
-                                                val newCenterY = (bx1State.centerYFraction + offsetY).coerceAtMost(0.95f)
-                                                deltaState = deltaState.copy(
-                                                    enabled = true,
-                                                    add = true,
-                                                    remove = false,
-                                                    centerXFraction = bx1State.centerXFraction,
-                                                    centerYFraction = newCenterY
-                                                )
-                                            } else {
-                                                deltaState = deltaState.copy(
-                                                    enabled = false,
-                                                    add = false,
-                                                    remove = true
-                                                )
-                                            }
-                                            syncMeasurementStates(viewModel, sp1State, bx1State, deltaState)
-                                        }
-                                    }
-                                ) {
-                                    Text(
-                                        text = "ΔT",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = if (deltaState.enabled) Color(0xFFFFA500) else Color.LightGray
-                                    )
-                                }
-                        }
-
-                        // Palette selector
-                        var paletteMenuExpanded by remember { mutableStateOf(false) }
-                        val currentPalette by viewModel.currentPalette.collectAsState()
-                        val filteredPalettesWithLabel = viewModel.filteredPalettesWithLabel
-                        TaskBarButton(onClick = { paletteMenuExpanded = true }, active = paletteMenuExpanded) {
-                            Icon(
-                                imageVector = Icons.Filled.ColorLens,
-                                contentDescription = "Palette"
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = paletteMenuExpanded,
-                            onDismissRequest = { paletteMenuExpanded = false },
-                            containerColor = Color.Transparent, // 👈 ESSENCIAL
-                            tonalElevation = 0.dp,              // 👈 remove sombra tonal
-                            shadowElevation = 0.dp,             // 👈 remove sombra
-                            offset = DpOffset(x = 0.dp, y = (-100).dp) // 👈 sobe o menu 20dp
-                        ) {
-                            filteredPalettesWithLabel.forEach { (palette, label) ->
-                                DropdownMenuItem(
-                                    trailingIcon = {
-                                        if (palette == currentPalette) {
-                                            Icon(
-                                                Icons.Filled.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .background(
-                                                        color = Color.Black.copy(alpha = 0.5f), // 50% de transparência
-                                                        shape = RoundedCornerShape(6.dp)
-                                                    ),
-                                            )
-                                        }
-                                    },
-                                    text = {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    color = Color.Black.copy(alpha = 0.5f), // 50% de transparência
-                                                    shape = RoundedCornerShape(6.dp)
-                                                )
-                                                .padding(horizontal = 8.dp, vertical = 0.dp)
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                color = Color.White
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.selectPalette(palette)
-                                    }
-                                )
-                            }
-                        }
-
-                        // Fusion mode selector
-                        var fusionMenuExpanded by remember { mutableStateOf(false) }
-                        val currentFusionMode by viewModel.currentFusionMode.collectAsState()
-                        val fusionModesWithLabel = viewModel.fusionModesWithLabel
-                        TaskBarButton(onClick = { fusionMenuExpanded = true }, active = fusionMenuExpanded) {
-                            Icon(
-                                imageVector = Icons.Filled.Image,
-                                contentDescription = "Image Mode"
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = fusionMenuExpanded,
-                            onDismissRequest = { fusionMenuExpanded = false },
-                            containerColor = Color.Transparent,
-                            tonalElevation = 0.dp,
-                            shadowElevation = 0.dp,
-                            offset = DpOffset(x = 0.dp, y = (-100).dp)
-                        ) {
-                            fusionModesWithLabel.forEach { (mode, label) ->
-                                DropdownMenuItem(
-                                    trailingIcon = {
-                                        if (mode == currentFusionMode) {
-                                            Icon(
-                                                Icons.Filled.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .background(
-                                                        color = Color.Black.copy(alpha = 0.5f),
-                                                        shape = RoundedCornerShape(6.dp)
-                                                    ),
-                                            )
-                                        }
-                                    },
-                                    text = {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    color = Color.Black.copy(alpha = 0.5f),
-                                                    shape = RoundedCornerShape(6.dp)
-                                                )
-                                                .padding(horizontal = 8.dp, vertical = 0.dp)
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                color = Color.White
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.selectFusionMode(mode)
-                                        // Removido: fusionMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
-
-                        // Flashlight toggle button
-                        TaskBarButton(active = isFlashOn, onClick = {
-                            viewModel.toggleFlash { success, msg ->
-                                if (!success) {
-                                    scope.launch { snackbarHostState.showSnackbar("Flash failed: $msg") }
-                                } else {
-                                    isFlashOn = !isFlashOn
-                                }
-                            }
-                        }) {
-                            Icon(
-//                                imageVector = if (isFlashOn) Icons.Filled.FlashlightOn else Icons.Filled.FlashlightOn,
-                                imageVector = Icons.Filled.FlashlightOn,
-                                contentDescription = "Flashlight",
-                                tint = if (isFlashOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        // Laser toggle button
-                        TaskBarButton(active = isLaserOn, onClick = {
-                            viewModel.toggleLaser { success, msg ->
-                                if (!success) {
-                                    scope.launch { snackbarHostState.showSnackbar("Laser failed: $msg") }
-                                } else {
-                                    isLaserOn = !isLaserOn
-                                }
-                            }
-                        }) {
-                            MeasurementLaserToolGlyph(centerColor = Color.Red)
-                        }
-
-                        // Toolbar: adicionar overlay de configuração
-                        TaskBarButton(active = isThermalMode, onClick = { showThermalParams = true }) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = "Settings",
-                                tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-
-                // Always show the recent thermograms area with dark gray background and placeholder if empty
-                val recentBarHeight = 72.dp
-                Surface(
-                    color = Color(0xFF23272A), // dark gray
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(recentBarHeight)
-                ) {
-                    if (recentThermograms.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Termogramas Recentes...",
-                                color = Color.LightGray,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    } else {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp)
-                            ) {
-                                items(recentThermograms) { imagePath ->
-                                    RecentThermogramThumbnail(
-                                        imagePath = imagePath,
-                                        onOpen = {
-                                            navController.currentBackStackEntry
-                                                ?.savedStateHandle
-                                                ?.set("thermogram_recent_list", ArrayList(recentThermograms))
-                                            navController.navigate("${NavRoutes.THERMOGRAM_IMAGE}/${Uri.encode(imagePath)}")
-                                        },
-                                        onRemove = {
-                                            viewModel.removeRecentThermogram(imagePath, deleteFile = true)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Overlay watermark in bottom start above toolbar
+        // Overlay watermark
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomStart
@@ -811,9 +503,11 @@ fun ThermogramsCameraScreen(
                         if (sp1State.enabled && measurementTemperatures.bx1 != null) {
                             refLabel = bx1State.label
                             refValue = measurementTemperatures.bx1
+                            deltaState = deltaState.copy(label = bx1State.label)
                         } else if (bx1State.enabled && measurementTemperatures.bx2 != null) {
                             refLabel = deltaState.label
                             refValue = measurementTemperatures.bx2
+                            deltaState = deltaState.copy(label = "Bx2")
                         }
                     }
                     val refText = if (refValue != null) String.format(Locale.getDefault(), "%.1f\t°C", refValue) else "--"
@@ -845,16 +539,242 @@ fun ThermogramsCameraScreen(
                 onDismiss = { showThermalParams = false }
             )
         }
-    }
+        } // fim BoxWithConstraints (área térmica)
+
+        // ===== TOOLBAR + RECENT (fora da área térmica) =====
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                tonalElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(toolbarHeight)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    // Botão único para alternância Sp1 <-> Bx1 <-> Sp1 desabilitado
+                    TaskBarButton(
+                        active = sp1State.enabled || bx1State.enabled,
+                        onClick = {
+                            when {
+                                sp1State.enabled -> {
+                                    sp1State = sp1State.copy(enabled = false, add = false, remove = true)
+                                    bx1State = bx1State.copy(enabled = true, add = true, remove = false)
+                                }
+                                bx1State.enabled -> {
+                                    sp1State = sp1State.copy(enabled = false, add = false, remove = true)
+                                    bx1State = bx1State.copy(enabled = false, add = false, remove = true)
+                                }
+                                else -> {
+                                    sp1State = sp1State.copy(enabled = true, add = true, remove = false)
+                                    bx1State = bx1State.copy(enabled = false, add = false, remove = true)
+                                }
+                            }
+                            syncMeasurementStates(viewModel, sp1State, bx1State, deltaState)
+                        }
+                    ) {
+                        when {
+                            sp1State.enabled -> MeasurementSpotToolGlyph(centerColor = Color(0xFFE63600))
+                            bx1State.enabled -> MeasurementSquareToolGlyph(centerColor = Color(0xFFE63600))
+                            else -> MeasurementSpotToolGlyph(centerColor = Color.LightGray)
+                        }
+                    }
+
+                    // Botão ΔT
+                    val deltaEnabled by remember(sp1State.enabled, bx1State.enabled) {
+                        mutableStateOf(sp1State.enabled || bx1State.enabled)
+                    }
+                    DisposableEffect(deltaEnabled) {
+                        if (!deltaEnabled && deltaState.enabled) {
+                            deltaState = deltaState.copy(enabled = false, remove = true)
+                            syncMeasurementStates(viewModel, sp1State, bx1State, deltaState)
+                        }
+                        onDispose { }
+                    }
+                    Box(modifier = Modifier.alpha(if (deltaEnabled) 1f else 0.4f)) {
+                        TaskBarButton(
+                            active = deltaState.enabled,
+                            onClick = {
+                                if (deltaEnabled) {
+                                    val newEnabled = !deltaState.enabled
+                                    if (newEnabled) {
+                                        val offsetY = bx1State.sizeFraction * 1.2f
+                                        val newCenterY = (bx1State.centerYFraction + offsetY).coerceAtMost(0.72f)
+                                        deltaState = deltaState.copy(
+                                            enabled = true,
+                                            add = true,
+                                            remove = false,
+                                            centerXFraction = bx1State.centerXFraction,
+                                            centerYFraction = newCenterY
+                                        )
+                                    } else {
+                                        deltaState = deltaState.copy(enabled = false, add = false, remove = true)
+                                    }
+                                    syncMeasurementStates(viewModel, sp1State, bx1State, deltaState)
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = "ΔT",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (deltaState.enabled) Color(0xFFFFA500) else Color.LightGray
+                            )
+                        }
+                    }
+
+                    // Palette selector
+                    var paletteMenuExpanded by remember { mutableStateOf(false) }
+                    val currentPalette by viewModel.currentPalette.collectAsState()
+                    val filteredPalettesWithLabel = viewModel.filteredPalettesWithLabel
+                    TaskBarButton(onClick = { paletteMenuExpanded = true }, active = paletteMenuExpanded) {
+                        Icon(imageVector = Icons.Filled.ColorLens, contentDescription = "Palette")
+                    }
+                    DropdownMenu(
+                        expanded = paletteMenuExpanded,
+                        onDismissRequest = { paletteMenuExpanded = false },
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        offset = DpOffset(x = 0.dp, y = (-100).dp)
+                    ) {
+                        filteredPalettesWithLabel.forEach { (palette, label) ->
+                            DropdownMenuItem(
+                                trailingIcon = {
+                                    if (palette == currentPalette) {
+                                        Icon(Icons.Filled.Check, contentDescription = null,
+                                            modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)))
+                                    }
+                                },
+                                text = {
+                                    Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp)) {
+                                        Text(text = label, color = Color.White)
+                                    }
+                                },
+                                onClick = { viewModel.selectPalette(palette) }
+                            )
+                        }
+                    }
+
+                    // Fusion mode selector
+                    var fusionMenuExpanded by remember { mutableStateOf(false) }
+                    val currentFusionMode by viewModel.currentFusionMode.collectAsState()
+                    val fusionModesWithLabel = viewModel.fusionModesWithLabel
+                    TaskBarButton(onClick = { fusionMenuExpanded = true }, active = fusionMenuExpanded) {
+                        Icon(imageVector = Icons.Filled.Image, contentDescription = "Image Mode")
+                    }
+                    DropdownMenu(
+                        expanded = fusionMenuExpanded,
+                        onDismissRequest = { fusionMenuExpanded = false },
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        offset = DpOffset(x = 0.dp, y = (-100).dp)
+                    ) {
+                        fusionModesWithLabel.forEach { (mode, label) ->
+                            DropdownMenuItem(
+                                trailingIcon = {
+                                    if (mode == currentFusionMode) {
+                                        Icon(Icons.Filled.Check, contentDescription = null,
+                                            modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)))
+                                    }
+                                },
+                                text = {
+                                    Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp)) {
+                                        Text(text = label, color = Color.White)
+                                    }
+                                },
+                                onClick = { viewModel.selectFusionMode(mode) }
+                            )
+                        }
+                    }
+
+                    // Flashlight
+                    TaskBarButton(active = isFlashOn, onClick = {
+                        viewModel.toggleFlash { success, msg ->
+                            if (!success) scope.launch { snackbarHostState.showSnackbar("Flash failed: $msg") }
+                            else isFlashOn = !isFlashOn
+                        }
+                    }) {
+                        Icon(imageVector = Icons.Filled.FlashlightOn, contentDescription = "Flashlight",
+                            tint = if (isFlashOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    // Laser
+                    TaskBarButton(active = isLaserOn, onClick = {
+                        viewModel.toggleLaser { success, msg ->
+                            if (!success) scope.launch { snackbarHostState.showSnackbar("Laser failed: $msg") }
+                            else isLaserOn = !isLaserOn
+                        }
+                    }) {
+                        MeasurementLaserToolGlyph(centerColor = Color.Red)
+                    }
+
+                    // Settings
+                    TaskBarButton(active = isThermalMode, onClick = { showThermalParams = true }) {
+                        Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings",
+                            tint = if (isThermalMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+
+            // Recent thermograms strip
+            Surface(
+                color = Color(0xFF23272A),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(recentBarHeight)
+            ) {
+                if (recentThermograms.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Termogramas Recentes...", color = Color.LightGray, style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(recentThermograms) { imagePath ->
+                                RecentThermogramThumbnail(
+                                    imagePath = imagePath,
+                                    onOpen = {
+                                        navController.currentBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set("thermogram_recent_list", ArrayList(recentThermograms))
+                                        navController.navigate("${NavRoutes.THERMOGRAM_IMAGE}/${Uri.encode(imagePath)}")
+                                    },
+                                    onRemove = {
+                                        viewModel.removeRecentThermogram(imagePath, deleteFile = true)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    } // fim Column principal
 }
 
 @Composable
 private fun WatermarkOverlay(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
-            .padding(start = 8.dp, bottom = 120.dp) // 100dp to sit above toolbar and recent bar
+            .padding(start = 8.dp, bottom = 8.dp)
 //            .background(Color(0x80000000), shape = RoundedCornerShape(12.dp))
-            .padding(horizontal = 6.dp, vertical = 12.dp),
+            .padding(horizontal = 6.dp, vertical = 0.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
@@ -877,7 +797,7 @@ private fun ThermalParametersOverlay(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.6f))
             .clickable(onClick = onDismiss, indication = null, interactionSource = remember { MutableInteractionSource() })
-            .offset(y = (-60).dp)
+
     ) {
         Box(
             modifier = Modifier

@@ -5,6 +5,7 @@ import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
+import com.tech.thermography.android.util.Constants
 
 interface SyncApi {
     
@@ -67,11 +68,11 @@ interface SyncApi {
     suspend fun downloadFile(@Url url: String): Response<ResponseBody>
 
     @Multipart
-    @POST("http://34.39.196.181:5000/api/uploadThermogram")
+    @POST("${Constants.IMAGE_BASE_URL}/api/uploadThermogram")
     suspend fun uploadThermogram(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @Multipart
-    @POST("http://34.39.196.181:5000/api/uploadImage")
+    @POST("${Constants.IMAGE_BASE_URL}/api/uploadImage")
     suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @GET("thermographic-inspection-records")
