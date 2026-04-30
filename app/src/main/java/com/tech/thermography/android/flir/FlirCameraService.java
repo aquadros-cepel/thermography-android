@@ -23,7 +23,6 @@ public final class FlirCameraService {
     private AceController.TemperatureRange latestTemperatureRange;
     private MeasurementTemperatures latestsMeasurementTemperatures;
 
-
     public AceController.TemperatureRange updateRangeFromThermalImage(@NonNull ThermalImage thermalImage) {
         try {
             Scale scale = thermalImage.getScale();
@@ -35,7 +34,8 @@ public final class FlirCameraService {
             ThermalValue minValue = scale.getRangeMin();
             ThermalValue maxValue = scale.getRangeMax();
             if (minValue == null || maxValue == null) {
-//                ThermalLog.w(TAG, "Scale range values are null: min=" + minValue + ", max=" + maxValue);
+                // ThermalLog.w(TAG, "Scale range values are null: min=" + minValue + ", max=" +
+                // maxValue);
                 return latestTemperatureRange;
             }
 
@@ -43,7 +43,7 @@ public final class FlirCameraService {
             double max = maxValue.asCelsius().value;
             latestTemperatureRange = new AceController.TemperatureRange(min, max);
 
-//            ThermalLog.d(TAG, "Range (Celsius): " + min + "°C - " + max + "°C");
+            // ThermalLog.d(TAG, "Range (Celsius): " + min + "°C - " + max + "°C");
             return latestTemperatureRange;
         } catch (Exception e) {
             ThermalLog.e(TAG, "Failed to read range from thermal image: " + e.getMessage());
@@ -54,10 +54,11 @@ public final class FlirCameraService {
     public AceController.TemperatureRange getLatestTemperatureRange() {
         return latestTemperatureRange;
     }
+
     public void updateMeasurementTemperaturesFromThermalImage(@NonNull ThermalImage thermalImage) {
         Double spotTemp = null;
         Double bx1Temp = null;
-        Double bx2Temp = null;
+        Double deltaTemp = null;
         try {
             MeasurementShapeCollection measurements = thermalImage.getMeasurements();
             if (measurements != null) {
@@ -75,7 +76,7 @@ public final class FlirCameraService {
                                 }
                             }
                         } catch (Exception e) {
-//                            ThermalLog.e(TAG, "Failed to extract spot temperature: " + e.getMessage());
+                            // ThermalLog.e(TAG, "Failed to extract spot temperature: " + e.getMessage());
                         }
                     }
                 }
@@ -93,24 +94,24 @@ public final class FlirCameraService {
                                 }
                             }
                         } catch (Exception e) {
-//                            ThermalLog.e(TAG, "Failed to extract bx1 temperature: " + e.getMessage());
+                            // ThermalLog.e(TAG, "Failed to extract bx1 temperature: " + e.getMessage());
                         }
                     }
                 }
-                // Bx2
+                // delta
                 if (rects != null && rects.size() > 1) {
-                    Object bx2 = rects.get(1);
-                    if (bx2 != null) {
+                    Object delta = rects.get(1);
+                    if (delta != null) {
                         try {
-                            Object maxValue = bx2.getClass().getMethod("getMaxValue").invoke(bx2);
+                            Object maxValue = delta.getClass().getMethod("getMaxValue").invoke(delta);
                             if (maxValue != null) {
                                 Object celsius = maxValue.getClass().getMethod("asCelsius").invoke(maxValue);
                                 if (celsius != null) {
-                                    bx2Temp = (Double) celsius.getClass().getField("value").get(celsius);
+                                    deltaTemp = (Double) celsius.getClass().getField("value").get(celsius);
                                 }
                             }
                         } catch (Exception e) {
-//                            ThermalLog.e(TAG, "Failed to extract bx2 temperature: " + e.getMessage());
+                            // ThermalLog.e(TAG, "Failed to extract delta temperature: " + e.getMessage());
                         }
                     }
                 }
@@ -118,16 +119,16 @@ public final class FlirCameraService {
         } catch (Exception e) {
             ThermalLog.e(TAG, "Failed to read measurement temperatures: " + e.getMessage());
         }
-        latestsMeasurementTemperatures = new MeasurementTemperatures(spotTemp, bx1Temp, bx2Temp);
+        latestsMeasurementTemperatures = new MeasurementTemperatures(spotTemp, bx1Temp, deltaTemp);
     }
 
     public MeasurementTemperatures getLatestMeasurementTemperatures() {
         return latestsMeasurementTemperatures;
     }
+
     public void applyMeasurements(
             @NonNull ThermalImage thermalImage,
-            @NonNull List<MeasurementState> states
-    ) {
+            @NonNull List<MeasurementState> states) {
         try {
             MeasurementShapeCollection measurements = thermalImage.getMeasurements();
             if (measurements == null) {
@@ -138,7 +139,8 @@ public final class FlirCameraService {
             measurements.clear();
 
             for (MeasurementState state : states) {
-                if (state == null) continue;
+                if (state == null)
+                    continue;
 
                 if (state.getEnabled()) {
 
@@ -148,15 +150,13 @@ public final class FlirCameraService {
                         applyMeasurementSquare(
                                 measurements,
                                 thermalImage,
-                                (MeasurementSquareState) state
-                        );
+                                (MeasurementSquareState) state);
 
                     } else if (state instanceof MeasurementSpotState) {
                         applyMeasurementSpot(
                                 measurements,
                                 thermalImage,
-                                (MeasurementSpotState) state
-                        );
+                                (MeasurementSpotState) state);
                     }
                 }
             }
@@ -169,8 +169,7 @@ public final class FlirCameraService {
     private void applyMeasurementSpot(
             @NonNull MeasurementShapeCollection measurements,
             @NonNull ThermalImage thermalImage,
-            @NonNull MeasurementSpotState state
-    ){
+            @NonNull MeasurementSpotState state) {
         try {
             int imageWidth = thermalImage.getWidth();
             int imageHeight = thermalImage.getHeight();
@@ -180,17 +179,18 @@ public final class FlirCameraService {
 
             measurements.addSpot(centerX, centerY);
 
-            ThermalLog.d(TAG, "Measurement Spot applied (" + state.getLabel() + ") at [" + centerX + "," + centerY + "]");
+            ThermalLog.d(TAG,
+                    "Measurement Spot applied (" + state.getLabel() + ") at [" + centerX + "," + centerY + "]");
         } catch (Exception e) {
             ThermalLog.w(TAG, "Unable to add Spot measurement (" + state.getLabel() + "): " + e.getMessage());
         }
 
     }
+
     private void applyMeasurementSquare(
             @NonNull MeasurementShapeCollection measurements,
             @NonNull ThermalImage thermalImage,
-            @NonNull MeasurementSquareState state
-    ) {
+            @NonNull MeasurementSquareState state) {
         try {
             int imageWidth = thermalImage.getWidth();
             int imageHeight = thermalImage.getHeight();
@@ -205,7 +205,8 @@ public final class FlirCameraService {
             int top = Math.max(0, Math.min(centerY - halfSize, imageHeight - squareSize));
 
             measurements.addRectangle(left, top, squareSize, squareSize);
-            ThermalLog.d(TAG, "Measurement rectangle applied (" + state.getLabel() + ") at [" + left + "," + top + "] size=" + squareSize);
+            ThermalLog.d(TAG, "Measurement rectangle applied (" + state.getLabel() + ") at [" + left + "," + top
+                    + "] size=" + squareSize);
         } catch (Exception e) {
             ThermalLog.w(TAG, "Unable to add rectangle measurement (" + state.getLabel() + "): " + e.getMessage());
         }

@@ -105,23 +105,22 @@ fun MeasurementSquareOverlay(
                     .size(with(density) { squareSizePx.toDp() })
                     .border(2.dp, Color.White)
                     .clip(RoundedCornerShape(2.dp))
-            )
-        }
-
-        if (state.label.isNotEmpty()) {
-            Surface(
-                color = Color(0xCC000000),
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier.border(1.dp, Color.White, MaterialTheme.shapes.large)
             ) {
-                Text(
-                    text = state.label,
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier
-                        .background(Color.Transparent)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                // Label dentro da caixa branca, alinhado ao canto inferior esquerdo
+                if (state.label.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .background(Color(0xFF000000).copy(alpha = 0.3f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = state.label,
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
             }
         }
     }

@@ -3,7 +3,7 @@
 ## 🎯 Problema Identificado
 
 **Situação Anterior:**
-- PixelCopy capturava **apenas elementos UI** (toolbar, temperature bar, Bx1, Bx2)
+- PixelCopy capturava **apenas elementos UI** (toolbar, temperature bar, Bx1, delta)
 - **Fundo preto** onde deveria ter a stream térmica
 
 **Causa:**
@@ -32,7 +32,7 @@ captureComposeUI(activity, width, height)
 - Usa `PixelCopy.request()` para capturar window
 - CountDownLatch para tornar síncrono
 - Resize para match com tamanho da térmica
-- **Resultado:** Bitmap com elementos UI (toolbar, temperature bar, Bx1, Bx2)
+- **Resultado:** Bitmap com elementos UI (toolbar, temperature bar, Bx1, delta)
 
 ### **Step 3: Compositar**
 ```kotlin
@@ -55,7 +55,7 @@ Composite Bitmap = Layers:
 └─ Layer 2 (Overlay): Elementos UI (PixelCopy)
     ├─ Temperature bar (gradient lateral)
     ├─ Valores min/max temperatura
-    ├─ Measurement boxes (Bx1, Bx2)
+    ├─ Measurement boxes (Bx1, delta)
     ├─ Toolbar (botões inferiores)
     └─ Ícone settings
 ```
@@ -103,7 +103,7 @@ Este arquivo mostra o **resultado final composite** (thermal + UI).
 - [✅] Stream térmica **COLORIDA** (roxo, laranja, amarelo)
 - [✅] Temperature bar lateral (gradient)
 - [✅] Valores de temperatura (29,1 e 25,7)
-- [✅] Measurement boxes (Bx1, Bx2) se ativados
+- [✅] Measurement boxes (Bx1, delta) se ativados
 - [✅] Toolbar inferior (botões)
 - [✅] Ícone settings
 
@@ -124,7 +124,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ### **Passo 2: Tirar Snapshot**
 1. Abra o app
 2. Conecte FLIR camera
-3. **Ative Bx1 e Bx2** (opcional)
+3. **Ative Bx1 e delta** (opcional)
 4. Aguarde stream aparecer
 5. Clique no botão de snapshot
 
@@ -140,7 +140,7 @@ Abra `debug_composite_XXXXX.jpg` e confirme:
 **Deve mostrar:**
 - ✅ **Fundo colorido** (stream térmica, não preto!)
 - ✅ Temperature bar lateral
-- ✅ Bx1 e Bx2 (se ativados)
+- ✅ Bx1 e delta (se ativados)
 - ✅ Toolbar
 - ✅ Valores de temperatura
 
@@ -154,7 +154,7 @@ Se TUDO estiver visível → **PERFEITO!** 🎉
 |----------|---------------------|-------------------|
 | **Fundo** | ❌ Preto | ✅ Térmica colorida |
 | **Temperature bar** | ✅ Visível | ✅ Visível |
-| **Bx1/Bx2** | ✅ Visível | ✅ Visível |
+| **Bx1/delta** | ✅ Visível | ✅ Visível |
 | **Toolbar** | ✅ Visível | ✅ Visível |
 | **Valores temp** | ✅ Visível | ✅ Visível |
 
@@ -197,7 +197,7 @@ Após testar, verificar:
 - [ ] `debug_composite_*.jpg` mostra **térmica colorida + UI**
 - [ ] Fundo **NÃO está preto**
 - [ ] Temperature bar visível
-- [ ] Bx1 e Bx2 visíveis (se ativados)
+- [ ] Bx1 e delta visíveis (se ativados)
 - [ ] Toolbar visível
 - [ ] `snapshot_*.jpg` final funciona em FLIR Tools
 

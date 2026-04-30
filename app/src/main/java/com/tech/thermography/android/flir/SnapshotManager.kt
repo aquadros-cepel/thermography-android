@@ -32,7 +32,7 @@ class SnapshotManager @Inject constructor() {
     
     /**
      * Captures the ENTIRE SCREEN (GL thermal + Compose UI) synchronously and returns a JavaImageBuffer for overlay.
-     * This combines: GL framebuffer (thermal stream) + Compose UI (toolbar, temperature bar, Bx1/Bx2).
+     * This combines: GL framebuffer (thermal stream) + Compose UI (toolbar, temperature bar, Bx1/delta).
      * 
      * Strategy:
      * 1. Capture GL framebuffer with glReadPixels (thermal background)
@@ -88,7 +88,7 @@ class SnapshotManager @Inject constructor() {
 //                    compositeBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
 //                }
 //                ThermalLog.i(TAG, "🔍 DEBUG: Composite saved to: ${debugFile.absolutePath}")
-//                ThermalLog.i(TAG, "🔍 DEBUG: Should show thermal + toolbar + temperature bar + Bx1 + Bx2")
+//                ThermalLog.i(TAG, "🔍 DEBUG: Should show thermal + toolbar + temperature bar + Bx1 + delta")
 //            } catch (e: Exception) {
 //                ThermalLog.w(TAG, "Failed to save debug composite: ${e.message}")
 //            }

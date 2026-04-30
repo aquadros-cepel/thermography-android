@@ -31,7 +31,7 @@
 
 **Recursos:**
 - ✅ Dropdown material 3 com lista de ROIs
-- ✅ Mostra label do ROI (ex: "Bx1", "Bx2")
+- ✅ Mostra label do ROI (ex: "Bx1", "delta")
 - ✅ Versão VIEW (apenas texto) e EDIT (dropdown interativo)
 - ✅ Enabled/disabled baseado no modo
 
