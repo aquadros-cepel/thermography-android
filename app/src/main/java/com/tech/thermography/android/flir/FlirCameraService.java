@@ -140,7 +140,7 @@ public final class FlirCameraService {
             for (MeasurementState state : states) {
                 if (state == null) continue;
 
-                if (state.getEnabled() || !state.getRemove()) {
+                if (state.getEnabled()) {
 
                     ThermalLog.w(TAG, "Applying measurement: " + state);
 

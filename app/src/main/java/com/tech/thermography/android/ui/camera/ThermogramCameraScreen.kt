@@ -62,7 +62,9 @@ import com.flir.thermalsdk.image.PaletteManager
 import com.flir.thermalsdk.image.ThermalValue
 import com.flir.thermalsdk.image.TemperatureUnit
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.alpha
 import com.tech.thermography.android.ui.components.CompactUiWrapper
+import androidx.compose.ui.graphics.graphicsLayer
 
 
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
@@ -206,9 +208,13 @@ fun ThermogramsCameraScreen(
     var isThermalMode by remember { mutableStateOf(false) }
     var isFlashOn by remember { mutableStateOf(false) }
     var isLaserOn by remember { mutableStateOf(false) }
-    var sp1State by remember { mutableStateOf(MeasurementSpotState(label = "Sp1",enabled = true)) }
-    var bx1State by remember { mutableStateOf(MeasurementSquareState(label = "Bx1", enabled = false)) }
-    var bx2State by remember { mutableStateOf(MeasurementSquareState(label = "Ref")) }
+    var sp1State by remember { mutableStateOf(MeasurementSpotState(label = "Sp1", enabled = true, add = true, remove = false)) }
+    var bx1State by remember { mutableStateOf(MeasurementSquareState(label = "Bx1", enabled = false, add = true, remove = false)) }
+    var bx2State by remember { mutableStateOf(MeasurementSquareState(label = "Bx2", add = true, remove = false)) }
+    // Sincroniza o estado inicial do Sp1 com o ViewModel/controller após todas as variáveis de estado serem declaradas
+    LaunchedEffect(Unit) {
+        syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
+    }
     var measurementOverlaySize by remember { mutableStateOf(IntSize.Zero) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -467,53 +473,58 @@ fun ThermogramsCameraScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        // MeasurementSpot toggle button (Sp1)
-                        TaskBarButton(active = sp1State.enabled, onClick = {
-                            val newEnabled = !sp1State.enabled
-                            sp1State = sp1State.copy(enabled = newEnabled)
-                            if (newEnabled) {
-                                bx1State = bx1State.copy(
-                                    enabled = false,
-                                    add = false,
-                                    remove = true
-                                )
+                        // Botão único para alternância Sp1 <-> Bx1 <-> Sp1 desabilitado
+                        TaskBarButton(
+                            active = sp1State.enabled || bx1State.enabled,
+                            onClick = {
+                                when {
+                                    // Se Sp1 está habilitado, ativa Bx1 e desabilita Sp1
+                                    sp1State.enabled -> {
+                                        sp1State = sp1State.copy(enabled = false, add = false, remove = true)
+                                        bx1State = bx1State.copy(enabled = true, add = true, remove = false)
+                                    }
+                                    // Se Bx1 está habilitado, desabilita Sp1 e coloca Bx1 como remove
+                                    bx1State.enabled -> {
+                                        sp1State = sp1State.copy(enabled = false, add = false, remove = true)
+                                        bx1State = bx1State.copy(enabled = false, add = false, remove = true)
+                                    }
+                                    // Se ambos desabilitados, volta para Sp1 habilitado
+                                    else -> {
+                                        sp1State = sp1State.copy(enabled = true, add = true, remove = false)
+                                        bx1State = bx1State.copy(enabled = false, add = false, remove = true)
+                                    }
+                                }
+                                syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
                             }
-                            syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
-                        }) {
-                            MeasurementSpotToolGlyph(centerColor = Color.Red)
+                        ) {
+                            when {
+                                sp1State.enabled -> MeasurementSpotToolGlyph(centerColor = Color.Red)
+                                bx1State.enabled -> MeasurementSquareToolGlyph(centerColor = Color.Red)
+                                else -> MeasurementSpotToolGlyph(centerColor = Color.LightGray)
+                            }
                         }
 
-                        // MeasurementRectangle toggle button (Bx1)
-                        TaskBarButton(active = bx1State.enabled, onClick = {
-                            val newEnabled = !bx1State.enabled
-                            bx1State = bx1State.copy(
-                                enabled = newEnabled,
-                                add = newEnabled,
-                                remove = !newEnabled
-                            )
-                            if (newEnabled) {
-                                sp1State = sp1State.copy(
-                                    enabled = false,
-                                    add = false,
-                                    remove = true
-                                )
+                        // MeasurementRectangle button (Bx2) só habilitado se Sp1 ou Bx1 estiverem habilitados
+                        val bx2Enabled = sp1State.enabled || bx1State.enabled
+                        Box(
+                            modifier = Modifier.alpha(if (bx2Enabled) 1f else 0.4f)
+                        ) {
+                            TaskBarButton(
+                                active = bx2State.enabled,
+                                onClick = {
+                                    if (bx2Enabled) {
+                                        val newEnabled = !bx2State.enabled
+                                        bx2State = bx2State.copy(
+                                            enabled = newEnabled,
+                                            add = newEnabled,
+                                            remove = !newEnabled
+                                        )
+                                        syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
+                                    }
+                                }
+                            ) {
+                                MeasurementSquareToolGlyph(centerColor = Color(0xFF2196F3))
                             }
-                            syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
-                        }) {
-                            MeasurementSquareToolGlyph(centerColor = Color.Red)
-                        }
-
-                        // MeasurementRectangle button (Bx2)
-                        TaskBarButton(active = bx2State.enabled, onClick = {
-                            val newEnabled = !bx2State.enabled
-                            bx2State = bx2State.copy(
-                                enabled = newEnabled,
-                                add = newEnabled,
-                                remove = !newEnabled
-                            )
-                            syncMeasurementStates(viewModel, sp1State, bx1State, bx2State)
-                        }) {
-                            MeasurementSquareToolGlyph(centerColor = Color(0xFF2196F3))
                         }
 
                         // Palette selector
@@ -739,7 +750,7 @@ fun ThermogramsCameraScreen(
         ) {
             Column {
                 val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
-                val objLabel = if (sp1State.enabled) sp1State.label else bx1State.label
+                val objLabel = if (sp1State.enabled) sp1State.label else if (bx1State.enabled) bx1State.label else "°C"
                 if (objTemp != null) {
                     Text(
                         text = "$objLabel\t" + String.format(Locale.getDefault(), "%.1f\t°C", objTemp),
