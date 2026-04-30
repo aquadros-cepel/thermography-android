@@ -47,10 +47,11 @@ fun MeasurementSquareOverlay(
     val interactionSizePx = squareSizePx + (interactionPaddingPx * 2)
     val centerX = (state.centerXFraction * overlaySize.width).roundToInt()
     val centerY = (state.centerYFraction * overlaySize.height).roundToInt()
-    val left = (centerX - halfSquarePx - interactionPaddingPx)
-        .coerceIn(0, (overlaySize.width - interactionSizePx).coerceAtLeast(0))
-    val top = (centerY - halfSquarePx - interactionPaddingPx)
-        .coerceIn(0, (overlaySize.height - interactionSizePx).coerceAtLeast(0))
+    // Permite que o quadrado vá até a borda da área útil, sem limitar pelo interactionPaddingPx
+    val left = (centerX - halfSquarePx)
+        .coerceIn(0, (overlaySize.width - squareSizePx).coerceAtLeast(0))
+    val top = (centerY - halfSquarePx)
+        .coerceIn(0, (overlaySize.height - squareSizePx).coerceAtLeast(0))
 
     Column(
         modifier = Modifier
