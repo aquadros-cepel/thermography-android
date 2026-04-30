@@ -58,12 +58,15 @@ public final class FlirCameraService {
     public void updateMeasurementTemperaturesFromThermalImage(@NonNull ThermalImage thermalImage) {
         Double spotTemp = null;
         Double bx1Temp = null;
+        Double bx2Temp = null;
         Double deltaTemp = null;
         try {
             MeasurementShapeCollection measurements = thermalImage.getMeasurements();
+            List spots = null;
+            List rects = null;
             if (measurements != null) {
                 // Spot
-                List spots = measurements.getSpots();
+                spots = measurements.getSpots();
                 if (spots != null && !spots.isEmpty()) {
                     Object spot = spots.get(0);
                     if (spot != null) {
@@ -80,8 +83,8 @@ public final class FlirCameraService {
                         }
                     }
                 }
-                // Bx1
-                List rects = measurements.getRectangles();
+                // Rectangles
+                rects = measurements.getRectangles();
                 if (rects != null && rects.size() > 0) {
                     Object bx1 = rects.get(0);
                     if (bx1 != null) {
@@ -98,28 +101,38 @@ public final class FlirCameraService {
                         }
                     }
                 }
-                // delta
                 if (rects != null && rects.size() > 1) {
-                    Object delta = rects.get(1);
-                    if (delta != null) {
+                    Object bx2 = rects.get(1);
+                    if (bx2 != null) {
                         try {
-                            Object maxValue = delta.getClass().getMethod("getMaxValue").invoke(delta);
+                            Object maxValue = bx2.getClass().getMethod("getMaxValue").invoke(bx2);
                             if (maxValue != null) {
                                 Object celsius = maxValue.getClass().getMethod("asCelsius").invoke(maxValue);
                                 if (celsius != null) {
-                                    deltaTemp = (Double) celsius.getClass().getField("value").get(celsius);
+                                    bx2Temp = (Double) celsius.getClass().getField("value").get(celsius);
                                 }
                             }
                         } catch (Exception e) {
-                            // ThermalLog.e(TAG, "Failed to extract delta temperature: " + e.getMessage());
+                            // ThermalLog.e(TAG, "Failed to extract bx2 temperature: " + e.getMessage());
                         }
                     }
                 }
             }
+            // Cálculo do delta conforme regra:
+            // 1. Se existe Spot e Rect(0): delta = Spot - Rect(0)
+            // 2. Se não existe Spot mas existe Rect(0) e Rect(1): delta = Rect(0) - Rect(1)
+            // 3. Caso contrário, delta = null
+            if (spotTemp != null && bx1Temp != null) {
+                deltaTemp = spotTemp - bx1Temp;
+            } else if (spotTemp == null && bx1Temp != null && bx2Temp != null) {
+                deltaTemp = bx1Temp - bx2Temp;
+            } else {
+                deltaTemp = null;
+            }
         } catch (Exception e) {
             ThermalLog.e(TAG, "Failed to read measurement temperatures: " + e.getMessage());
         }
-        latestsMeasurementTemperatures = new MeasurementTemperatures(spotTemp, bx1Temp, deltaTemp);
+        latestsMeasurementTemperatures = new MeasurementTemperatures(spotTemp, bx1Temp, bx2Temp, deltaTemp);
     }
 
     public MeasurementTemperatures getLatestMeasurementTemperatures() {

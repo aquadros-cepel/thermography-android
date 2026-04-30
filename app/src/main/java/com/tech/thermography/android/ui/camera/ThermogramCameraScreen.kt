@@ -16,13 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Flare
-import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Settings
@@ -51,20 +48,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import com.tech.thermography.android.ui.camera.components.MeasurementSpotGlyph
 import com.tech.thermography.android.ui.camera.components.MeasurementSpotOverlay
 import com.tech.thermography.android.ui.camera.components.MeasurementSquareOverlay
 import com.tech.thermography.android.ui.camera.MeasurementSpotState
 
 
-import com.flir.thermalsdk.image.Palette
-import com.flir.thermalsdk.image.PaletteManager
 import com.flir.thermalsdk.image.ThermalValue
 import com.flir.thermalsdk.image.TemperatureUnit
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.alpha
 import com.tech.thermography.android.ui.components.CompactUiWrapper
-import androidx.compose.ui.graphics.graphicsLayer
 
 
 private class CustomGLSurfaceView(context: Context) : GLSurfaceView(context) {
@@ -199,7 +192,7 @@ fun syncMeasurementStates(
     deltaState: MeasurementSquareState
 ) {
     // Só envia os MeasurementSquares para o controller
-    viewModel.setMeasurementSquareStates(listOf(sp1State, bx1State, deltaState))
+    viewModel.setMeasurementStates(listOf(sp1State, bx1State, deltaState))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -810,16 +803,30 @@ fun ThermogramsCameraScreen(
                 }
 
                 // Se delta (Ref) estiver ativo, mostrar Ref e AT
-                if (deltaState.enabled && measurementTemperatures.delta != null) {
+                if (deltaState.enabled) {
+                    var refLabel = ""
+                    var refValue: Double? = null
+
+                    if (measurementTemperatures != null) {
+                        if (sp1State.enabled && measurementTemperatures.bx1 != null) {
+                            refLabel = bx1State.label
+                            refValue = measurementTemperatures.bx1
+                        } else if (bx1State.enabled && measurementTemperatures.bx2 != null) {
+                            refLabel = deltaState.label
+                            refValue = measurementTemperatures.bx2
+                        }
+                    }
+                    val refText = if (refValue != null) String.format(Locale.getDefault(), "%.1f\t°C", refValue) else "--"
+                    val deltaText = if (measurementTemperatures != null && measurementTemperatures.delta != null)
+                        String.format(Locale.getDefault(), "%.1f\t°C", measurementTemperatures.delta)
+                    else "--"
                     Text(
-                        text = "Ref\t" + (measurementTemperatures.delta?.let { String.format(Locale.getDefault(), "%.1f\t°C", it) } ?: "--"),
+                        text = "$refLabel\t$refText",
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge
                     )
-                    val objTemp = measurementTemperatures.spot ?: measurementTemperatures.bx1
-                    val at = if (objTemp != null && measurementTemperatures.delta != null) objTemp - measurementTemperatures.delta!! else null
                     Text(
-                        text = "ΔT\t\t" + (at?.let { String.format(Locale.getDefault(), "%.1f\t°C", it) } ?: "--"),
+                        text = "ΔT\t\t$deltaText",
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge
                     )

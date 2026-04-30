@@ -253,7 +253,7 @@ class ThermogramCameraViewModel @Inject constructor(
         return controller.getMeasurementTemperatures()
     }
 
-    fun setMeasurementSquareStates(states: List<MeasurementState>) {
+    fun setMeasurementStates(states: List<MeasurementState>) {
         controller.setMeasurementStates(states)
     }
 
