@@ -467,6 +467,12 @@ class ThermalAnomalyViewModel @Inject constructor(
         }
     }
 
+    // Converte URI para path absoluto (/storage/...) ou mantém string para content://
+    private fun Uri.toLocalPath(): String = when (scheme) {
+        "file" -> path ?: toString()
+        else   -> toString()
+    }
+
     private fun handleImageSelected(uri: Uri) {
         _uiState.update { it.copy(thermogramImageUri = uri) }
 
@@ -477,7 +483,8 @@ class ThermalAnomalyViewModel @Inject constructor(
                     val currentUserId = resolveCurrentUserId()
                     val equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID()
                     
-                    val realImageRef = _uiState.value.realImageUri?.toString() ?: ""
+                    val realImageRef = _uiState.value.realImageUri?.toLocalPath() ?: ""
+                    val localPath = uri.toLocalPath()
 
                     // 1. Criar Thermogram de Monitoramento
                     val thermogramId = UUID.randomUUID()
@@ -485,7 +492,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                         id = thermogramId,
                         equipmentId = equipmentId,
                         createdById = currentUserId,
-                        localImagePath = uri.toString(),
+                        localImagePath = localPath,
                         localImageRefPath = realImageRef
                     )
 
@@ -495,7 +502,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                         id = thermogramRefId,
                         equipmentId = equipmentId,
                         createdById = currentUserId,
-                        localImagePath = uri.toString(),
+                        localImagePath = localPath,
                         localImageRefPath = realImageRef
                     )
 
@@ -551,14 +558,15 @@ class ThermalAnomalyViewModel @Inject constructor(
                 result.onSuccess { metadata ->
                     val currentUserId = resolveCurrentUserId()
                     val equipmentId = _uiState.value.selectedEquipment?.id ?: UUID.randomUUID()
-                    val realImageRef = _uiState.value.realImageUri?.toString() ?: ""
-                    
+                    val realImageRef = _uiState.value.realImageUri?.toLocalPath() ?: ""
+                    val localPath = uri.toLocalPath()
+
                     val thermogramRefId = _uiState.value.thermogramRef?.id ?: UUID.randomUUID()
                     val thermogramReference = metadata.toEntity(
                         id = thermogramRefId,
                         equipmentId = equipmentId,
                         createdById = currentUserId,
-                        localImagePath = uri.toString(),
+                        localImagePath = localPath,
                         localImageRefPath = realImageRef
                     )
 
