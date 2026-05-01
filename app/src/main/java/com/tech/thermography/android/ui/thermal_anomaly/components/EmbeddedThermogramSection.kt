@@ -2,13 +2,18 @@ package com.tech.thermography.android.ui.thermal_anomaly.components
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -17,8 +22,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -34,13 +43,108 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.scale
 import java.io.File
 import java.util.UUID
+
+// ---------------------------------------------------------------------------
+// Custom picker: lista imagens diretamente de getExternalFilesDir/thermalEnergy
+// ---------------------------------------------------------------------------
+@Composable
+private fun ThermalImagePickerDialog(
+    onImagePicked: (Uri) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val images = remember {
+        val picturesDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val thermalDir = File(picturesDir, "thermalEnergy")
+        thermalDir.listFiles { f -> f.extension.lowercase() in listOf("jpg", "jpeg", "png") }
+            ?.sortedBy { it.lastModified() }
+            ?: emptyList()
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Fechar")
+                    }
+                    Text(
+                        text = "Termogramas Salvos",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "${images.size} imagens",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+
+                HorizontalDivider()
+
+                if (images.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Nenhum termograma encontrado\nem Pictures/thermalEnergy",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(images) { file ->
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .border(1.dp, Color.Gray, RoundedCornerShape(4.dp))
+                                    .clickable {
+                                        onImagePicked(file.toUri())
+                                        onDismiss()
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = file,
+                                    contentDescription = file.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun RoiDropdownInline(
@@ -90,6 +194,9 @@ fun EmbeddedThermogramSection(
 ) {
     var showLightbox by remember { mutableStateOf(false) }
     var showRealLightbox by remember { mutableStateOf(false) }
+    var showThermalPicker by remember { mutableStateOf(false) }
+    var showThermalRefPicker by remember { mutableStateOf(false) }
+    var showThermalRealPicker by remember { mutableStateOf(false) }
     val singleRoi = rois.size <= 1
     var showRefThermogram by remember(singleRoi) { mutableStateOf(singleRoi) }
 
@@ -156,28 +263,6 @@ fun EmbeddedThermogramSection(
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
 
-    // Launcher para GALERIA (Usando GetContent para permitir navegação em pastas se necessário)
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { onImageSelected(it) }
-    }
-
-    val galleryRefLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> 
-        uri?.let { 
-            onRefImageSelected(it)
-            showRefThermogram = true
-        } 
-    }
-
-    val galleryRealLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { onRealImageSelected(it) }
-    }
-
     // Launcher para CÂMERA
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -205,26 +290,6 @@ fun EmbeddedThermogramSection(
         if (isGranted && photoRefUri != null) cameraRefLauncher.launch(photoRefUri) 
     }
 
-    // Função auxiliar para forçar o Android a ver arquivos novos na pasta da FLIR
-    val refreshFlirGallery = {
-        try {
-            val dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
-            val flirDir = File(dcim, "100_FLIR")
-            if (flirDir.exists() && flirDir.isDirectory) {
-                // Escaneia a própria pasta e arquivos nela para atualizar o MediaStore
-                val files = flirDir.listFiles()?.map { it.absolutePath }?.toTypedArray()
-                if (files != null && files.isNotEmpty()) {
-                    MediaScannerConnection.scanFile(context, files, null, null)
-                } else {
-                    // Se não conseguir listar, escaneia pelo menos a pasta
-                    MediaScannerConnection.scanFile(context, arrayOf(flirDir.absolutePath), null, null)
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -246,10 +311,7 @@ fun EmbeddedThermogramSection(
             if (mode != ThermogramMode.VIEW) {
                 Row(horizontalArrangement = Arrangement.Start) {
                     IconButton(
-                        onClick = { 
-                            refreshFlirGallery()
-                            galleryLauncher.launch("image/*") 
-                        },
+                        onClick = { showThermalPicker = true },
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria", tint = MaterialTheme.colorScheme.primary)
@@ -302,10 +364,7 @@ fun EmbeddedThermogramSection(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (mode != ThermogramMode.VIEW) {
-                        IconButton(onClick = { 
-                            refreshFlirGallery()
-                            galleryRefLauncher.launch("image/*") 
-                        }, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = { showThermalRefPicker = true }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria Ref", tint = MaterialTheme.colorScheme.primary)
                         }
 //                        IconButton(onClick = {
@@ -359,7 +418,7 @@ fun EmbeddedThermogramSection(
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(text = "Imagem Visível", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     if (mode != ThermogramMode.VIEW) {
-                        IconButton(onClick = { refreshFlirGallery(); galleryRealLauncher.launch("image/*") }, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = { showThermalRealPicker = true }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.PhotoLibrary, contentDescription = "Selecionar Imagem Real", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -392,8 +451,27 @@ fun EmbeddedThermogramSection(
         }
     }
 
-    if (showLightbox && displayImageUri != null) {
-        Dialog(onDismissRequest = { showLightbox = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    // Pickers customizados — abrem direto em Pictures/thermalEnergy
+    if (showThermalPicker) {
+        ThermalImagePickerDialog(
+            onImagePicked = { onImageSelected(it) },
+            onDismiss = { showThermalPicker = false }
+        )
+    }
+    if (showThermalRefPicker) {
+        ThermalImagePickerDialog(
+            onImagePicked = { onRefImageSelected(it); showRefThermogram = true },
+            onDismiss = { showThermalRefPicker = false }
+        )
+    }
+    if (showThermalRealPicker) {
+        ThermalImagePickerDialog(
+            onImagePicked = { onRealImageSelected(it) },
+            onDismiss = { showThermalRealPicker = false }
+        )
+    }
+
+    if (showLightbox && displayImageUri != null) {        Dialog(onDismissRequest = { showLightbox = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), color = MaterialTheme.colorScheme.surface) {
                 var scale by remember { mutableStateOf(1f) }
                 var offsetX by remember { mutableStateOf(0f) }
