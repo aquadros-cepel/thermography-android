@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.cyclonedx.bom)
 }
 
 
@@ -123,8 +124,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // SDKs nativos da FLIR (arquivos .aar da pasta libs)
-    implementation("", name = "androidsdk-release", ext = "aar")
-    implementation("", name = "thermalsdk-release", ext = "aar")
+    implementation(files("libs/androidsdk-release.aar"))
+    implementation(files("libs/thermalsdk-release.aar"))
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
@@ -141,4 +142,13 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// Configuração do CycloneDX para gerar SBOM em formato JSON
+tasks.cyclonedxBom {
+    setIncludeConfigs(listOf("releaseRuntimeClasspath"))
+    setOutputFormat("json")
+    setOutputName("sbom")
+    setSchemaVersion("1.5")
+    setIncludeBomSerialNumber(true)
 }

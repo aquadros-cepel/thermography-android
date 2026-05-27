@@ -58,6 +58,10 @@ class AceController @Inject constructor(
 
     private var state = State.Idle
 
+    /** True quando uma câmera ACE foi conectada com sucesso nesta sessão. */
+    val isAceCameraConnected: Boolean
+        get() = state == State.CameraReady || state == State.Streaming
+
     private var glView: GLSurfaceView? = null
     private var renderer: AceRenderer? = null
 

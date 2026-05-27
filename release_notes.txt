@@ -1,0 +1,116 @@
+# RELEASE NOTES
+## Thermal Inspection Application – Pilot Release
+
+Application Name: Thermal Energy
+Version: v0.1.0 – Pilot Release
+Release Date: 04-30-2026
+Platform: FLIR ACE Platform
+Target Device: FLIR i65
+Build Type: Beta / Validation Release
+Application Type: Thermal Inspection & Predictive Maintenance
+
+# 1. Purpose of this Release
+
+This is the first pilot release of the application developed for validation and testing on the FLIR ACE platform.
+
+The primary goal of this release is to validate:
+- ACE platform compatibility
+- Thermal camera integration
+- Thermal image acquisition
+- Temperature measurement workflow
+- Risk assessment calculation
+- Offline-first data persistence
+- Cloud synchronization
+- User experience and application stability
+
+# 2. Application Overview
+
+The application supports industrial thermal inspections and predictive maintenance workflows.
+
+Capabilities:
+- Execute inspection routes
+- Capture thermal and visual images
+- Perform thermal anomaly assessment
+- Calculate Delta Temperature (ΔT)
+- Register inspection findings
+- Operate fully offline
+- Synchronize with cloud infrastructure
+
+# 3. Authentication
+
+Validation credentials:
+Username: admin
+Password: admin
+
+# 4. Initial Synchronization
+
+Cloud → Device synchronization into local Room Database.
+
+# 5. Main Application Menu
+
+- Routes (Rotas)
+- Camera (Câmera)
+- Synchronization (Sincronização)
+- Logout
+
+- Last Inspection Thermography Records
+
+# 6. Inspection Routes Workflow
+
+Select Route → Equipment Groups → Equipment Subgroups → Equipment -> click in câmera icon
+
+Thermographic Registration includes:
+- Equipment data (Instalation, equipment location, equipment, inspection route, report number, service order)
+- Object thermogram selection (Termograma de Monitoramento)
+- Reference thermogram selection (Termograma de Referência)
+- Meta data from object thermogram and delta T
+- Visual image selection (Imagem Visível)
+- Component selection (Componente)
+- Delta Temperature calculation 
+- Risk assessment (Condição) -> Normal, Baixo Risco, Médio risco, Alto risco, Alto Risco iminente (Low risk, medium risk, high risk, imminent high risk)
+- Analysis Description (Descrição da Análise)
+- Maintenance recommendation (Recomendações)
+
+# 7. Camera Module
+
+Toolbar:
+1. Spot (Sp1) / Box (Bx1)
+2. Reference Box (Bx2)
+3. Color palette
+4. Thermal / MSX / Digital mode
+5. Flashlight
+6. Laser
+7. Thermal Image Parameters
+   7.1. Distância, emissividade, temp. refletida, temp. atmosférica, umidade relativa
+        (Distance, emissivity, reflected temperature, atmospheric temperature, relative humidity
+
+Snapshot button -> storage in private application directory.
+
+# 8. Offline-First Architecture
+
+Room local database with automatic cloud synchronization when Wi‑Fi or 5G becomes available.
+
+# 9. Test Focus Requested from FLIR Team
+
+- ACE compatibility
+- Thermal functions
+- Camera features
+- Performance
+- Storage
+- UX
+
+# 10. Known Limitations
+
+Pilot release for validation only.
+Sign up link is not available yet (Criar Conta -> Login Screen)
+Forgot password is not available yet (Esqueceu sua senha? -> Login Screen)
+
+# 11. Contact Information
+
+Company: TECH Monitoramento da Condição LTDA
+Technical Contact: André Quadros
+Email: quadros.andre@gmail.com
+Phone: +55 24 99246-9052
+
+# Version History
+v0.1.0 - Initial pilot release for FLIR ACE platform validation

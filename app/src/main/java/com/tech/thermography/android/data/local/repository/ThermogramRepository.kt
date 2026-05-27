@@ -47,7 +47,7 @@ class ThermogramRepository @Inject constructor(
                 val fullUrl = if (remotePath.startsWith("http")) {
                     remotePath
                 } else {
-                    "${Constants.IMAGE_BASE_URL}$remotePath"
+                    "${Constants.IMAGE_BASE_URL}/py-api/$remotePath"
                 }
                 downloadAndSaveImage(fullUrl, entity.id, "thermal")
             }
@@ -57,7 +57,7 @@ class ThermogramRepository @Inject constructor(
                 val fullUrl = if (remotePath.startsWith("http")) {
                     remotePath
                 } else {
-                    "${Constants.IMAGE_BASE_URL}$remotePath"
+                    "${Constants.IMAGE_BASE_URL}/py-api/$remotePath"
                 }
                 downloadAndSaveImage(fullUrl, entity.id, "real")
             }

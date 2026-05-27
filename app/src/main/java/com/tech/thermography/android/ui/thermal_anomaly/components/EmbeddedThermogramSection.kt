@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,8 +44,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import java.io.File
 import java.util.UUID
 
@@ -54,15 +58,29 @@ import java.util.UUID
 @Composable
 private fun ThermalImagePickerDialog(
     onImagePicked: (Uri) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    flirLastImportedFile: String? = null   // quando muda, recarrega a lista
 ) {
     val context = LocalContext.current
 
-    val images = remember {
+    // Recarrega a lista sempre que um novo arquivo chegar da câmera FLIR
+    var refreshTrigger by remember { mutableStateOf(0) }
+    // Disparo imediato quando chega um arquivo novo
+    LaunchedEffect(flirLastImportedFile) { if (flirLastImportedFile != null) refreshTrigger++ }
+    // Polling periódico enquanto o dialog está aberto — garante que novos arquivos apareçam mesmo
+    // que a prop não tenha mudado (ex: arquivo chegou antes do dialog abrir)
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(2_000)
+            refreshTrigger++
+        }
+    }
+
+    val images = remember(refreshTrigger) {
         val picturesDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         val thermalDir = File(picturesDir, "thermalEnergy")
         thermalDir.listFiles { f -> f.extension.lowercase() in listOf("jpg", "jpeg", "png") }
-            ?.sortedBy { it.lastModified() }
+            ?.sortedByDescending { it.lastModified() }
             ?: emptyList()
     }
 
@@ -122,9 +140,8 @@ private fun ThermalImagePickerDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(images) { file ->
-                            Box(
+                            Column(
                                 modifier = Modifier
-                                    .aspectRatio(1f)
                                     .border(1.dp, Color.Gray, RoundedCornerShape(4.dp))
                                     .clickable {
                                         onImagePicked(file.toUri())
@@ -135,7 +152,19 @@ private fun ThermalImagePickerDialog(
                                     model = file,
                                     contentDescription = file.name,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .aspectRatio(1f)
+                                        .fillMaxWidth()
+                                )
+                                Text(
+                                    text = file.nameWithoutExtension,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
                                 )
                             }
                         }
@@ -190,7 +219,10 @@ fun EmbeddedThermogramSection(
     onRefRoiSelected: (ROIEntity) -> Unit,
     onImageSelected: (Uri) -> Unit,
     temperatureDifference: Double?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // FLIR background monitoring
+    flirMonitoringActive: Boolean = false,
+    flirLastImportedFile: String? = null
 ) {
     var showLightbox by remember { mutableStateOf(false) }
     var showRealLightbox by remember { mutableStateOf(false) }
@@ -297,6 +329,66 @@ fun EmbeddedThermogramSection(
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+
+        // ── Banner de novo termograma chegando da câmera ──────────────────
+        var showNewFileBanner by remember { mutableStateOf(false) }
+        var newFileName by remember { mutableStateOf("") }
+        LaunchedEffect(flirLastImportedFile, flirMonitoringActive) {
+            if (flirLastImportedFile != null && flirMonitoringActive) {
+                // Só mostra se estiver monitorando ativamente
+                newFileName = File(flirLastImportedFile).name
+                showNewFileBanner = true
+            } else {
+                // Esconde o banner se desconectou ou parou o monitoramento
+                showNewFileBanner = false
+            }
+        }
+        AnimatedVisibility(visible = showNewFileBanner) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .clickable {
+                        // Seleciona automaticamente o novo arquivo como termograma de monitoramento
+                        flirLastImportedFile?.let { onImageSelected(File(it).toUri()) }
+                        showNewFileBanner = false
+                    },
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("📷", style = MaterialTheme.typography.bodyMedium)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Novo termograma FLIR disponível",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32)
+                        )
+                        Text(
+                            text = newFileName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF2E7D32),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        text = "Usar →",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2E7D32)
+                    )
+                }
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -455,19 +547,22 @@ fun EmbeddedThermogramSection(
     if (showThermalPicker) {
         ThermalImagePickerDialog(
             onImagePicked = { onImageSelected(it) },
-            onDismiss = { showThermalPicker = false }
+            onDismiss = { showThermalPicker = false },
+            flirLastImportedFile = flirLastImportedFile
         )
     }
     if (showThermalRefPicker) {
         ThermalImagePickerDialog(
             onImagePicked = { onRefImageSelected(it); showRefThermogram = true },
-            onDismiss = { showThermalRefPicker = false }
+            onDismiss = { showThermalRefPicker = false },
+            flirLastImportedFile = flirLastImportedFile
         )
     }
     if (showThermalRealPicker) {
         ThermalImagePickerDialog(
             onImagePicked = { onRealImageSelected(it) },
-            onDismiss = { showThermalRealPicker = false }
+            onDismiss = { showThermalRealPicker = false },
+            flirLastImportedFile = flirLastImportedFile
         )
     }
 

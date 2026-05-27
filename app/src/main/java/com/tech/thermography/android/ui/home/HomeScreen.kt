@@ -73,6 +73,15 @@ fun HomeScreen(
                                 onClick = {
                                     if (label == "Logout") {
                                         showLogoutDialog = true
+                                    } else if (label == "Câmera") {
+                                        // Roteamento inteligente: ACE (USB) → ThermogramsCameraScreen
+                                        //                         Rede WiFi → FlirDiscoveryScreen
+                                        val destination = if (viewModel.isAceCameraConnected()) {
+                                            NavRoutes.THERMOGRAMS
+                                        } else {
+                                            NavRoutes.FLIR_DISCOVERY
+                                        }
+                                        navController?.navigate(destination)
                                     } else {
                                         navController?.navigate(route)
                                     }

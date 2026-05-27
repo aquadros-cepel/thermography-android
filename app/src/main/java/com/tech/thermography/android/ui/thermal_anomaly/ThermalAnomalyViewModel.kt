@@ -29,6 +29,7 @@ import com.tech.thermography.android.flir.toEntity
 import com.tech.thermography.android.data.local.entity.enumeration.EquipmentType
 import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.local.repository.ThermogramRepository
+import com.tech.thermography.android.flir.network.FlirNetworkService
 
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,10 +38,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.tech.thermography.android.flir.network.CameraConnectionState
 
 import java.time.Instant
 import java.time.ZoneId
@@ -65,8 +68,22 @@ class ThermalAnomalyViewModel @Inject constructor(
     private val riskRepo: RiskPeriodicityDeadlineRepository,
     private val userInfoRepository: UserInfoRepository,
     private val roiRepository: ROIRepository,
-    private val sessionStore: UserSessionStore
+    private val sessionStore: UserSessionStore,
+    private val flirNetworkService: FlirNetworkService
 ) : ViewModel() {
+
+    // ── Estado do monitoramento FLIR em background ────────────────────────────
+    /** true quando a câmera FLIR de rede está monitorando e importando termogramas */
+    val flirMonitoringActive: StateFlow<Boolean> = flirNetworkService.monitoringActive
+
+    /** Caminho local do último termograma importado da câmera FLIR de rede */
+    val flirLastImportedFile: StateFlow<String?> = flirNetworkService.lastImportedFile
+
+    /** Nome/modelo da câmera FLIR conectada, ou null se não conectada */
+    val flirConnectedCameraName: StateFlow<String?> = flirNetworkService.connectionState
+        .map { state -> if (state is CameraConnectionState.Connected) state.deviceId else null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    // ─────────────────────────────────────────────────────────────────────────
 
     private val _uiState = MutableStateFlow(ThermalAnomalyUiState())
     val uiState: StateFlow<ThermalAnomalyUiState> = _uiState.asStateFlow()

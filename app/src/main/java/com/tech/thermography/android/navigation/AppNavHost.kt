@@ -37,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.tech.thermography.android.ui.auth.login.LoginScreen
 import com.tech.thermography.android.ui.camera.ThermogramsCameraScreen
 import com.tech.thermography.android.ui.camera.ThermogramImageScreen
+import com.tech.thermography.android.ui.flir_discovery.FlirDiscoveryScreen
 import com.tech.thermography.android.ui.home.HomeScreen
 import com.tech.thermography.android.ui.inspection_report.InspectionRecordsScreen
 import com.tech.thermography.android.ui.sync.SyncScreen
@@ -126,6 +127,10 @@ fun AppNavHost() {
 
             composable(NavRoutes.THERMOGRAMS) {
                 ThermogramsCameraScreen(navController = navController)
+            }
+
+            composable(NavRoutes.FLIR_DISCOVERY) {
+                FlirDiscoveryScreen(navController = navController)
             }
 
             composable("${NavRoutes.THERMOGRAM_IMAGE}/{${NavRoutes.THERMOGRAM_IMAGE_ARG}}") { backStackEntry ->

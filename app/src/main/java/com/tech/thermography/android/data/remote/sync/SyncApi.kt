@@ -68,11 +68,11 @@ interface SyncApi {
     suspend fun downloadFile(@Url url: String): Response<ResponseBody>
 
     @Multipart
-    @POST("${Constants.IMAGE_BASE_URL}/api/uploadThermogram")
+    @POST("${Constants.IMAGE_BASE_URL}/py-api/uploadThermogram")
     suspend fun uploadThermogram(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @Multipart
-    @POST("${Constants.IMAGE_BASE_URL}/api/uploadImage")
+    @POST("${Constants.IMAGE_BASE_URL}/py-api/uploadImage")
     suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @GET("thermographic-inspection-records")

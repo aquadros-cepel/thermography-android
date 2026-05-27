@@ -4,8 +4,8 @@ object NavRoutes {
     const val LOGIN = "login"
     const val HOME = "home"
     const val SYNC = "sync"
-    const val INSPECTION_RECORDS = "inspection_records" // Pode ser usado para Termogramas ou separado
-    
+    const val INSPECTION_RECORDS = "inspection_records"
+
     // Novas rotas para a Bottom Bar
     const val ROUTES = "routes"
     const val THERMOGRAMS = "thermograms"
@@ -14,4 +14,7 @@ object NavRoutes {
     const val THERMAL_ANOMALY = "thermal_anomaly"
     const val SETTINGS = "settings"
     const val INSPECTION_RECORD_DETAIL = "inspection"
+
+    /** Tela de discovery/conexão de câmeras FLIR via WiFi (dispositivos não-ACE) */
+    const val FLIR_DISCOVERY = "flir_discovery"
 }

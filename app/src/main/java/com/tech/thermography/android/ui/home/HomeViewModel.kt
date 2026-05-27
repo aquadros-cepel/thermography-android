@@ -9,6 +9,7 @@ import com.tech.thermography.android.data.local.repository.EquipmentRepository
 import com.tech.thermography.android.data.local.repository.ThermogramRepository
 import com.tech.thermography.android.data.local.repository.ThermographicInspectionRecordRepository
 import com.tech.thermography.android.data.local.storage.UserSessionStore
+import com.tech.thermography.android.flir.AceController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +27,8 @@ class HomeViewModel @Inject constructor(
     private val sessionStore: UserSessionStore,
     private val thermographicRecordRepository: ThermographicInspectionRecordRepository,
     private val equipmentRepository: EquipmentRepository,
-    private val thermogramRepository: ThermogramRepository
+    private val thermogramRepository: ThermogramRepository,
+    private val aceController: AceController
 ) : ViewModel() {
 
     private val _recentRecords = MutableStateFlow<List<RecentRecordItem>>(emptyList())
@@ -57,4 +59,11 @@ class HomeViewModel @Inject constructor(
             onComplete()
         }
     }
+
+    /**
+     * Retorna true se uma câmera ACE (USB/direct) estiver conectada.
+     * Quando true, o botão Câmera deve abrir ThermogramsCameraScreen.
+     * Quando false, deve abrir FlirDiscoveryScreen (câmeras via WiFi).
+     */
+    fun isAceCameraConnected(): Boolean = aceController.isAceCameraConnected
 }
