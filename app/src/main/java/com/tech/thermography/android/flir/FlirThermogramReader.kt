@@ -74,6 +74,9 @@ class FlirThermogramReader @Inject constructor() {
     }
 }
 
+/** Arredonda Double para 2 casas decimais */
+private fun Double?.round2(): Double? = this?.let { kotlin.math.round(it * 100) / 100.0 }
+
 /**
  * Extension function para converter ThermogramMetadata em ThermogramEntity
  */
@@ -95,19 +98,19 @@ fun ThermogramMetadata.toEntity(
         localImageRefPath = localImageRefPath,
         imageRefPath = imageRefPath ?: localImageRefPath,
         audioPath = audioPath,
-        minTemp = minTemp,
-        avgTemp = avgTemp,
-        maxTemp = maxTemp,
-        emissivity = emissivity,
-        subjectDistance = subjectDistance,
-        atmosphericTemp = atmosphericTemp,
-        reflectedTemp = reflectedTemp,
-        relativeHumidity = relativeHumidity,
+        minTemp = minTemp.round2(),
+        avgTemp = avgTemp.round2(),
+        maxTemp = maxTemp.round2(),
+        emissivity = emissivity.round2(),
+        subjectDistance = subjectDistance.round2(),
+        atmosphericTemp = atmosphericTemp.round2(),
+        reflectedTemp = reflectedTemp.round2(),
+        relativeHumidity = relativeHumidity.round2(),
         cameraLens = cameraLens,
         cameraModel = cameraModel,
         imageResolution = imageResolution,
         selectedRoiId = selectedRoiId,
-        maxTempRoi = rois.firstOrNull()?.maxTemp,
+        maxTempRoi = rois.firstOrNull()?.maxTemp.round2(),
         createdAt = createdAt,
         latitude = latitude,
         longitude = longitude,
@@ -124,7 +127,7 @@ fun ROIMetadata.toEntity(thermogramId: UUID): ROIEntity {
         id = id,
         type = type,
         label = label,
-        maxTemp = maxTemp,
+        maxTemp = maxTemp.round2()!!,
         thermogramId = thermogramId
     )
 }

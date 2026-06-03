@@ -155,14 +155,14 @@ class ThermogramViewModel @Inject constructor(
                     val updatedThermogram = if (currentThermogram != null) {
                         currentThermogram.copy(
                             localImagePath = uri.toString(),
-                            minTemp = metadata.minTemp,
-                            avgTemp = metadata.avgTemp,
-                            maxTemp = metadata.maxTemp,
-                            emissivity = metadata.emissivity,
-                            subjectDistance = metadata.subjectDistance,
-                            atmosphericTemp = metadata.atmosphericTemp,
-                            reflectedTemp = metadata.reflectedTemp,
-                            relativeHumidity = metadata.relativeHumidity,
+                            minTemp = metadata.minTemp?.let { kotlin.math.round(it * 100) / 100.0 },
+                            avgTemp = metadata.avgTemp?.let { kotlin.math.round(it * 100) / 100.0 },
+                            maxTemp = metadata.maxTemp?.let { kotlin.math.round(it * 100) / 100.0 },
+                            emissivity = metadata.emissivity?.let { kotlin.math.round(it * 100) / 100.0 },
+                            subjectDistance = metadata.subjectDistance?.let { kotlin.math.round(it * 100) / 100.0 },
+                            atmosphericTemp = metadata.atmosphericTemp?.let { kotlin.math.round(it * 100) / 100.0 },
+                            reflectedTemp = metadata.reflectedTemp?.let { kotlin.math.round(it * 100) / 100.0 },
+                            relativeHumidity = metadata.relativeHumidity?.let { kotlin.math.round(it * 100) / 100.0 },
                             cameraLens = metadata.cameraLens,
                             cameraModel = metadata.cameraModel,
                             imageResolution = metadata.imageResolution

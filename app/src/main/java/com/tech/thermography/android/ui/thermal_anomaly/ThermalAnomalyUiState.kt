@@ -50,6 +50,8 @@ data class ThermalAnomalyUiState(
     // UI state
     val isLoading: Boolean = false,
     val error: String? = null,
+    val thermogramError: String? = null,
+    val thermogramRefError: String? = null,
     val isSaved: Boolean = false,
     val isEditing: Boolean = false,
     val isDirty: Boolean = false

@@ -22,7 +22,6 @@ import com.tech.thermography.android.data.local.repository.UserInfoRepository
 import com.tech.thermography.android.data.local.repository.ROIRepository
 import com.tech.thermography.android.data.local.storage.UserSessionStore
 import com.tech.thermography.android.data.local.entity.enumeration.DatetimeUnit
-import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import com.tech.thermography.android.data.local.entity.RiskPeriodicityDeadlineEntity
 import com.tech.thermography.android.flir.FlirThermogramReader
 import com.tech.thermography.android.flir.toEntity
@@ -56,7 +55,7 @@ import org.json.JSONObject
 
 @HiltViewModel
 class ThermalAnomalyViewModel @Inject constructor(
-    @ApplicationContext private val context: android.content.Context,
+    @param:ApplicationContext private val context: android.content.Context,
     private val plantRepository: PlantRepository,
     private val equipmentRepository: EquipmentRepository,
     private val equipmentComponentRepository: EquipmentComponentRepository,
@@ -72,12 +71,6 @@ class ThermalAnomalyViewModel @Inject constructor(
     private val flirNetworkService: FlirNetworkService
 ) : ViewModel() {
 
-    // ── Estado do monitoramento FLIR em background ────────────────────────────
-    /** true quando a câmera FLIR de rede está monitorando e importando termogramas */
-    val flirMonitoringActive: StateFlow<Boolean> = flirNetworkService.monitoringActive
-
-    /** Caminho local do último termograma importado da câmera FLIR de rede */
-    val flirLastImportedFile: StateFlow<String?> = flirNetworkService.lastImportedFile
 
     /** Nome/modelo da câmera FLIR conectada, ou null se não conectada */
     val flirConnectedCameraName: StateFlow<String?> = flirNetworkService.connectionState
@@ -102,6 +95,7 @@ class ThermalAnomalyViewModel @Inject constructor(
 
     fun onEvent(event: ThermalAnomalyEvent) {
         when (event) {
+
             is ThermalAnomalyEvent.PlantSelectedById -> {
                 viewModelScope.launch {
                     try {
@@ -174,15 +168,17 @@ class ThermalAnomalyViewModel @Inject constructor(
                             var loadedRoisRef: List<com.tech.thermography.android.data.local.entity.ROIEntity> = emptyList()
 
                             try {
-                                loadedThermogram = thermogramRepository.getThermogramById(therm.thermogramId)
-                                if (loadedThermogram != null) {
-                                    loadedRois = roiRepository.getRoisByThermogramId(loadedThermogram.id).first()
+                                val thermogramResult = thermogramRepository.getThermogramById(therm.thermogramId)
+                                loadedThermogram = thermogramResult
+                                if (thermogramResult != null) {
+                                    loadedRois = roiRepository.getRoisByThermogramId(thermogramResult.id).first()
                                 }
                                 
                                 therm.thermogramRefId?.let { refId ->
-                                    loadedThermogramRef = thermogramRepository.getThermogramById(refId)
-                                    if (loadedThermogramRef != null) {
-                                        loadedRoisRef = roiRepository.getRoisByThermogramId(loadedThermogramRef!!.id).first()
+                                    val thermogramRefResult = thermogramRepository.getThermogramById(refId)
+                                    loadedThermogramRef = thermogramRefResult
+                                    if (thermogramRefResult != null) {
+                                        loadedRoisRef = roiRepository.getRoisByThermogramId(thermogramRefResult.id).first()
                                     }
                                 }
                             } catch (e: Exception) {
@@ -216,8 +212,8 @@ class ThermalAnomalyViewModel @Inject constructor(
                                     // Preenche a imagem real (localImageRefPath) a partir do thermogram, se disponível
                                     realImageUri = loadedThermogram?.localImageRefPath?.takeIf { it.isNotBlank() }?.let { path ->
                                         when {
-                                            path.startsWith("content://") -> android.net.Uri.parse(path)
-                                            path.startsWith("file://") -> android.net.Uri.parse(path)
+                                            path.startsWith("content://") -> Uri.parse(path)
+                                            path.startsWith("file://") -> Uri.parse(path)
                                             else -> java.io.File(path).toUri()
                                         }
                                     } ?: state.realImageUri,
@@ -534,9 +530,10 @@ class ThermalAnomalyViewModel @Inject constructor(
                     }
 
                     // SP1 (Sp1) é o primeiro ROI para monitoramento
-                    // SP2 (Sp2) é o segundo ROI para referência
+                    // SP2 (Sp2) é o segundo ROI para referência (só se houver 2+ ROIs)
                     val selectedRoi = roisMonitoring.firstOrNull()
-                    val selectedRefRoi = roisReference.getOrNull(1) ?: roisReference.firstOrNull()
+                    val hasMultipleRois = roisMonitoring.size > 1
+                    val selectedRefRoi = if (hasMultipleRois) roisReference.getOrNull(1) else null
 
                     _uiState.update {
                         it.copy(
@@ -546,23 +543,25 @@ class ThermalAnomalyViewModel @Inject constructor(
                             ),
                             thermogramRois = roisMonitoring,
                             selectedRoi = selectedRoi,
-                            
-                            thermogramRef = thermogramReference.copy(
+
+                            // Só preenche referência automaticamente se tiver mais de 1 ROI
+                            thermogramRef = if (hasMultipleRois) thermogramReference.copy(
                                 selectedRoiId = selectedRefRoi?.id,
                                 maxTempRoi = selectedRefRoi?.maxTemp
-                            ),
-                            thermogramRefRois = roisReference,
-                            selectedRefRoi = selectedRefRoi
+                            ) else it.thermogramRef,
+                            thermogramRefRois = if (hasMultipleRois) roisReference else it.thermogramRefRois,
+                            selectedRefRoi = if (hasMultipleRois) selectedRefRoi else it.selectedRefRoi
                         )
                     }
+                    _uiState.update { it.copy(thermogramError = null) }
                 }
                 result.onFailure { error ->
                     _uiState.update {
-                        it.copy(error = "Aviso: Não foi possível ler metadados da imagem: ${error.message}")
+                        it.copy(thermogramError = "Aviso: Não foi possível ler metadados da imagem: ${error.message}")
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Erro ao processar imagem: ${e.message}") }
+                _uiState.update { it.copy(thermogramError = "Erro ao processar imagem: ${e.message}") }
             }
         }
     }
@@ -600,21 +599,23 @@ class ThermalAnomalyViewModel @Inject constructor(
                                 maxTempRoi = selectedRefRoi?.maxTemp
                             ),
                             thermogramRefRois = roisReference,
-                            selectedRefRoi = selectedRefRoi
+                            selectedRefRoi = selectedRefRoi,
+                            thermogramRefError = null
                         )
                     }
                 }
                 result.onFailure { error ->
-                    // Se falhar ao ler metadados, apenas atualiza o caminho da imagem se necessário
-                    Log.w("ThermAnomVM", "Failed to read ref image metadata: ${error.message}")
+                    _uiState.update {
+                        it.copy(thermogramRefError = "Aviso: Não foi possível ler metadados da imagem: ${error.message}")
+                    }
                 }
             } catch (e: Exception) {
-                Log.w("ThermAnomVM", "Error processing ref image: ${e.message}")
+                _uiState.update { it.copy(thermogramRefError = "Erro ao processar imagem: ${e.message}") }
             }
         }
     }
 
-    private fun handleRealImageSelected(uri: android.net.Uri) {
+    private fun handleRealImageSelected(uri: Uri) {
         // Copia a imagem selecionada para a pasta app-specific Pictures/thermalEnergy e atualiza o estado
         viewModelScope.launch {
             try {
@@ -634,7 +635,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 } catch (_: Exception) {}
 
                 val destUri = destFile.toUri()
-                android.util.Log.d("ThermAnomVM", "Real image saved to: ${destFile.absolutePath}")
+                Log.d("ThermAnomVM", "Real image saved to: ${destFile.absolutePath}")
 
                 _uiState.update { state ->
                     val path = destFile.absolutePath
@@ -646,7 +647,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // Em caso de erro, faz fallback para gravar a Uri original (não deve acontecer normalmente)
-                android.util.Log.w("ThermAnomVM", "Failed to copy real image to app folder: ${e.message}")
+                Log.w("ThermAnomVM", "Failed to copy real image to app folder: ${e.message}")
                 _uiState.update { state ->
                     val path = uri.toString()
                     state.copy(
@@ -706,15 +707,14 @@ class ThermalAnomalyViewModel @Inject constructor(
         val parts = condition.split(" ")
         for (part in parts) {
             val regex = Regex("(<=|>=|<|>|=|≤|≥)(\\d+(\\.\\d+)?)")
-            val match = regex.find(part)
-            if (match == null) continue
+            val match = regex.find(part) ?: continue
             val operator = match.groupValues[1]
             val limit = match.groupValues[2].toDoubleOrNull() ?: continue
 
             when (operator) {
                 "<", "<=" , "≤" -> if (!(value < limit || operator == "<=" && value <= limit || operator == "≤" && value <= limit)) return false
                 ">", ">=" , "≥" -> if (!(value > limit || operator == ">=" && value >= limit || operator == "≥" && value >= limit)) return false
-                "=" -> if (!(value == limit)) return false
+                "=" -> if (value != limit) return false
             }
         }
         return true

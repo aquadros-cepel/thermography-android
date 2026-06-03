@@ -8,7 +8,8 @@ Este documento descreve o Software Bill of Materials (SBOM) gerado para o aplica
 
 - **Formato**: CycloneDX JSON (versão 1.5)
 - **Arquivo**: `app/build/reports/sbom.json`
-- **Plugin utilizado**: `org.cyclonedx.bom` versão 1.8.2
+- **Plugin utilizado**: `org.cyclonedx.bom` versão 2.2.0
+- **Requisito mínimo**: cyclonedx-gradle-plugin:2.2.0 ou mais recente
 
 ## Como Gerar o SBOM
 
@@ -22,10 +23,16 @@ O arquivo `sbom.json` será criado/atualizado em `app/build/reports/sbom.json`.
 
 ## Conteúdo do SBOM
 
-O SBOM gerado contém:
+O SBOM gerado contém informações completas sobre todas as dependências do projeto, conforme exigido para validação e conformidade.
+
+### Ferramentas de Geração
+- **Plugin**: cyclonedx-gradle-plugin
+- **Versão**: 2.2.0
+- **Formato de saída**: CycloneDX JSON
+- **Versão do esquema**: 1.5
 
 ### Componentes Identificados
-- **Total de componentes**: 117 dependências diretas e transitivas
+- **Dependências**: Todas as dependências diretas e transitivas do projeto
 - **Configuração**: `releaseRuntimeClasspath` (dependências de runtime da versão release)
 
 ### Informações por Componente
@@ -130,10 +137,20 @@ tasks.cyclonedxBom {
 
 ## Atualizações
 
+### Histórico de Versões
+
+**Versão atual: 2.2.0** (29 de maio de 2026)
+- ✅ Atualizado para cyclonedx-gradle-plugin:2.2.0
+- ✅ Atende aos requisitos mínimos de validação
+- ✅ Formato CycloneDX JSON compatível com ferramentas de análise
+
+### Quando Regenerar
+
 O SBOM deve ser regenerado sempre que:
 - Novas dependências forem adicionadas ao projeto
 - Versões de dependências existentes forem atualizadas
 - Antes de cada submissão de release
+- Após alterações nas bibliotecas locais (.aar)
 
 ## Licenciamento
 
@@ -144,12 +161,21 @@ Para visualizar as licenças específicas de cada componente, consulte o campo `
 ## Conformidade
 
 Este SBOM está em conformidade com:
-- Formato CycloneDX (padrão da indústria)
-- Especificação versão 1.5
-- Formato JSON conforme requerido
-- Inclui dependências diretas e transitivas
-- Contém informações de licenciamento
-- Fornece hashes criptográficos para verificação de integridade
+- ✅ Formato CycloneDX (padrão da indústria)
+- ✅ Especificação versão 1.5
+- ✅ Formato JSON conforme requerido
+- ✅ Plugin versão 2.2.0 (requisito mínimo atendido)
+- ✅ Inclui dependências diretas e transitivas
+- ✅ Contém informações de licenciamento
+- ✅ Fornece hashes criptográficos para verificação de integridade
+- ✅ Número serial único para rastreabilidade (BOM serial number)
+
+### Validação
+
+O SBOM foi validado e atende aos seguintes requisitos:
+- **Ferramenta**: cyclonedx-gradle-plugin:2.2.0 ou mais recente ✅
+- **Formato preferencial**: CycloneDX ✅
+- **Formato de arquivo**: JSON (sbom.json) ✅
 
 ## Ferramentas de Análise
 

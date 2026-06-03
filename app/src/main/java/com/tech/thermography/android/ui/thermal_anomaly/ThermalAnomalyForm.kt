@@ -120,8 +120,6 @@ fun ThermalAnomalyForm(
     viewModel: ThermalAnomalyViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val flirMonitoringActive by viewModel.flirMonitoringActive.collectAsState()
-    val flirLastImportedFile by viewModel.flirLastImportedFile.collectAsState()
     val flirConnectedCameraName by viewModel.flirConnectedCameraName.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
 
@@ -176,7 +174,7 @@ fun ThermalAnomalyForm(
             }
         )
         // ── Sticky FLIR badge — fica visível mesmo ao rolar ──────────────────
-        if (flirMonitoringActive && flirConnectedCameraName != null) {
+        if (flirConnectedCameraName != null) {
             val infiniteTransition = rememberInfiniteTransition(label = "flirDot")
             val dotAlpha by infiniteTransition.animateFloat(
                 initialValue = 1f,
@@ -262,8 +260,8 @@ fun ThermalAnomalyForm(
                             viewModel.onEvent(ThermalAnomalyEvent.UpdateThermogramImage(uri))
                         },
                         temperatureDifference = viewModel.calculateTemperatureDifference(),
-                        flirMonitoringActive = flirMonitoringActive,
-                        flirLastImportedFile = flirLastImportedFile
+                        thermogramError = uiState.thermogramError,
+                        thermogramRefError = uiState.thermogramRefError
                     )
                 }
             }
@@ -350,7 +348,7 @@ fun ThermalAnomalyForm(
             )
         }
 
-        // Error message
+        // Error message (erros gerais, não relacionados a imagens)
         if (uiState.error != null) {
             Text(
                 text = uiState.error!!,

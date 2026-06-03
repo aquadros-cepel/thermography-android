@@ -58,17 +58,12 @@ import java.util.UUID
 @Composable
 private fun ThermalImagePickerDialog(
     onImagePicked: (Uri) -> Unit,
-    onDismiss: () -> Unit,
-    flirLastImportedFile: String? = null   // quando muda, recarrega a lista
+    onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
 
-    // Recarrega a lista sempre que um novo arquivo chegar da câmera FLIR
+    // Polling periódico para atualizar a lista enquanto o dialog está aberto
     var refreshTrigger by remember { mutableStateOf(0) }
-    // Disparo imediato quando chega um arquivo novo
-    LaunchedEffect(flirLastImportedFile) { if (flirLastImportedFile != null) refreshTrigger++ }
-    // Polling periódico enquanto o dialog está aberto — garante que novos arquivos apareçam mesmo
-    // que a prop não tenha mudado (ex: arquivo chegou antes do dialog abrir)
     LaunchedEffect(Unit) {
         while (true) {
             kotlinx.coroutines.delay(2_000)
@@ -220,9 +215,9 @@ fun EmbeddedThermogramSection(
     onImageSelected: (Uri) -> Unit,
     temperatureDifference: Double?,
     modifier: Modifier = Modifier,
-    // FLIR background monitoring
-    flirMonitoringActive: Boolean = false,
-    flirLastImportedFile: String? = null
+    // Erros independentes por seção
+    thermogramError: String? = null,
+    thermogramRefError: String? = null
 ) {
     var showLightbox by remember { mutableStateOf(false) }
     var showRealLightbox by remember { mutableStateOf(false) }
@@ -330,65 +325,6 @@ fun EmbeddedThermogramSection(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
-
-        // ── Banner de novo termograma chegando da câmera ──────────────────
-        var showNewFileBanner by remember { mutableStateOf(false) }
-        var newFileName by remember { mutableStateOf("") }
-        LaunchedEffect(flirLastImportedFile, flirMonitoringActive) {
-            if (flirLastImportedFile != null && flirMonitoringActive) {
-                // Só mostra se estiver monitorando ativamente
-                newFileName = File(flirLastImportedFile).name
-                showNewFileBanner = true
-            } else {
-                // Esconde o banner se desconectou ou parou o monitoramento
-                showNewFileBanner = false
-            }
-        }
-        AnimatedVisibility(visible = showNewFileBanner) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .clickable {
-                        // Seleciona automaticamente o novo arquivo como termograma de monitoramento
-                        flirLastImportedFile?.let { onImageSelected(File(it).toUri()) }
-                        showNewFileBanner = false
-                    },
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("📷", style = MaterialTheme.typography.bodyMedium)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Novo termograma FLIR disponível",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
-                        )
-                        Text(
-                            text = newFileName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF2E7D32),
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                    Text(
-                        text = "Usar →",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E7D32)
-                    )
-                }
-            }
-        }
-        // ─────────────────────────────────────────────────────────────────
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -428,6 +364,17 @@ fun EmbeddedThermogramSection(
             onImageClick = { if (displayImageUri != null) showLightbox = true },
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (thermogramError != null) {
+            Text(
+                text = thermogramError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -482,6 +429,17 @@ fun EmbeddedThermogramSection(
                     ThermogramImage(imageUri = displayRefImageUri,
                         onImageClick = { if (displayRefImageUri != null) showLightbox = true },
                         modifier = Modifier.fillMaxWidth())
+
+                    if (thermogramRefError != null) {
+                        Text(
+                            text = thermogramRefError,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
 
                     val currentRefRois = if (refRois.isNotEmpty()) refRois else rois
                     if (currentRefRois.isNotEmpty()) {
@@ -547,22 +505,19 @@ fun EmbeddedThermogramSection(
     if (showThermalPicker) {
         ThermalImagePickerDialog(
             onImagePicked = { onImageSelected(it) },
-            onDismiss = { showThermalPicker = false },
-            flirLastImportedFile = flirLastImportedFile
+            onDismiss = { showThermalPicker = false }
         )
     }
     if (showThermalRefPicker) {
         ThermalImagePickerDialog(
             onImagePicked = { onRefImageSelected(it); showRefThermogram = true },
-            onDismiss = { showThermalRefPicker = false },
-            flirLastImportedFile = flirLastImportedFile
+            onDismiss = { showThermalRefPicker = false }
         )
     }
     if (showThermalRealPicker) {
         ThermalImagePickerDialog(
             onImagePicked = { onRealImageSelected(it) },
-            onDismiss = { showThermalRealPicker = false },
-            flirLastImportedFile = flirLastImportedFile
+            onDismiss = { showThermalRealPicker = false }
         )
     }
 

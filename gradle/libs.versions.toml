@@ -2,7 +2,7 @@
 agp = "8.13.2"
 kotlin = "1.9.24"
 ksp = "1.9.24-1.0.20"
-cyclonedx = "1.8.2"
+cyclonedx = "2.2.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"

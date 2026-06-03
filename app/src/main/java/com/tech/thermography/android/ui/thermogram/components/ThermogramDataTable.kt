@@ -74,21 +74,21 @@ fun ThermogramDataTable(
         DataRow(
             index = rowIndex++,
             label = "Emissividade",
-            value = thermogram.emissivity?.toString() ?: "--"
+            value = thermogram.emissivity?.let { "%.2f".format(it) } ?: "--"
         )
 
         // Distância
         DataRow(
             index = rowIndex++,
             label = "Distância",
-            value = thermogram.subjectDistance?.let { "%.0f m".format(it) } ?: "--"
+            value = thermogram.subjectDistance?.let { "%.1f m".format(it) } ?: "--"
         )
 
         // Temperatura Refletida
         DataRow(
             index = rowIndex++,
             label = "Temperatura Refletida",
-            value = thermogram.reflectedTemp?.let { "%.0f °C".format(it) } ?: "--"
+            value = thermogram.reflectedTemp?.let { "%.1f °C".format(it) } ?: "--"
         )
 
         // Temperatura Ambiente
@@ -102,7 +102,7 @@ fun ThermogramDataTable(
         DataRow(
             index = rowIndex++,
             label = "Umidade Relativa do Ar",
-            value = thermogram.relativeHumidity?.let { "%.0f %%".format(it) } ?: "--"
+            value = thermogram.relativeHumidity?.let { "%.1f %%".format(it) } ?: "--"
         )
 
         // Data do Registro (renomeado)
