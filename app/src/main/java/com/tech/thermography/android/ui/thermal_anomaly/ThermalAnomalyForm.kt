@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -200,7 +201,9 @@ fun ThermalAnomalyForm(
                     tint = Color(0xFF00BCD4),
                     modifier = Modifier
                         .size(10.dp)
-                        .alpha(dotAlpha)
+                        .graphicsLayer {
+                            alpha = dotAlpha
+                        }
                 )
                 Text(
                     text = "Conectado à câmera $flirConnectedCameraName",
