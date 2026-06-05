@@ -181,7 +181,7 @@ fun ThermalAnomalyForm(
                 initialValue = 1f,
                 targetValue = 0f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 1500),
+                    animation = tween(durationMillis = 1000),
                     repeatMode = RepeatMode.Reverse
                 ),
                 label = "dotAlpha"
