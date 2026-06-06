@@ -301,6 +301,9 @@ class ThermalAnomalyViewModel @Inject constructor(
             EquipmentType.ELECTRICAL_PANEL -> "PA"
             EquipmentType.PROTECTION_CONTROL_PANEL -> "PA"
             EquipmentType.METAL_CLAD_SWITCHGEAR -> "CB"
+            EquipmentType.EMERGENCY_GENERATOR -> "GE"
+            EquipmentType.BUSBAR -> "BR"
+            EquipmentType.DISTRIBUTION_LINE -> "RD"
             else -> ""
         }
     }

@@ -245,7 +245,7 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
     val eq = item.equipment
     val display = if (eq != null) {
         val code = eq.code?.takeIf { it.isNotBlank() }
-        if (code != null) "$code (${eq.name})" else eq.name
+        if (code != null) "${eq.name} (${code})" else eq.name
     } else {
         item.link.equipmentId?.toString() ?: "equip"
     }

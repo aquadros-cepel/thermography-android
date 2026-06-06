@@ -232,8 +232,8 @@ fun MapComponent(
                     val customIcon = createCustomMarker(context, level, plant.name)
                     marker.icon = customIcon
                     
-                    // Ajusta a âncora dinamicamente
-                    val anchorV = 65f / customIcon.intrinsicHeight.toFloat()
+                    // Ajusta a âncora dinamicamente (130 * 0.7 = 91)
+                    val anchorV = 91f / customIcon.intrinsicHeight.toFloat()
                     marker.setAnchor(Marker.ANCHOR_CENTER, anchorV)
 
                     // Se for o selecionado, já abre o info window
@@ -306,11 +306,11 @@ fun createCustomMarker(context: Context, level: Int, text: String? = null): Draw
     val lightColor = android.graphics.Color.parseColor(lightColorHex)
 
     // Fator de escala para controlar o tamanho final
-    val scale = 0.5f
+    val scale = 0.6f
 
     // 2. Configuração de Texto
-    val baseTextSizePx = 50f // Reduzido de 60f para 50f
-    val baseTextPadding = 8f
+    val baseTextSizePx = 60f // Aumentado para melhor visibilidade
+    val baseTextPadding = 10f
     
     val textPaint = Paint().apply {
         isAntiAlias = true
