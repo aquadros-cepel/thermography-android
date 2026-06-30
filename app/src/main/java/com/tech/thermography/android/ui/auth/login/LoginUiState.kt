@@ -1,10 +1,11 @@
 package com.tech.thermography.android.ui.auth.login
 
 data class LoginUiState(
-    val username: String = "admin",
-    val password: String = "admin",
+    val username: String = "",
+    val password: String = "",
     val rememberMe: Boolean = false,
     val loading: Boolean = false,
     val error: String? = null,
-    val isAuthenticated: Boolean = false
+    val isAuthenticated: Boolean = false,
+    val shouldSync: Boolean = false
 )
