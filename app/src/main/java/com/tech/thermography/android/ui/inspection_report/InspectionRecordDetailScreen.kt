@@ -105,7 +105,7 @@ fun InspectionRecordDetailScreen(
                     } catch (_: Exception) { "--" }
                 } ?: "--"
 
-                Text(text = "Inspeção iniciada\t\t\t\t: $startedText", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Inspeção iniciada\t\t: $startedText", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "Inspeção encerrada\t: $finishedText", style = MaterialTheme.typography.bodySmall)
             }
