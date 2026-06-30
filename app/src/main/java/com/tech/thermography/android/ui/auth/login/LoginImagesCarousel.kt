@@ -20,13 +20,17 @@ import kotlinx.coroutines.delay
 @Composable
 fun LoginImagesCarousel(modifier: Modifier = Modifier) {
     val images = listOf(
-        R.drawable.thermography_0,
-        R.drawable.thermography_1,
-        R.drawable.thermography_2,
-        R.drawable.thermography_3,
-        R.drawable.thermography_4,
-        R.drawable.thermography_5,
-        R.drawable.thermography_6
+        R.drawable.flir0,
+        R.drawable.flir1,
+        R.drawable.flir2,
+        R.drawable.flir3,
+        R.drawable.flir4,
+        R.drawable.flir5,
+        R.drawable.flir6,
+        R.drawable.flir7,
+        R.drawable.flir8,
+        R.drawable.flir9,
+        R.drawable.flir10
     )
 
     var index by remember { mutableStateOf(0) }

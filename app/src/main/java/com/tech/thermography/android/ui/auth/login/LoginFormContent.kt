@@ -44,6 +44,7 @@ fun LoginFormContent(
 
     Column(
         modifier = Modifier
+            .widthIn(max = 420.dp)
             .fillMaxWidth()
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally

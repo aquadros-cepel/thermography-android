@@ -21,7 +21,7 @@ class AuthRepositoryImpl @Inject constructor(
                 session.saveToken(token, rememberMe)
                 AuthResult(success = true)
             } else {
-                AuthResult(error = "Token inválido")
+                AuthResult(error = "Usuário ou senha inválidos")
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Login failed", e)
