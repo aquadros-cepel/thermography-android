@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -37,10 +38,20 @@ fun RegisterScreen(
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
 
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+
     if (uiState.success) {
-        LaunchedEffect(Unit) {
-            onBack()
-        }
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Sucesso") },
+            text = { Text(uiState.successMessage ?: "") },
+            confirmButton = {
+                TextButton(onClick = { onBack() }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -149,7 +160,14 @@ fun RegisterScreen(
                         onValueChange = { viewModel.onPasswordChanged(it) },
                         label = { Text("Senha") },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                        visualTransformation = PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val description = if (passwordVisible) "Ocultar senha" else "Mostrar senha"
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = icon, contentDescription = description)
+                            }
+                        },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -166,7 +184,14 @@ fun RegisterScreen(
                         onValueChange = { viewModel.onConfirmPasswordChanged(it) },
                         label = { Text("Confirme Senha") },
                         leadingIcon = { Icon(Icons.Default.LockReset, contentDescription = null) },
-                        visualTransformation = PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val icon = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val description = if (confirmPasswordVisible) "Ocultar senha" else "Mostrar senha"
+                            IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                Icon(imageVector = icon, contentDescription = description)
+                            }
+                        },
+                        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -180,7 +205,13 @@ fun RegisterScreen(
                 }
 
                 uiState.error?.let {
-                    Text(it, color = Color.Red, modifier = Modifier.padding(top = 16.dp), fontSize = 14.sp)
+                    Text(
+                        text = it,
+                        color = Color(0xFFFF8A80), // Vermelho mais claro (material coral)
+                        modifier = Modifier.padding(top = 16.dp),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
                 Spacer(Modifier.height(32.dp))

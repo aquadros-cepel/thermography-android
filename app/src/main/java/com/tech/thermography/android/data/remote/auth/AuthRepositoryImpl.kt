@@ -28,4 +28,37 @@ class AuthRepositoryImpl @Inject constructor(
             AuthResult(error = e.message)
         }
     }
+
+    override suspend fun register(request: RegisterRequest): RegisterResult {
+        return try {
+            val response = api.register(request)
+            if (response.isSuccessful) {
+                RegisterResult(
+                    success = true,
+                    message = "Usuário cadastrado com sucesso. \n\n Um link para acessar a plataforma web Thermal Energy foi enviada para o seu e-mail. \n\nUse o login e senha cadastrados para acessar o aplicativo Thermal Energy e sua plataforma web."
+                )
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val errorMsg = if (!errorBody.isNullOrBlank()) {
+                    try {
+                        val json = org.json.JSONObject(errorBody)
+                        val message = json.optString("message")
+                        when (message) {
+                            "error.userexists" -> "Login está sendo usado"
+                            "error.emailexists" -> "E-mail já está em uso"
+                            else -> json.optString("detail", "Falha ao criar conta")
+                        }
+                    } catch (_: Exception) {
+                        "Falha ao criar conta"
+                    }
+                } else {
+                    "Falha ao criar conta"
+                }
+                RegisterResult(error = errorMsg)
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Registration failed", e)
+            RegisterResult(error = e.message ?: "Erro de rede")
+        }
+    }
 }

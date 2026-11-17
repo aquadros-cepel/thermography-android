@@ -46,7 +46,7 @@ class RegisterViewModel @Inject constructor(
 
         val result = repository.register(request)
         if (result.success) {
-            _uiState.update { it.copy(loading = false, success = true) }
+            _uiState.update { it.copy(loading = false, success = true, successMessage = result.message) }
         } else {
             _uiState.update { it.copy(loading = false, error = result.error ?: "Falha ao criar conta") }
         }

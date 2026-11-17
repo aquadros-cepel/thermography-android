@@ -9,5 +9,6 @@ data class RegisterUiState(
     val confirmPassword: String = "",
     val loading: Boolean = false,
     val error: String? = null,
-    val success: Boolean = false
+    val success: Boolean = false,
+    val successMessage: String? = null
 )

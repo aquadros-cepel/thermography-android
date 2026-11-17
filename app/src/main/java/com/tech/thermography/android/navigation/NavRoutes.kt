@@ -2,6 +2,7 @@ package com.tech.thermography.android.navigation
 
 object NavRoutes {
     const val LOGIN = "login"
+    const val REGISTER = "register"
     const val HOME = "home"
     const val SYNC = "sync"
     const val INSPECTION_RECORDS = "inspection_records"

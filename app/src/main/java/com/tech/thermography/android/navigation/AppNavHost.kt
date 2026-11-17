@@ -35,6 +35,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tech.thermography.android.ui.auth.login.LoginScreen
+import com.tech.thermography.android.ui.auth.register.RegisterScreen
 import com.tech.thermography.android.ui.camera.ThermogramsCameraScreen
 import com.tech.thermography.android.ui.camera.ThermogramImageScreen
 import com.tech.thermography.android.ui.flir_discovery.FlirDiscoveryScreen
@@ -55,7 +56,8 @@ fun AppNavHost() {
     val bottomBarRoutes = items.map { it.first }
     val context = LocalContext.current
     val isTablet = DeviceUtils.isTablet(context)
-    val showBottomBar = currentDestination?.route in bottomBarRoutes && isTablet
+//    val showBottomBar = currentDestination?.route in bottomBarRoutes && isTablet
+    val showBottomBar = false
 
     Scaffold(
         bottomBar = {
@@ -95,12 +97,23 @@ fun AppNavHost() {
 
             composable(NavRoutes.LOGIN) {
                 LoginScreen(
-                    onLoginSuccess = { 
-                        navController.navigate(NavRoutes.HOME) {
+                    onLoginSuccess = { shouldSync ->
+                        val destination = if (shouldSync) NavRoutes.SYNC else NavRoutes.HOME
+                        navController.navigate(destination) {
                             popUpTo(NavRoutes.LOGIN) { inclusive = true }
                         }
                     },
-                    onNavigateToCreateAccount = { /* TODO */ }
+                    onNavigateToCreateAccount = {
+                        navController.navigate(NavRoutes.REGISTER)
+                    }
+                )
+            }
+
+            composable(NavRoutes.REGISTER) {
+                RegisterScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    }
                 )
             }
 
@@ -232,9 +245,12 @@ object DeviceUtils {
         val activity = context.findActivity()
         if (activity != null) {
             val windowSizeClass = calculateWindowSizeClass(activity)
-            return windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+            // Tablets em portrait costumam ser 'Medium' (600dp+) e em landscape 'Expanded' (840dp+)
+            return windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
         }
-        return false
+        // Fallback baseado na configuração (útil se activity for null por algum motivo)
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        return configuration.smallestScreenWidthDp >= 600
     }
 }
 
