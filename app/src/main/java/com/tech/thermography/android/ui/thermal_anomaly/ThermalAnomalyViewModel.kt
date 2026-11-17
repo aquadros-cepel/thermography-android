@@ -96,6 +96,14 @@ class ThermalAnomalyViewModel @Inject constructor(
     fun onEvent(event: ThermalAnomalyEvent) {
         when (event) {
 
+            is ThermalAnomalyEvent.InitialDataSelectedByIds -> {
+                handleInitialDataSelectedByIds(
+                    plantId = event.plantId,
+                    equipmentId = event.equipmentId,
+                    inspectionRecordId = event.inspectionRecordId,
+                    thermographicId = event.thermographicId
+                )
+            }
             is ThermalAnomalyEvent.PlantSelectedById -> {
                 viewModelScope.launch {
                     try {
@@ -239,6 +247,143 @@ class ThermalAnomalyViewModel @Inject constructor(
         }
     }
 
+    private fun handleInitialDataSelectedByIds(
+        plantId: UUID?,
+        equipmentId: UUID?,
+        inspectionRecordId: UUID?,
+        thermographicId: UUID?
+    ) {
+        viewModelScope.launch {
+            try {
+                if (thermographicId != null) {
+                    val therm = recordRepository.getThermographicInspectionRecordById(thermographicId)
+                    if (therm != null) {
+                        val plant = therm.plantId.let { plantRepository.getPlantById(it) }
+                        val equipment = therm.equipmentId.let { equipmentRepository.getEquipmentById(it) }
+                        val inspectionRecord = therm.routeId?.let { inspectionRecordRepository.getInspectionRecordById(it) }
+                        val component = therm.componentId?.let { equipmentComponentRepository.getEquipmentComponentById(it) }
+
+                        val filteredEquipments = plant?.let { equipmentRepository.getEquipmentsByPlantId(it.id).first() } ?: emptyList()
+                        val filteredInspectionRecords = equipment?.let { inspectionRecordRepository.getInspectionRecordsByEquipmentId(it.id) } ?: emptyList()
+
+                        val componentCode = equipment?.let { getEquipmentComponentCode(it.type) } ?: ""
+                        val allComponents = equipmentComponentRepository.getAllEquipmentComponents().first()
+                        val availableComponents = if (componentCode.isNotEmpty()) {
+                            allComponents.filter { it.code == componentCode }
+                        } else emptyList()
+
+                        var loadedThermogram: com.tech.thermography.android.data.local.entity.ThermogramEntity? = null
+                        var loadedRois: List<com.tech.thermography.android.data.local.entity.ROIEntity> = emptyList()
+                        var loadedThermogramRef: com.tech.thermography.android.data.local.entity.ThermogramEntity? = null
+                        var loadedRoisRef: List<com.tech.thermography.android.data.local.entity.ROIEntity> = emptyList()
+
+                        try {
+                            val thermogramResult = thermogramRepository.getThermogramById(therm.thermogramId)
+                            loadedThermogram = thermogramResult
+                            if (thermogramResult != null) {
+                                loadedRois = roiRepository.getRoisByThermogramId(thermogramResult.id).first()
+                            }
+
+                            therm.thermogramRefId?.let { refId ->
+                                val thermogramRefResult = thermogramRepository.getThermogramById(refId)
+                                loadedThermogramRef = thermogramRefResult
+                                if (thermogramRefResult != null) {
+                                    loadedRoisRef = roiRepository.getRoisByThermogramId(thermogramRefResult.id).first()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.w("ThermAnomVM", "Failed to load thermogram or rois: ${e.message}")
+                        }
+
+                        _uiState.update { state ->
+                            state.copy(
+                                selectedPlant = plant ?: state.selectedPlant,
+                                selectedEquipment = equipment ?: state.selectedEquipment,
+                                equipmentType = equipment?.let { generateEquipmentTypeString(it) } ?: state.equipmentType,
+                                selectedComponent = component ?: state.selectedComponent,
+                                selectedInspectionRecord = inspectionRecord ?: state.selectedInspectionRecord,
+                                filteredEquipments = filteredEquipments,
+                                filteredInspectionRecords = filteredInspectionRecords,
+                                availableComponents = availableComponents,
+                                recordName = therm.name,
+                                serviceOrder = therm.serviceOrder ?: "",
+                                analysisDescription = therm.analysisDescription ?: "",
+                                condition = therm.condition,
+                                recommendations = therm.recommendations ?: "",
+                                deadlineExecution = therm.deadlineExecution?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
+                                nextMonitoring = therm.nextMonitoring?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
+                                isEditing = true,
+                                thermogramId = therm.id,
+                                thermogram = loadedThermogram ?: state.thermogram,
+                                thermogramRois = loadedRois.ifEmpty { state.thermogramRois },
+                                selectedRoi = loadedRois.find { it.id == loadedThermogram?.selectedRoiId } ?: loadedRois.firstOrNull(),
+                                thermogramRef = loadedThermogramRef ?: state.thermogramRef,
+                                thermogramRefRois = loadedRoisRef.ifEmpty { state.thermogramRefRois },
+                                selectedRefRoi = loadedRoisRef.find { it.id == loadedThermogramRef?.selectedRoiId } ?: loadedRoisRef.firstOrNull(),
+                                thermogramImageUri = loadedThermogram?.localImagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramImageUri,
+                                realImageUri = loadedThermogram?.localImageRefPath?.takeIf { it.isNotBlank() }?.let { path ->
+                                    when {
+                                        path.startsWith("content://") -> Uri.parse(path)
+                                        path.startsWith("file://") -> Uri.parse(path)
+                                        else -> java.io.File(path).toUri()
+                                    }
+                                } ?: state.realImageUri,
+                                thermogramRefImageUri = loadedThermogramRef?.localImagePath?.takeIf { it.isNotBlank() }?.toUri() ?: state.thermogramRefImageUri
+                            )
+                        }
+                        return@launch
+                    }
+                }
+
+                // New record
+                val plant = plantId?.let { plantRepository.getPlantById(it) }
+                val equipment = equipmentId?.let { equipmentRepository.getEquipmentById(it) }
+                val inspectionRecord = inspectionRecordId?.let { inspectionRecordRepository.getInspectionRecordById(it) }
+
+                val filteredEquipments = plant?.let { equipmentRepository.getEquipmentsByPlantId(it.id).first() } ?: emptyList()
+                val filteredInspectionRecords = equipment?.let { inspectionRecordRepository.getInspectionRecordsByEquipmentId(it.id) } ?: emptyList()
+
+                val componentCode = equipment?.let { getEquipmentComponentCode(it.type) } ?: ""
+                val allComponents = equipmentComponentRepository.getAllEquipmentComponents().first()
+                val availableComponents = if (componentCode.isNotEmpty()) {
+                    allComponents.filter { it.code == componentCode }
+                } else emptyList()
+
+                var generatedRecordName = ""
+                if (plant != null) {
+                    val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+                    val n = anomalyRecords.size
+                    val numberPart = String.format(Locale.US, "%03d", n + 1)
+                    val codePart = plant.code ?: plant.name ?: plant.id.toString()
+                    generatedRecordName = "CAT_${numberPart}_$codePart"
+                }
+
+                _uiState.update { state ->
+                    state.copy(
+                        selectedPlant = plant ?: state.selectedPlant,
+                        selectedEquipment = equipment ?: state.selectedEquipment,
+                        equipmentType = equipment?.let { generateEquipmentTypeString(it) } ?: state.equipmentType,
+                        selectedInspectionRecord = inspectionRecord ?: state.selectedInspectionRecord,
+                        filteredEquipments = if (filteredEquipments.isNotEmpty()) filteredEquipments else state.filteredEquipments,
+                        filteredInspectionRecords = if (filteredInspectionRecords.isNotEmpty()) filteredInspectionRecords else state.filteredInspectionRecords,
+                        availableComponents = if (availableComponents.isNotEmpty()) availableComponents else state.availableComponents,
+                        recordName = if (state.recordName.isBlank() && generatedRecordName.isNotBlank()) generatedRecordName else state.recordName
+                    )
+                }
+
+                if (plant != null) {
+                    viewModelScope.launch {
+                        equipmentRepository.getEquipmentsByPlantId(plant.id).collect { equipmentList ->
+                            _uiState.update { it.copy(filteredEquipments = equipmentList) }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("ThermAnomVM", "handleInitialDataSelectedByIds failed: ${e.message}")
+            }
+        }
+    }
+
     private fun handlePlantSelected(plant: PlantEntity) {
         _uiState.update { it.copy(
             selectedPlant = plant,
@@ -247,8 +392,10 @@ class ThermalAnomalyViewModel @Inject constructor(
             equipmentType = ""
         ) }
         viewModelScope.launch {
-            equipmentRepository.getEquipmentsByPlantId(plant.id).collect { equipmentList ->
-                _uiState.update { it.copy(filteredEquipments = equipmentList) }
+            viewModelScope.launch {
+                equipmentRepository.getEquipmentsByPlantId(plant.id).collect { equipmentList ->
+                    _uiState.update { it.copy(filteredEquipments = equipmentList) }
+                }
             }
             val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
             val condition = _uiState.value.condition

@@ -124,17 +124,16 @@ fun ThermalAnomalyForm(
     val flirConnectedCameraName by viewModel.flirConnectedCameraName.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
 
-    // If we received a thermographicId (editing), load it first so isEditing is set before plant selection
-    LaunchedEffect(thermographicId) {
-        thermographicId?.let { viewModel.onEvent(ThermalAnomalyEvent.ThermographicSelectedById(it)) }
-    }
-
-    // Then process plant/equipment/inspection selection. Processing thermographicId first ensures
-    // that when navigating to edit an existing record we won't auto-generate/overwrite the recordName.
-    LaunchedEffect(plantId, equipmentId, inspectionRecordId) {
-        plantId?.let { viewModel.onEvent(ThermalAnomalyEvent.PlantSelectedById(it)) }
-        equipmentId?.let { viewModel.onEvent(ThermalAnomalyEvent.EquipmentSelectedById(it)) }
-        inspectionRecordId?.let { viewModel.onEvent(ThermalAnomalyEvent.InspectionRecordSelectedById(it)) }
+    // Initialize form with initial IDs atomically to prevent race conditions
+    LaunchedEffect(plantId, equipmentId, inspectionRecordId, thermographicId) {
+        viewModel.onEvent(
+            ThermalAnomalyEvent.InitialDataSelectedByIds(
+                plantId = plantId,
+                equipmentId = equipmentId,
+                inspectionRecordId = inspectionRecordId,
+                thermographicId = thermographicId
+            )
+        )
     }
 
     // When saved, navigate to InspectionRecordDetail and request it to expand to the equipment
