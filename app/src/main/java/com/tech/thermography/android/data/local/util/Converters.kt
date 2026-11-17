@@ -56,11 +56,11 @@ class Converters {
     fun toDatetimeUnit(value: String?): DatetimeUnit? = value?.let { DatetimeUnit.valueOf(it) }
 
     @TypeConverter
-    fun fromThermographicInspectionRecordType(type: ThermographicInspectionRecordType?): String? = type?.name
+    fun fromThermographicRecordType(type: ThermographicRecordType?): String? = type?.name
 
     @TypeConverter
-    fun toThermographicInspectionRecordType(value: String?): ThermographicInspectionRecordType? = 
-        value?.let { ThermographicInspectionRecordType.valueOf(it) }
+    fun toThermographicRecordType(value: String?): ThermographicRecordType? =
+        value?.let { ThermographicRecordType.valueOf(it) }
 
     @TypeConverter
     fun fromEquipmentInspectionStatus(status: EquipmentInspectionStatus?): String? = status?.name

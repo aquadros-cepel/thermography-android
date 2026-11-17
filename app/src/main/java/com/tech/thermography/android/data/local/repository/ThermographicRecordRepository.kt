@@ -11,9 +11,9 @@ import androidx.work.WorkManager
 import androidx.work.ExistingWorkPolicy
 import com.tech.thermography.android.work.ThermographicSyncWorker
 import com.tech.thermography.android.data.local.AppDatabase
-import com.tech.thermography.android.data.local.dao.ThermographicInspectionRecordWithRelations
-import com.tech.thermography.android.data.local.entity.ThermographicInspectionRecordEntity
-import com.tech.thermography.android.data.remote.mapper.ThermographicInspectionRecordMapper
+import com.tech.thermography.android.data.local.dao.ThermographicRecordWithRelations
+import com.tech.thermography.android.data.local.entity.ThermographicRecord
+import com.tech.thermography.android.data.remote.mapper.ThermographicRecordMapper
 import com.tech.thermography.android.data.remote.mapper.ROIMapper
 import com.tech.thermography.android.data.remote.sync.SyncApi
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,54 +30,54 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ThermographicInspectionRecordRepository @Inject constructor(
+class ThermographicRecordRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: AppDatabase,
     private val syncApi: SyncApi
-) : AbstractSyncRepository<ThermographicInspectionRecordEntity>() {
-    private val thermographicInspectionRecordDao = db.thermographicInspectionRecordDao()
+) : AbstractSyncRepository<ThermographicRecord>() {
+    private val thermographicRecordDao = db.thermographicRecordDao()
     private val thermogramDao = db.thermogramDao()
     private val roiDao = db.roiDao()
 
-    fun getAllThermographicInspectionRecords(): Flow<List<ThermographicInspectionRecordEntity>> = 
-        thermographicInspectionRecordDao.getAllThermographicInspectionRecords()
+    fun getAllThermographicRecords(): Flow<List<ThermographicRecord>> = 
+        thermographicRecordDao.getAllThermographicRecords()
 
-    fun getThermographicInspectionRecordsByPlantId(plantId: UUID): Flow<List<ThermographicInspectionRecordEntity>> =
-        thermographicInspectionRecordDao.getThermographicInspectionRecordsByPlantId(plantId)
+    fun getThermographicRecordsByPlantId(plantId: UUID): Flow<List<ThermographicRecord>> =
+        thermographicRecordDao.getThermographicRecordsByPlantId(plantId)
 
-    fun getThermographicInspectionRecordsByPlantAndEquipment(plantId: UUID, equipmentId: UUID): Flow<List<ThermographicInspectionRecordEntity>> =
-        thermographicInspectionRecordDao.getThermographicInspectionRecordsByPlantAndEquipment(plantId, equipmentId)
+    fun getThermographicRecordsByPlantAndEquipment(plantId: UUID, equipmentId: UUID): Flow<List<ThermographicRecord>> =
+        thermographicRecordDao.getThermographicRecordsByPlantAndEquipment(plantId, equipmentId)
 
-    suspend fun getThermographicInspectionRecordById(id: UUID): ThermographicInspectionRecordEntity? = 
-        thermographicInspectionRecordDao.getThermographicInspectionRecordById(id)
+    suspend fun getThermographicRecordById(id: UUID): ThermographicRecord? = 
+        thermographicRecordDao.getThermographicRecordById(id)
 
-    suspend fun getThermographicInspectionRecordFull(id: UUID): ThermographicInspectionRecordWithRelations {
-        return thermographicInspectionRecordDao.getThermographicInspectionRecordWithRelations(id)
+    suspend fun getThermographicRecordFull(id: UUID): ThermographicRecordWithRelations {
+        return thermographicRecordDao.getThermographicRecordWithRelations(id)
     }
 
-    suspend fun insertThermographicInspectionRecord(context: Context, record: ThermographicInspectionRecordEntity) {
+    suspend fun insertThermographicRecord(context: Context, record: ThermographicRecord) {
         // Persiste a imagem localmente antes de salvar para garantir acesso posterior
         persistThermogramImageLocally(record.thermogramId)
         record.thermogramRefId?.let { persistThermogramImageLocally(it) }
         
         val newRecord = record.copy(syncStatus = com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus.NEW)
-        thermographicInspectionRecordDao.insertThermographicInspectionRecord(newRecord)
+        thermographicRecordDao.insertThermographicRecord(newRecord)
         triggerSync(context)
     }
 
-    suspend fun updateThermographicInspectionRecord(context: Context, record: ThermographicInspectionRecordEntity) {
+    suspend fun updateThermographicRecord(context: Context, record: ThermographicRecord) {
         // Persiste a imagem localmente antes de salvar
         persistThermogramImageLocally(record.thermogramId)
         record.thermogramRefId?.let { persistThermogramImageLocally(it) }
         
         val updated = record.copy(syncStatus = com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus.EDITED)
-        thermographicInspectionRecordDao.updateThermographicInspectionRecord(updated)
+        thermographicRecordDao.updateThermographicRecord(updated)
         triggerSync(context)
     }
 
-    suspend fun deleteThermographicInspectionRecord(context: Context, record: ThermographicInspectionRecordEntity) {
+    suspend fun deleteThermographicRecord(context: Context, record: ThermographicRecord) {
         val updated = record.copy(syncStatus = com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus.DELETED)
-        thermographicInspectionRecordDao.updateThermographicInspectionRecord(updated)
+        thermographicRecordDao.updateThermographicRecord(updated)
         triggerSync(context)
     }
 
@@ -132,17 +132,17 @@ class ThermographicInspectionRecordRepository @Inject constructor(
     }
 
     override suspend fun syncEntities() {
-        val remoteEntities: List<com.tech.thermography.android.data.remote.dto.ThermographicInspectionRecordCreateDTO> = syncApi.getAllThermographicInspectionRecords()
-        val entities: List<ThermographicInspectionRecordEntity> = remoteEntities.map { dto -> ThermographicInspectionRecordMapper.dtoToEntity(dto) }
+        val remoteEntities: List<com.tech.thermography.android.data.remote.dto.ThermographicRecordCreateDTO> = syncApi.getAllThermographicRecords()
+        val entities: List<ThermographicRecord> = remoteEntities.map { dto -> ThermographicRecordMapper.dtoToEntity(dto) }
         setCache(entities)
     }
 
     override suspend fun insertCached() {
-        thermographicInspectionRecordDao.insertThermographicInspectionRecords(cache)
+        thermographicRecordDao.insertThermographicRecords(cache)
     }
 
     suspend fun syncPendingRecords(): Boolean {
-        val records = thermographicInspectionRecordDao.getRecordsToSync()
+        val records = thermographicRecordDao.getRecordsToSync()
         Log.d("SyncDebug", "syncPendingRecords: Encontrados ${records.size} registros para sincronizar")
         
         var anySynced = false
@@ -161,7 +161,7 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                     syncRealImageRef(it)
                 }
 
-                val fullRecord = getThermographicInspectionRecordFull(record.id)
+                val fullRecord = getThermographicRecordFull(record.id)
                 
                 // Buscar ROIs
                 val mainRois = fullRecord.thermogram?.let { t -> 
@@ -171,7 +171,7 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                     roiDao.getRoisByThermogramId(t.id).first().map { ROIMapper.entityToDto(it) }
                 }
 
-                val dto = ThermographicInspectionRecordMapper.entityToDto(
+                val dto = ThermographicRecordMapper.entityToDto(
                     fullRecord.record,
                     fullRecord.plant,
                     fullRecord.thermogram,
@@ -183,10 +183,10 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                 when (record.syncStatus.name) {
                     "NEW" -> {
                         Log.d("SyncDebug", "Enviando POST para registro NEW: ${record.id}")
-                        val response = syncApi.postThermographicInspectionRecord(dto)
+                        val response = syncApi.postThermographicRecord(dto)
                         if (response.isSuccessful) {
                             Log.d("SyncDebug", "Sucesso no POST do registro: ${record.id}")
-                            thermographicInspectionRecordDao.updateStatus(record.id, "SYNCED")
+                            thermographicRecordDao.updateStatus(record.id, "SYNCED")
                             anySynced = true
                         } else {
                             Log.e("SyncDebug", "Erro no POST do registro: ${record.id}. Código: ${response.code()}")
@@ -194,10 +194,10 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                     }
                     "EDITED" -> {
                         Log.d("SyncDebug", "Enviando POST (Update) para registro EDITED: ${record.id}")
-                        val response = syncApi.updateThermographicInspectionRecord(dto)
+                        val response = syncApi.updateThermographicRecord(dto)
                         if (response.isSuccessful) {
                             Log.d("SyncDebug", "Sucesso no Update do registro: ${record.id}")
-                            thermographicInspectionRecordDao.updateStatus(record.id, "SYNCED")
+                            thermographicRecordDao.updateStatus(record.id, "SYNCED")
                             anySynced = true
                         } else {
                             Log.e("SyncDebug", "Erro no Update do registro: ${record.id}. Código: ${response.code()}")
@@ -205,10 +205,10 @@ class ThermographicInspectionRecordRepository @Inject constructor(
                     }
                     "DELETED" -> {
                         Log.d("SyncDebug", "Enviando DELETE para registro: ${record.id}")
-                        val response = syncApi.deleteThermographicInspectionRecord(record.id.toString())
+                        val response = syncApi.deleteThermographicRecord(record.id.toString())
                         if (response.isSuccessful) {
                             Log.d("SyncDebug", "Sucesso no DELETE do registro: ${record.id}")
-                            thermographicInspectionRecordDao.deleteById(record.id)
+                            thermographicRecordDao.deleteById(record.id)
                             anySynced = true
                         } else {
                             Log.e("SyncDebug", "Erro no DELETE do registro: ${record.id}. Código: ${response.code()}")

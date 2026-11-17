@@ -19,7 +19,7 @@ import com.tech.thermography.android.data.local.repository.RiskPeriodicityDeadli
 import com.tech.thermography.android.data.local.repository.RiskRecommendationTranslationRepository
 import com.tech.thermography.android.data.local.repository.SyncableRepository
 import com.tech.thermography.android.data.local.repository.ThermogramRepository
-import com.tech.thermography.android.data.local.repository.ThermographicInspectionRecordRepository
+import com.tech.thermography.android.data.local.repository.ThermographicRecordRepository
 import com.tech.thermography.android.data.local.repository.UserInfoRepository
 import com.tech.thermography.android.data.remote.auth.AuthRepository
 import com.tech.thermography.android.data.remote.auth.AuthRepositoryImpl
@@ -90,7 +90,7 @@ abstract class RepositoryModule {
     abstract fun bindROIRepository(impl: ROIRepository): SyncableRepository
 
     @Binds @IntoMap @IntKey(17)
-    abstract fun bindThermographicInspectionRecordRepository(impl: ThermographicInspectionRecordRepository): SyncableRepository
+    abstract fun bindThermographicRecordRepository(impl: ThermographicRecordRepository): SyncableRepository
 
     @Binds @IntoMap @IntKey(18)
     abstract fun bindEquipmentTypeTranslationRepository(impl: EquipmentTypeTranslationRepository): SyncableRepository

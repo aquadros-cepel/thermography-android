@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.tech.thermography.android.data.local.repository.ThermographicInspectionRecordRepository
+import com.tech.thermography.android.data.local.repository.ThermographicRecordRepository
 import com.tech.thermography.android.util.NetworkUtils
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -14,7 +14,7 @@ import dagger.assisted.AssistedInject
 class ThermographicSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val repository: ThermographicInspectionRecordRepository
+    private val repository: ThermographicRecordRepository
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         Log.d("ThermographicSyncWorker", "Iniciando worker de sincronização")

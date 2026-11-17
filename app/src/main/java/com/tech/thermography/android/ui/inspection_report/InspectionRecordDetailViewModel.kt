@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 // Wrapper to combine link entity with loaded equipment entity
 data class DisplayAnomaly(
-    val record: com.tech.thermography.android.data.local.entity.ThermographicInspectionRecordEntity,
+    val record: com.tech.thermography.android.data.local.entity.ThermographicRecord,
     val componentName: String?
 )
 
@@ -50,7 +50,7 @@ class InspectionRecordDetailViewModel @Inject constructor(
     private val groupEquipmentRepository: InspectionRecordGroupEquipmentRepository,
     private val plantRepository: PlantRepository,
     private val equipmentRepository: EquipmentRepository,
-    private val thermographicRepository: com.tech.thermography.android.data.local.repository.ThermographicInspectionRecordRepository,
+    private val thermographicRepository: com.tech.thermography.android.data.local.repository.ThermographicRecordRepository,
     private val equipmentComponentRepository: com.tech.thermography.android.data.local.repository.EquipmentComponentRepository
 ) : ViewModel() {
 
@@ -149,7 +149,7 @@ class InspectionRecordDetailViewModel @Inject constructor(
                 // If we have a plantId, collect anomalies reactively and update UI state whenever anomalies change
                 if (record?.plantId != null) {
                     viewModelScope.launch {
-                        thermographicRepository.getThermographicInspectionRecordsByPlantId(record.plantId).collect { allAnomalies ->
+                        thermographicRepository.getThermographicRecordsByPlantId(record.plantId).collect { allAnomalies ->
                             val anomaliesByEquipment = allAnomalies.groupBy { it.equipmentId }
 
                             val groupedItems = groupedLinksByGroupId.mapValues { entry ->

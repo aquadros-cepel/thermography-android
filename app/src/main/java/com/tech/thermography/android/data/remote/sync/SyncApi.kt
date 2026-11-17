@@ -76,17 +76,17 @@ interface SyncApi {
     suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @GET("thermographic-inspection-records")
-    suspend fun getAllThermographicInspectionRecords(): List<ThermographicInspectionRecordCreateDTO>
+    suspend fun getAllThermographicRecords(): List<ThermographicRecordCreateDTO>
 
     @GET("user-infos")
     suspend fun getAllUserInfos(): List<UserInfoDto>
 
     @POST("thermographic-inspection-records/actions/create")
-    suspend fun postThermographicInspectionRecord(@Body record: ThermographicInspectionRecordCreateDTO): Response<Unit>
+    suspend fun postThermographicRecord(@Body record: ThermographicRecordCreateDTO): Response<Unit>
 
     @POST("thermographic-inspection-records/actions/update")
-    suspend fun updateThermographicInspectionRecord(@Body record: ThermographicInspectionRecordCreateDTO): Response<Unit>
+    suspend fun updateThermographicRecord(@Body record: ThermographicRecordCreateDTO): Response<Unit>
 
     @DELETE("thermographic-inspection-records/{id}")
-    suspend fun deleteThermographicInspectionRecord(@Path("id") id: String): Response<Unit>
+    suspend fun deleteThermographicRecord(@Path("id") id: String): Response<Unit>
 }

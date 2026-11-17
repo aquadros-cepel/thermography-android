@@ -8,13 +8,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tech.thermography.android.data.local.entity.EquipmentEntity
 import com.tech.thermography.android.data.local.entity.PlantEntity
-import com.tech.thermography.android.data.local.entity.ThermographicInspectionRecordEntity
+import com.tech.thermography.android.data.local.entity.ThermographicRecord
 import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
-import com.tech.thermography.android.data.local.entity.enumeration.ThermographicInspectionRecordType
+import com.tech.thermography.android.data.local.entity.enumeration.ThermographicRecordType
 import com.tech.thermography.android.data.local.repository.EquipmentComponentRepository
 import com.tech.thermography.android.data.local.repository.EquipmentRepository
 import com.tech.thermography.android.data.local.repository.PlantRepository
-import com.tech.thermography.android.data.local.repository.ThermographicInspectionRecordRepository
+import com.tech.thermography.android.data.local.repository.ThermographicRecordRepository
 import com.tech.thermography.android.data.local.repository.InspectionRecordRepository
 import com.tech.thermography.android.data.local.repository.EquipmentComponentTemperatureLimitsRepository
 import com.tech.thermography.android.data.local.repository.RiskPeriodicityDeadlineRepository
@@ -59,7 +59,7 @@ class ThermalAnomalyViewModel @Inject constructor(
     private val plantRepository: PlantRepository,
     private val equipmentRepository: EquipmentRepository,
     private val equipmentComponentRepository: EquipmentComponentRepository,
-    private val recordRepository: ThermographicInspectionRecordRepository,
+    private val recordRepository: ThermographicRecordRepository,
     private val inspectionRecordRepository: InspectionRecordRepository,
     private val flirReader: FlirThermogramReader,
     private val thermogramRepository: ThermogramRepository,
@@ -164,7 +164,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 _uiState.update { it.copy(condition = event.value, isDirty = true) }
                 viewModelScope.launch {
                     _uiState.value.selectedPlant?.let { p ->
-                        val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(p.id).first()
+                        val anomalyRecords = recordRepository.getThermographicRecordsByPlantId(p.id).first()
                         setThermalRecordName(p, event.value, anomalyRecords)
                     }
                     applyRiskPeriodicity(event.value)
@@ -183,7 +183,7 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.ThermographicSelectedById -> {
                 viewModelScope.launch {
                     try {
-                        val therm = recordRepository.getThermographicInspectionRecordById(event.thermographicId)
+                        val therm = recordRepository.getThermographicRecordById(event.thermographicId)
                         if (therm != null) {
                             val plant = therm.plantId.let { plantRepository.getPlantById(it) }
                             val equipment = therm.equipmentId.let { equipmentRepository.getEquipmentById(it) }
@@ -279,7 +279,7 @@ class ThermalAnomalyViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (thermographicId != null) {
-                    val therm = recordRepository.getThermographicInspectionRecordById(thermographicId)
+                    val therm = recordRepository.getThermographicRecordById(thermographicId)
                     if (therm != null) {
                         val plant = therm.plantId.let { plantRepository.getPlantById(it) }
                         val equipment = therm.equipmentId.let { equipmentRepository.getEquipmentById(it) }
@@ -377,7 +377,7 @@ class ThermalAnomalyViewModel @Inject constructor(
 
                 var generatedRecordName = ""
                 if (plant != null) {
-                    val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+                    val anomalyRecords = recordRepository.getThermographicRecordsByPlantId(plant.id).first()
                     val n = anomalyRecords.size
                     val numberPart = String.format(Locale.US, "%03d", n + 1)
                     val codePart = plant.code ?: plant.name ?: plant.id.toString()
@@ -423,7 +423,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                     _uiState.update { it.copy(filteredEquipments = equipmentList) }
                 }
             }
-            val anomalyRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+            val anomalyRecords = recordRepository.getThermographicRecordsByPlantId(plant.id).first()
             val condition = _uiState.value.condition
             val currentState = _uiState.value
             if (!currentState.isEditing && currentState.recordName.isBlank()) {
@@ -507,7 +507,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                 val plant = currentState.selectedPlant ?: state.selectedPlant
 
                 if (!currentState.isEditing && finalRecordName.isBlank()) {
-                    val existing = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+                    val existing = recordRepository.getThermographicRecordsByPlantId(plant.id).first()
                     val n = existing.size
                     val numberPart = String.format(Locale.US, "%03d", n + 1)
                     val codePart = plant.code ?: plant.name ?: plant.id.toString()
@@ -561,10 +561,10 @@ class ThermalAnomalyViewModel @Inject constructor(
 
                 val deltaT = calculateTemperatureDifference() ?: 0.0
 
-                val record = ThermographicInspectionRecordEntity(
+                val record = ThermographicRecord(
                     id = if (currentState.isEditing) currentState.thermogramId ?: UUID.randomUUID() else UUID.randomUUID(),
                     name = finalRecordName,
-                    type = ThermographicInspectionRecordType.ANOMALY_DETECTED,
+                    type = ThermographicRecordType.ANOMALY_DETECTED,
                     serviceOrder = state.serviceOrder.ifBlank { null },
                     createdAt = Instant.now(),
                     analysisDescription = state.analysisDescription.ifBlank { null },
@@ -591,12 +591,12 @@ class ThermalAnomalyViewModel @Inject constructor(
                 )
 
                 if (currentState.isEditing) {
-                    val existingRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
+                    val existingRecords = recordRepository.getThermographicRecordsByPlantId(plant.id).first()
                     val original = existingRecords.find { it.name == finalRecordName }
                     val recordToSave = if (original != null) record.copy(id = original.id, syncStatus = RecordSyncStatus.EDITED) else record
-                    recordRepository.updateThermographicInspectionRecord(context, recordToSave)
+                    recordRepository.updateThermographicRecord(context, recordToSave)
                 } else {
-                    recordRepository.insertThermographicInspectionRecord(context, record)
+                    recordRepository.insertThermographicRecord(context, record)
                 }
 
                 _uiState.update { it.copy(isLoading = false, isSaved = true, error = null) }
@@ -615,7 +615,7 @@ class ThermalAnomalyViewModel @Inject constructor(
         }
     }
 
-    fun setThermalRecordName(powerStation: PlantEntity?, condition: ConditionType, anomalyRecords: List<ThermographicInspectionRecordEntity>) {
+    fun setThermalRecordName(powerStation: PlantEntity?, condition: ConditionType, anomalyRecords: List<ThermographicRecord>) {
         if (powerStation != null) {
             val lastName = powerStation.code?.split("-")?.lastOrNull() ?: ""
             if (condition == ConditionType.NORMAL) {

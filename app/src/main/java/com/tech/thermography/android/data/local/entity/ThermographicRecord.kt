@@ -6,13 +6,13 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
-import com.tech.thermography.android.data.local.entity.enumeration.ThermographicInspectionRecordType
+import com.tech.thermography.android.data.local.entity.enumeration.ThermographicRecordType
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
 @Entity(
-    tableName = "thermographic_inspection_record",
+    tableName = "thermographic_record",
     foreignKeys = [
         ForeignKey(
             entity = PlantEntity::class,
@@ -65,10 +65,10 @@ import java.util.UUID
     ],
     indices = [Index("plantId"), Index("routeId"), Index("equipmentId"), Index("componentId"), Index("createdById"), Index("finishedById"), Index("thermogramId"), Index("thermogramRefId")]
 )
-data class ThermographicInspectionRecordEntity(
+data class ThermographicRecord(
     @PrimaryKey val id: UUID = UUID.randomUUID(),
     val name: String,
-    val type: ThermographicInspectionRecordType,
+    val type: ThermographicRecordType,
     val serviceOrder: String?,
     val createdAt: Instant,
     val analysisDescription: String?,

@@ -41,7 +41,7 @@ class ThermogramDTO(
 )
 
 // DTO principal
-class ThermographicInspectionRecordCreateDTO(
+class ThermographicRecordCreateDTO(
     val id: UUID,
     val name: String?,
     val type: String?,

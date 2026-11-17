@@ -26,12 +26,12 @@ import com.tech.thermography.android.data.local.util.Converters
         InspectionRecordGroupEquipmentEntity::class,
         ThermogramEntity::class,
         ROIEntity::class,
-        ThermographicInspectionRecordEntity::class,
+        ThermographicRecord::class,
         RiskPeriodicityDeadlineEntity::class,
         RiskRecommendationTranslationEntity::class,
         SyncEntityState::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -53,7 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun inspectionRecordGroupEquipmentDao(): InspectionRecordGroupEquipmentDao
     abstract fun thermogramDao(): ThermogramDao
     abstract fun roiDao(): ROIDao
-    abstract fun thermographicInspectionRecordDao(): ThermographicInspectionRecordDao
+    abstract fun thermographicRecordDao(): ThermographicRecordDao
     abstract fun riskPeriodicityDeadlineDao(): RiskPeriodicityDeadlineDao
     abstract fun riskRecommendationTranslationDao(): RiskRecommendationTranslationDao
     abstract fun syncEntityStateDao(): SyncEntityStateDao

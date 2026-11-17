@@ -1,10 +1,10 @@
 package com.tech.thermography.android.data.remote.mapper
 
-import com.tech.thermography.android.data.local.dao.ThermographicInspectionRecordWithRelations
-import com.tech.thermography.android.data.local.entity.ThermographicInspectionRecordEntity
-import com.tech.thermography.android.data.remote.dto.ThermographicInspectionRecordCreateDTO
+import com.tech.thermography.android.data.local.dao.ThermographicRecordWithRelations
+import com.tech.thermography.android.data.local.entity.ThermographicRecord
+import com.tech.thermography.android.data.remote.dto.ThermographicRecordCreateDTO
 import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
-import com.tech.thermography.android.data.local.entity.enumeration.ThermographicInspectionRecordType
+import com.tech.thermography.android.data.local.entity.enumeration.ThermographicRecordType
 import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
 import java.time.Instant
 import java.time.LocalDate
@@ -16,9 +16,9 @@ import com.tech.thermography.android.data.remote.dto.ThermogramDTO
 import com.tech.thermography.android.data.remote.dto.IdRefDTO
 import com.tech.thermography.android.data.remote.dto.PlantRefDTO
 
-object ThermographicInspectionRecordMapper {
-    private fun parseType(type: String?): ThermographicInspectionRecordType =
-        type?.let { ThermographicInspectionRecordType.valueOf(it) } ?: ThermographicInspectionRecordType.NO_ANOMALY
+object ThermographicRecordMapper {
+    private fun parseType(type: String?): ThermographicRecordType =
+        type?.let { ThermographicRecordType.valueOf(it) } ?: ThermographicRecordType.NO_ANOMALY
     private fun parseCondition(condition: String?): ConditionType =
         condition?.let { ConditionType.valueOf(it) } ?: ConditionType.HIGH_RISK
     private fun parseInstant(str: String?): Instant =
@@ -26,8 +26,8 @@ object ThermographicInspectionRecordMapper {
     private fun parseLocalDate(str: String?): LocalDate? =
         str?.let { LocalDate.parse(it) }
 
-    fun dtoToEntity(dto: ThermographicInspectionRecordCreateDTO): ThermographicInspectionRecordEntity {
-        return ThermographicInspectionRecordEntity(
+    fun dtoToEntity(dto: ThermographicRecordCreateDTO): ThermographicRecord {
+        return ThermographicRecord(
             id = dto.id,
             name = dto.name ?: "",
             type = parseType(dto.type),
@@ -58,14 +58,14 @@ object ThermographicInspectionRecordMapper {
     }
 
     fun entityToDto(
-        entity: ThermographicInspectionRecordEntity,
+        entity: ThermographicRecord,
         plant: PlantEntity?,
         thermogram: ThermogramEntity?,
         thermogramRef: ThermogramEntity?,
         rois: List<ROIDto>?,
         roisRef: List<ROIDto>?
-    ): ThermographicInspectionRecordCreateDTO {
-        return ThermographicInspectionRecordCreateDTO(
+    ): ThermographicRecordCreateDTO {
+        return ThermographicRecordCreateDTO(
             id = entity.id,
             name = entity.name,
             type = entity.type.name,
@@ -143,7 +143,7 @@ object ThermographicInspectionRecordMapper {
         )
     }
 
-    fun entityToDto(rel: ThermographicInspectionRecordWithRelations): ThermographicInspectionRecordCreateDTO {
+    fun entityToDto(rel: ThermographicRecordWithRelations): ThermographicRecordCreateDTO {
         val entity = rel.record
         return entityToDto(
             entity,
