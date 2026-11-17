@@ -45,6 +45,7 @@ fun LoginImagesCarousel(modifier: Modifier = Modifier) {
 
     Crossfade(
         targetState = index,
+        modifier = modifier,
         animationSpec = tween(
             durationMillis = 600,
             easing = FastOutSlowInEasing
@@ -54,7 +55,7 @@ fun LoginImagesCarousel(modifier: Modifier = Modifier) {
             painter = painterResource(id = images[currentIndex]),
             contentDescription = "Thermography Carousel",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Fit
         )
     }
 }
