@@ -228,6 +228,8 @@ fun EmbeddedThermogramSection(
     var showRefThermogram by remember(singleRoi) { mutableStateOf(singleRoi) }
 
     val context = LocalContext.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isTablet = configuration.smallestScreenWidthDp >= 600
 
     // Decide qual URI usar
     val displayImageUri = remember(thermogramImageUri, thermogram?.localImagePath) {
@@ -326,7 +328,9 @@ fun EmbeddedThermogramSection(
     ) {
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth(if (isTablet) 0.85f else 1f)
+                .align(Alignment.CenterHorizontally),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -344,17 +348,6 @@ fun EmbeddedThermogramSection(
                     ) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria", tint = MaterialTheme.colorScheme.primary)
                     }
-
-//                    IconButton(
-//                        onClick = {
-//                            if (hasCameraPermission) photoUri?.let { cameraLauncher.launch(it) }
-//                            else permissionLauncher.launch(Manifest.permission.CAMERA)
-//                        },
-//                        modifier = Modifier.size(40.dp)
-//                    ) {
-//                        Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera",
-//                            tint = if (photoUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
-//                    }
                 }
             }
         }
@@ -362,7 +355,10 @@ fun EmbeddedThermogramSection(
         ThermogramImage(
             imageUri = displayImageUri,
             onImageClick = { if (displayImageUri != null) showLightbox = true },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally)
         )
 
         if (thermogramError != null) {
@@ -371,13 +367,18 @@ fun EmbeddedThermogramSection(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
+                    .widthIn(max = if (isTablet) 500.dp else 2000.dp)
                     .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally)
                     .padding(horizontal = 4.dp, vertical = 2.dp)
             )
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (rois.isNotEmpty()) {
@@ -395,7 +396,9 @@ fun EmbeddedThermogramSection(
 
         if (displayImageUri != null) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth(if (isTablet) 0.85f else 1f)
+                    .align(Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -406,13 +409,6 @@ fun EmbeddedThermogramSection(
                         IconButton(onClick = { showThermalRefPicker = true }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeria Ref", tint = MaterialTheme.colorScheme.primary)
                         }
-//                        IconButton(onClick = {
-//                            if (hasCameraPermission) photoRefUri?.let { cameraRefLauncher.launch(it) }
-//                            else permissionRefLauncher.launch(Manifest.permission.CAMERA)
-//                        }, modifier = Modifier.size(40.dp)) {
-//                            Icon(Icons.Default.PhotoCamera, contentDescription = "Câmera Ref",
-//                                tint = if (photoRefUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
-//                        }
                     }
 
                     Switch(
@@ -425,10 +421,16 @@ fun EmbeddedThermogramSection(
             }
 
             if (showRefThermogram) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     ThermogramImage(imageUri = displayRefImageUri,
                         onImageClick = { if (displayRefImageUri != null) showLightbox = true },
-                        modifier = Modifier.fillMaxWidth())
+                        modifier = Modifier
+                            .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                            .fillMaxWidth())
 
                     if (thermogramRefError != null) {
                         Text(
@@ -436,6 +438,7 @@ fun EmbeddedThermogramSection(
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
+                                .widthIn(max = if (isTablet) 500.dp else 2000.dp)
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp, vertical = 2.dp)
                         )
@@ -443,7 +446,11 @@ fun EmbeddedThermogramSection(
 
                     val currentRefRois = if (refRois.isNotEmpty()) refRois else rois
                     if (currentRefRois.isNotEmpty()) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                                .fillMaxWidth()
+                        ) {
                             if (mode == ThermogramMode.VIEW) RoiLabel(selectedRoi = selectedRefRoi)
                             else RoiDropdownInline(label = "ÁREA DE REFERÊNCIA", rois = currentRefRois, selected = selectedRefRoi, onSelect = onRefRoiSelected, modifier = Modifier.weight(1f))
                             Spacer(modifier = Modifier.weight(1f))
@@ -459,13 +466,25 @@ fun EmbeddedThermogramSection(
                     selectedRoi = selectedRoi,
                     selectedRefRoi = selectedRefRoi,
                     temperatureDifference = temperatureDifference,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                        .fillMaxWidth()
+                        .align(Alignment.CenterHorizontally)
                 )
             }
 
             // Área para selecionar imagem REAL (visível) associada ao thermogram principal
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(if (isTablet) 0.85f else 1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(text = "Imagem Visível", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     if (mode != ThermogramMode.VIEW) {
                         IconButton(onClick = { showThermalRealPicker = true }, modifier = Modifier.size(40.dp)) {
@@ -477,7 +496,9 @@ fun EmbeddedThermogramSection(
                 // Exibe a imagem real selecionada (ou placeholder)
                 ThermogramImage(imageUri = displayRealImageUri,
                     onImageClick = { if (displayRealImageUri != null) showRealLightbox = true },
-                    modifier = Modifier.fillMaxWidth())
+                    modifier = Modifier
+                        .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                        .fillMaxWidth())
 
                 // Lightbox para a imagem real
                 if (showRealLightbox && displayRealImageUri != null) {
