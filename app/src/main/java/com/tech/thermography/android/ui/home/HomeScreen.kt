@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +33,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController? = null,
@@ -41,6 +42,8 @@ fun HomeScreen(
     val navBarItems = NavBarItems.items
     var showLogoutDialog by remember { mutableStateOf(false) }
     val recentRecords by viewModel.recentRecords.collectAsState()
+    val context = LocalContext.current
+    val isTablet = com.tech.thermography.android.navigation.DeviceUtils.isTablet(context)
 
     Column(
         modifier = Modifier
@@ -54,10 +57,14 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(8.dp))
         Column(
             modifier = Modifier
+                .widthIn(max = if (isTablet) 600.dp else 2000.dp)
                 .fillMaxWidth()
-                .height(180.dp)
-                .padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.SpaceEvenly
+                .then(
+                    if (isTablet) Modifier.wrapContentHeight() 
+                    else Modifier.height(180.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = if (isTablet) 16.dp else 0.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 0.dp)
         ) {
             // Renderiza os botões em 2 linhas x 2 colunas
             for (row in 0 until 2) {
@@ -90,13 +97,18 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(2f)
-                                    .padding(8.dp)
+                                    .padding(if (isTablet) 12.dp else 8.dp)
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(icon, contentDescription = label, tint = Color.Black)
+                                    Icon(
+                                        icon, 
+                                        contentDescription = label, 
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(if (isTablet) 42.dp else 24.dp)
+                                    )
                                     Text(
                                         text = label,
-                                        fontSize = 16.sp
+                                        fontSize = if (isTablet) 22.sp else 16.sp
                                     )
                                 }
                             }
