@@ -2,13 +2,16 @@ package com.tech.thermography.android.ui.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tech.thermography.android.data.local.repository.PlantRepository
 import com.tech.thermography.android.data.local.storage.UserSessionStore
 import com.tech.thermography.android.data.remote.auth.AuthRepository
 import com.tech.thermography.android.util.JwtUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -16,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val repository: AuthRepository,
-    private val sessionStore: UserSessionStore
+    private val sessionStore: UserSessionStore,
+    private val plantRepository: PlantRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -32,7 +36,8 @@ class LoginViewModel @Inject constructor(
         
         // Se o token existe e não está expirado, autentica automaticamente
         if (!token.isNullOrBlank() && !JwtUtils.isExpired(token)) {
-            _uiState.update { it.copy(isAuthenticated = true) }
+            val plants = plantRepository.getAllPlants().first()
+            _uiState.update { it.copy(isAuthenticated = true, shouldSync = plants.isEmpty()) }
         } else {
             // Se expirou ou não existe, garante que a sessão esteja limpa
             sessionStore.clearSession()
@@ -66,7 +71,8 @@ class LoginViewModel @Inject constructor(
 
         val result = repository.login(current.username, current.password, current.rememberMe)
         if (result.success) {
-            _uiState.update { it.copy(isAuthenticated = true, loading = false) }
+            val plants = plantRepository.getAllPlants().first()
+            _uiState.update { it.copy(isAuthenticated = true, loading = false, shouldSync = plants.isEmpty()) }
         } else {
             _uiState.update { it.copy(error = result.error ?: "Erro desconhecido", loading = false) }
         }

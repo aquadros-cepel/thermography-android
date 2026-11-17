@@ -1,122 +1,85 @@
 package com.tech.thermography.android.ui.auth.login
 
-import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ExperimentalMotionApi
-import androidx.constraintlayout.compose.MotionLayout
-import androidx.constraintlayout.compose.MotionScene
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tech.thermography.android.navigation.DeviceUtils
-import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMotionApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (Boolean) -> Unit,
     onNavigateToCreateAccount: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val isTablet = DeviceUtils.isTablet(context)
+    val scrollState = rememberScrollState()
 
     if (uiState.isAuthenticated) {
-        LaunchedEffect(Unit) { onLoginSuccess() }
+        LaunchedEffect(uiState.isAuthenticated) { onLoginSuccess(uiState.shouldSync) }
     }
 
-    Row(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val carouselHeight = screenHeight * 0.4f
+    val formMinHeight = if (isTablet) screenHeight * 0.6f else screenHeight
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .imePadding()
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         if (isTablet) {
-            Box(modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f)) {
-                LoginImagesCarousel()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.86f)
+                    .height(carouselHeight)
+            ) {
+                LoginImagesCarousel(modifier = Modifier.fillMaxSize())
             }
         }
 
-        Box(modifier = Modifier
-            .fillMaxHeight()
-            .weight(1f)
-            .padding(horizontal = if (isTablet) 64.dp else 24.dp),
-            contentAlignment = Alignment.Center) {
-
-            if (isTablet) {
-                val scene = remember {
-                    """
-                    {
-                      ConstraintSets: {
-                        start: {
-                          carousel: { alpha: 0, translationX: -200 },
-                          smallImage: { alpha: 0, translationX: 200 },
-                          form: { alpha: 0, translationX: 200 }
-                        },
-                        end: {
-                          carousel: { alpha: 1, translationX: 0 },
-                          smallImage: { alpha: 1, translationX: 0 },
-                          form: { alpha: 1, translationX: 0 }
-                        }
-                      },
-                      Transitions: {
-                        default: {
-                          from: 'start',
-                          to: 'end',
-                          duration: 700
-                        }
-                      }
-                    }
-                    """.trimIndent()
-                }
-                var progress by remember { mutableStateOf(0f) }
-                LaunchedEffect(Unit) {
-                    val steps = 20
-                    repeat(steps) { i ->
-                        progress = (i + 1) / steps.toFloat()
-                        delay(30)
-                    }
-                }
-                MotionLayout(
-                    motionScene = MotionScene(scene),
-                    progress = progress,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(modifier = Modifier) {
-                        LoginFormContent(uiState = uiState, isTablet = isTablet,
-                            onUsernameChanged = { viewModel.onUsernameChanged(it) },
-                            onPasswordChanged = { viewModel.onPasswordChanged(it) },
-                            onRememberChanged = { viewModel.onRememberChanged(it) },
-                            onLoginClicked = { viewModel.login() },
-                            onNavigateToCreateAccount = onNavigateToCreateAccount)
-                    }
-                    Box(modifier = Modifier) { /* handled above */ }
-                }
-            } else {
-                LoginFormContent(uiState = uiState, isTablet = false,
-                    onUsernameChanged = { viewModel.onUsernameChanged(it) },
-                    onPasswordChanged = { viewModel.onPasswordChanged(it) },
-                    onRememberChanged = { viewModel.onRememberChanged(it) },
-                    onLoginClicked = { viewModel.login() },
-                    onNavigateToCreateAccount = onNavigateToCreateAccount)
-            }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = formMinHeight)
+                .padding(horizontal = if (isTablet) 64.dp else 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            LoginFormContent(
+                uiState = uiState,
+                isTablet = isTablet,
+                onUsernameChanged = { viewModel.onUsernameChanged(it) },
+                onPasswordChanged = { viewModel.onPasswordChanged(it) },
+                onRememberChanged = { viewModel.onRememberChanged(it) },
+                onLoginClicked = { viewModel.login() },
+                onNavigateToCreateAccount = onNavigateToCreateAccount
+            )
         }
     }
 }
