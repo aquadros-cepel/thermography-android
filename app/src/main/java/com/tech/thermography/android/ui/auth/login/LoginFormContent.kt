@@ -3,13 +3,13 @@ package com.tech.thermography.android.ui.auth.login
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tech.thermography.android.R
 import com.tech.thermography.android.ui.components.CompactUiWrapper
@@ -38,15 +39,14 @@ fun LoginFormContent(
     var username by remember { mutableStateOf(uiState.username) }
     var password by remember { mutableStateOf(uiState.password) }
     var remember by remember { mutableStateOf(uiState.rememberMe) }
+    var passwordVisible by remember { mutableStateOf(false) }
     
     val focusManager = LocalFocusManager.current
-    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
-            .widthIn(max = 420.dp)
-            .fillMaxWidth()
-            .verticalScroll(scrollState),
+            .widthIn(max = if (isTablet) 460.dp else 420.dp)
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -97,7 +97,14 @@ fun LoginFormContent(
                 },
                 label = { Text("Senha") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                visualTransformation = PasswordVisualTransformation(),
+                trailingIcon = {
+                    val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    val description = if (passwordVisible) "Ocultar senha" else "Mostrar senha"
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = icon, contentDescription = description)
+                    }
+                },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -114,7 +121,7 @@ fun LoginFormContent(
 
         Spacer(Modifier.height(8.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = remember, onCheckedChange = {
                     remember = it
@@ -123,15 +130,20 @@ fun LoginFormContent(
                 Text("Manter conectado",
                     style = MaterialTheme.typography.bodyMedium)
             }
-            Text("Esqueceu sua senha?",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable { }
-            )
+            // Text("Esqueceu sua senha?",
+            //     color = MaterialTheme.colorScheme.primary,
+            //     style = MaterialTheme.typography.bodyMedium,
+            //     modifier = Modifier.clickable { }
+            // )
         }
 
         uiState.error?.let {
-            Text(it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                text = it,
+                color = Color(0xFFFF8A80), // Vermelho mais claro
+                modifier = Modifier.padding(top = 16.dp),
+                fontWeight = FontWeight.Medium
+            )
         }
 
         Spacer(Modifier.height(48.dp))
