@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -120,6 +121,7 @@ fun ThermalAnomalyForm(
     navController: NavHostController? = null,
     viewModel: ThermalAnomalyViewModel = hiltViewModel()
 ) {
+    val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
     val uiState by viewModel.uiState.collectAsState()
     val flirConnectedCameraName by viewModel.flirConnectedCameraName.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -286,27 +288,6 @@ fun ThermalAnomalyForm(
 
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppOutlinedField(
-                    value = uiState.current,
-                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCurrent(it)) },
-                    label = "CORRENTE (A)",
-                    modifier = Modifier.weight(1f)
-                )
-                AppOutlinedField(
-                    value = uiState.voltage,
-                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateVoltage(it)) },
-                    label = "TENSÃO (V)",
-                    modifier = Modifier.weight(1f)
-                )
-                AppOutlinedField(
-                    value = uiState.windSpeed,
-                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateWindSpeed(it)) },
-                    label = "VENTO (m/s)",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
             // CONDITION row alone
             val conditionOptions = listOf(
                 ConditionType.NORMAL,
@@ -351,6 +332,50 @@ fun ThermalAnomalyForm(
                     modifier = Modifier.weight(1f)
                 )
 
+            }
+
+            if (isTablet) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppOutlinedField(
+                        value = uiState.current,
+                        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCurrent(it)) },
+                        label = "CORRENTE (A)",
+                        modifier = Modifier.weight(1f)
+                    )
+                    AppOutlinedField(
+                        value = uiState.voltage,
+                        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateVoltage(it)) },
+                        label = "TENSÃO (V)",
+                        modifier = Modifier.weight(1f)
+                    )
+                    AppOutlinedField(
+                        value = uiState.windSpeed,
+                        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateWindSpeed(it)) },
+                        label = "VENTO (m/s)",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppOutlinedField(
+                        value = uiState.current,
+                        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCurrent(it)) },
+                        label = "CORRENTE (A)",
+                        modifier = Modifier.weight(1f)
+                    )
+                    AppOutlinedField(
+                        value = uiState.voltage,
+                        onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateVoltage(it)) },
+                        label = "TENSÃO (V)",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                AppOutlinedField(
+                    value = uiState.windSpeed,
+                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateWindSpeed(it)) },
+                    label = "VELOCIDADE DO VENTO (m/s)",
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             AppOutlinedField(
