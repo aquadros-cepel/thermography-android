@@ -263,7 +263,9 @@ fun ThermalAnomalyForm(
                         },
                         temperatureDifference = viewModel.calculateTemperatureDifference(),
                         thermogramError = uiState.thermogramError,
-                        thermogramRefError = uiState.thermogramRefError
+                        thermogramRefError = uiState.thermogramRefError,
+                        onThermogramPhaseSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateThermogramPhase(it)) },
+                        onThermogramRefPhaseSelected = { viewModel.onEvent(ThermalAnomalyEvent.UpdateThermogramRefPhase(it)) }
                     )
                 }
             }
@@ -279,6 +281,28 @@ fun ThermalAnomalyForm(
                     selectedOption = uiState.selectedComponent,
                     onOptionSelected = { viewModel.onEvent(ThermalAnomalyEvent.ComponentSelected(it)) },
                     optionLabelProvider = { it.name },
+                    modifier = Modifier.weight(1f)
+                )
+
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppOutlinedField(
+                    value = uiState.current,
+                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateCurrent(it)) },
+                    label = "CORRENTE (A)",
+                    modifier = Modifier.weight(1f)
+                )
+                AppOutlinedField(
+                    value = uiState.voltage,
+                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateVoltage(it)) },
+                    label = "TENSÃO (V)",
+                    modifier = Modifier.weight(1f)
+                )
+                AppOutlinedField(
+                    value = uiState.windSpeed,
+                    onValueChange = { viewModel.onEvent(ThermalAnomalyEvent.UpdateWindSpeed(it)) },
+                    label = "VENTO (m/s)",
                     modifier = Modifier.weight(1f)
                 )
             }

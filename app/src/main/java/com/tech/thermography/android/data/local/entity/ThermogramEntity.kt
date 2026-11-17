@@ -1,6 +1,7 @@
 package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
+import com.tech.thermography.android.data.local.entity.enumeration.PhaseType
 import java.time.Instant
 import java.util.*
 
@@ -46,5 +47,6 @@ data class ThermogramEntity(
     val latitude: Double?,
     val longitude: Double?,
     val equipmentId: UUID,
-    val createdById: UUID
+    val createdById: UUID,
+    val phase: PhaseType? = null
 )

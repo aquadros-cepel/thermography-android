@@ -50,6 +50,9 @@ object ThermographicInspectionRecordMapper {
             finishedById = dto.finishedBy?.id ?: UUID.randomUUID(),
             thermogramId = dto.thermogram?.id ?: UUID.randomUUID(),
             thermogramRefId = dto.thermogramRef?.id,
+            current = dto.current,
+            voltage = dto.voltage,
+            windSpeed = dto.windSpeed,
             syncStatus = RecordSyncStatus.SYNCED
         )
     }
@@ -101,7 +104,8 @@ object ThermographicInspectionRecordMapper {
                     createdAt = it.createdAt?.toString(),
                     latitude = it.latitude,
                     longitude = it.longitude,
-                    rois = rois
+                    rois = rois,
+                    phase = it.phase?.name
                 )
             },
             thermogramRef = thermogramRef?.let {
@@ -126,12 +130,16 @@ object ThermographicInspectionRecordMapper {
                     createdAt = it.createdAt?.toString(),
                     latitude = it.latitude,
                     longitude = it.longitude,
-                    rois = roisRef
+                    rois = roisRef,
+                    phase = it.phase?.name
                 )
             },
             route = entity.routeId?.let { IdRefDTO(it) },
             createdBy = IdRefDTO(entity.createdById),
-            finishedBy = IdRefDTO(entity.finishedById)
+            finishedBy = IdRefDTO(entity.finishedById),
+            current = entity.current,
+            voltage = entity.voltage,
+            windSpeed = entity.windSpeed
         )
     }
 

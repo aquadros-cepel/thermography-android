@@ -32,7 +32,9 @@ data class ThermalAnomalyUiState(
     val deadlineExecution: Long? = null,
     val nextMonitoring: Long? = null,
     val recommendations: String = "",
-
+    val current: String = "",
+    val voltage: String = "",
+    val windSpeed: String = "",
     // Thermogram data
     val thermogramId: UUID? = null,
     val thermogram: ThermogramEntity? = null,

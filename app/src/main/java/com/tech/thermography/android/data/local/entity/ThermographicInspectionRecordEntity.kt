@@ -88,5 +88,8 @@ data class ThermographicInspectionRecordEntity(
     val finishedById: UUID,
     val thermogramId: UUID,
     val thermogramRefId: UUID?,
+    val current: Double? = null,
+    val voltage: Double? = null,
+    val windSpeed: Double? = null,
     val syncStatus: RecordSyncStatus = RecordSyncStatus.NEW
 )

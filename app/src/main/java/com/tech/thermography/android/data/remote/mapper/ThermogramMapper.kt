@@ -28,6 +28,7 @@ object ThermogramMapper {
             createdAt = dto.createdAt,
             latitude = dto.latitude,
             longitude = dto.longitude,
+            phase = dto.phase,
             equipmentId = requireNotNull(dto.equipment.id) { "equipmentId cannot be null in ThermogramDto" },
             createdById = requireNotNull(dto.createdBy.id) { "createdById cannot be null in ThermogramDto" }
         )

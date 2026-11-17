@@ -7,6 +7,7 @@ import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
 import com.tech.thermography.android.data.local.entity.PlantEntity
 import com.tech.thermography.android.data.local.entity.ROIEntity
 import com.tech.thermography.android.data.local.entity.enumeration.ConditionType
+import com.tech.thermography.android.data.local.entity.enumeration.PhaseType
 
 sealed class ThermalAnomalyEvent {
     data class PlantSelected(val plant: PlantEntity) : ThermalAnomalyEvent()
@@ -21,6 +22,11 @@ sealed class ThermalAnomalyEvent {
     data class UpdateDeadline(val value: Long?) : ThermalAnomalyEvent()
     data class UpdateNextMonitoring(val value: Long?) : ThermalAnomalyEvent()
     data class UpdateRecommendations(val value: String) : ThermalAnomalyEvent()
+    data class UpdateCurrent(val value: String) : ThermalAnomalyEvent()
+    data class UpdateVoltage(val value: String) : ThermalAnomalyEvent()
+    data class UpdateWindSpeed(val value: String) : ThermalAnomalyEvent()
+    data class UpdateThermogramPhase(val value: PhaseType?) : ThermalAnomalyEvent()
+    data class UpdateThermogramRefPhase(val value: PhaseType?) : ThermalAnomalyEvent()
     data class InspectionRecordSelected(val record: InspectionRecordEntity) : ThermalAnomalyEvent()
     data class InspectionRecordSelectedById(val recordId: java.util.UUID) : ThermalAnomalyEvent()
     data class ThermographicSelectedById(val thermographicId: java.util.UUID) : ThermalAnomalyEvent()

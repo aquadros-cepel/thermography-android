@@ -2,6 +2,7 @@ package com.tech.thermography.android.data.remote.dto
 
 import java.time.Instant
 import java.util.UUID
+import com.tech.thermography.android.data.local.entity.enumeration.PhaseType
 
 data class ThermogramDto(
     val id: UUID,
@@ -24,6 +25,7 @@ data class ThermogramDto(
     val createdAt: Instant?,
     val latitude: Double?,
     val longitude: Double?,
+    val phase: PhaseType? = null,
     val equipment: UUID_DTO,
     val createdBy: UUID_DTO
 )

@@ -28,7 +28,8 @@ fun AppOutlinedField(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    maxLines: Int = 1
+    maxLines: Int = 1,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
 ) {
     val currentDensity = LocalDensity.current
     val compactDensity = Density(
@@ -92,9 +93,7 @@ fun AppOutlinedField(
                         .fillMaxWidth()
                         .background(fieldBg),
 
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Next
-                    )
+                    keyboardOptions = keyboardOptions
                 )
             }
         )

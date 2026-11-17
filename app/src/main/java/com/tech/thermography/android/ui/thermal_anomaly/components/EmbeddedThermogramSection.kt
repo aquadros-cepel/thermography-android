@@ -35,6 +35,7 @@ import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.tech.thermography.android.data.local.entity.ROIEntity
 import com.tech.thermography.android.data.local.entity.ThermogramEntity
+import com.tech.thermography.android.data.local.entity.enumeration.PhaseType
 import com.tech.thermography.android.ui.components.AppExposedDropdownMenu
 import com.tech.thermography.android.ui.thermogram.ThermogramMode
 import com.tech.thermography.android.ui.thermogram.components.RoiLabel
@@ -217,7 +218,9 @@ fun EmbeddedThermogramSection(
     modifier: Modifier = Modifier,
     // Erros independentes por seção
     thermogramError: String? = null,
-    thermogramRefError: String? = null
+    thermogramRefError: String? = null,
+    onThermogramPhaseSelected: (PhaseType?) -> Unit = {},
+    onThermogramRefPhaseSelected: (PhaseType?) -> Unit = {}
 ) {
     var showLightbox by remember { mutableStateOf(false) }
     var showRealLightbox by remember { mutableStateOf(false) }
@@ -386,9 +389,28 @@ fun EmbeddedThermogramSection(
                 else RoiDropdownInline(label = "ÁREA DO OBJETO", rois = rois, selected = selectedRoi, onSelect = onRoiSelected, modifier = Modifier.weight(1f))
             }
 
+            if (thermogram != null) PhaseDropdown(thermogram.phase, onThermogramPhaseSelected, Modifier.weight(1f), mode)
+        }
+
+                Row(
+            modifier = Modifier
+                .widthIn(max = if (isTablet) 500.dp else 2000.dp)
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             if (!singleRoi && !showRefThermogram && rois.size > 1) {
                 if (mode == ThermogramMode.VIEW) RoiLabel(selectedRoi = selectedRefRoi)
-                else RoiDropdownInline(label = "ÁREA DE REFERÊNCIA", rois = rois, selected = selectedRefRoi, onSelect = onRefRoiSelected, modifier = Modifier.weight(1f))
+                else RoiDropdownInline(
+                    label = "ÁREA DE REFERÊNCIA",
+                    rois = rois,
+                    selected = selectedRefRoi,
+                    onSelect = onRefRoiSelected,
+                    modifier = Modifier.weight(1f)
+                )
+                if (thermogramRef != null) {
+                    PhaseDropdown(thermogramRef.phase, onThermogramRefPhaseSelected, Modifier.weight(1f), mode)
+                }
             } else if (rois.isNotEmpty()) {
                 Spacer(modifier = Modifier.weight(1f))
             }
@@ -453,7 +475,7 @@ fun EmbeddedThermogramSection(
                         ) {
                             if (mode == ThermogramMode.VIEW) RoiLabel(selectedRoi = selectedRefRoi)
                             else RoiDropdownInline(label = "ÁREA DE REFERÊNCIA", rois = currentRefRois, selected = selectedRefRoi, onSelect = onRefRoiSelected, modifier = Modifier.weight(1f))
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (thermogramRef != null) PhaseDropdown(thermogramRef.phase, onThermogramRefPhaseSelected, Modifier.weight(1f), mode)
                         }
                     }
                 }
@@ -568,5 +590,34 @@ fun EmbeddedThermogramSection(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PhaseDropdown(
+    phase: PhaseType?,
+    onSelected: (PhaseType?) -> Unit,
+    modifier: Modifier,
+    mode: ThermogramMode
+) {
+    val labels = mapOf(
+        PhaseType.PHASE_A to "Fase A",
+        PhaseType.PHASE_B to "Fase B",
+        PhaseType.PHASE_C to "Fase C",
+        PhaseType.NEUTRAL to "Neutro",
+        PhaseType.GROUND to "Terra",
+        PhaseType.THREE_PHASE to "Trifásico"
+    )
+    if (mode == ThermogramMode.VIEW) {
+        Text(labels[phase] ?: "Fase não informada", modifier = modifier.padding(12.dp))
+    } else {
+        AppExposedDropdownMenu(
+            label = "FASE",
+            options = PhaseType.entries,
+            selectedOption = phase,
+            onOptionSelected = onSelected,
+            optionLabelProvider = { labels[it] ?: it.name },
+            modifier = modifier
+        )
     }
 }

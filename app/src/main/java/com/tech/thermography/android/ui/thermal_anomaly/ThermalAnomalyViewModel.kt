@@ -140,6 +140,26 @@ class ThermalAnomalyViewModel @Inject constructor(
             is ThermalAnomalyEvent.UpdateRecordName -> _uiState.update { it.copy(recordName = event.value, isDirty = true) }
             is ThermalAnomalyEvent.UpdateServiceOrder -> _uiState.update { it.copy(serviceOrder = event.value, isDirty = true) }
             is ThermalAnomalyEvent.UpdateAnalysis -> _uiState.update { it.copy(analysisDescription = event.value, isDirty = true) }
+            is ThermalAnomalyEvent.UpdateCurrent -> {
+                val sanitized = sanitizeOneDecimal(event.value)
+                if (sanitized != null) {
+                    _uiState.update { it.copy(current = sanitized, isDirty = true) }
+                }
+            }
+            is ThermalAnomalyEvent.UpdateVoltage -> {
+                val sanitized = sanitizeOneDecimal(event.value)
+                if (sanitized != null) {
+                    _uiState.update { it.copy(voltage = sanitized, isDirty = true) }
+                }
+            }
+            is ThermalAnomalyEvent.UpdateWindSpeed -> {
+                val sanitized = sanitizeOneDecimal(event.value)
+                if (sanitized != null) {
+                    _uiState.update { it.copy(windSpeed = sanitized, isDirty = true) }
+                }
+            }
+            is ThermalAnomalyEvent.UpdateThermogramPhase -> updateThermogramPhase(event.value, isReference = false)
+            is ThermalAnomalyEvent.UpdateThermogramRefPhase -> updateThermogramPhase(event.value, isReference = true)
             is ThermalAnomalyEvent.UpdateCondition -> {
                 _uiState.update { it.copy(condition = event.value, isDirty = true) }
                 viewModelScope.launch {
@@ -204,6 +224,9 @@ class ThermalAnomalyViewModel @Inject constructor(
                                     analysisDescription = therm.analysisDescription ?: "",
                                     condition = therm.condition,
                                     recommendations = therm.recommendations ?: "",
+                                    current = formatOneDecimal(therm.current),
+                                    voltage = formatOneDecimal(therm.voltage),
+                                    windSpeed = formatOneDecimal(therm.windSpeed),
                                     deadlineExecution = therm.deadlineExecution?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
                                     nextMonitoring = therm.nextMonitoring?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
                                     isEditing = true,
@@ -310,6 +333,9 @@ class ThermalAnomalyViewModel @Inject constructor(
                                 analysisDescription = therm.analysisDescription ?: "",
                                 condition = therm.condition,
                                 recommendations = therm.recommendations ?: "",
+                                current = formatOneDecimal(therm.current),
+                                voltage = formatOneDecimal(therm.voltage),
+                                windSpeed = formatOneDecimal(therm.windSpeed),
                                 deadlineExecution = therm.deadlineExecution?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
                                 nextMonitoring = therm.nextMonitoring?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
                                 isEditing = true,
@@ -477,10 +503,10 @@ class ThermalAnomalyViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val current = _uiState.value
-                val plant = current.selectedPlant ?: state.selectedPlant
+                val currentState = _uiState.value
+                val plant = currentState.selectedPlant ?: state.selectedPlant
 
-                if (!current.isEditing && finalRecordName.isBlank()) {
+                if (!currentState.isEditing && finalRecordName.isBlank()) {
                     val existing = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
                     val n = existing.size
                     val numberPart = String.format(Locale.US, "%03d", n + 1)
@@ -490,15 +516,15 @@ class ThermalAnomalyViewModel @Inject constructor(
                 }
 
                 _uiState.update { it.copy(isLoading = true, error = null) }
-                val conditionType = current.condition
+                val conditionType = currentState.condition
                 val createdById = resolveCurrentUserId()
 
                 // 1. Persistir o termograma principal (Monitoramento)
-                val thermId: UUID = current.thermogram?.let { t ->
+                val thermId: UUID = currentState.thermogram?.let { t ->
                     val toInsert = t.copy(
                         createdById = createdById,
-                        selectedRoiId = current.selectedRoi?.id,
-                        maxTempRoi = current.selectedRoi?.maxTemp
+                        selectedRoiId = currentState.selectedRoi?.id,
+                        maxTempRoi = currentState.selectedRoi?.maxTemp
                     )
                     if (thermogramRepository.getThermogramById(toInsert.id) != null) {
                         thermogramRepository.updateThermogram(toInsert)
@@ -507,18 +533,18 @@ class ThermalAnomalyViewModel @Inject constructor(
                     }
                     
                     // Salvar ROIs associadas al monitoramento
-                    val roiEntities = current.thermogramRois.map { roi -> roi.copy(thermogramId = toInsert.id) }
+                    val roiEntities = currentState.thermogramRois.map { roi -> roi.copy(thermogramId = toInsert.id) }
                     roiRepository.insertROIs(roiEntities)
                     
                     toInsert.id
                 } ?: UUID.randomUUID()
 
                 // 2. Persistir o termograma de referência
-                val thermRefId: UUID? = current.thermogramRef?.let { tRef ->
+                val thermRefId: UUID? = currentState.thermogramRef?.let { tRef ->
                     val toInsertRef = tRef.copy(
                         createdById = createdById,
-                        selectedRoiId = current.selectedRefRoi?.id,
-                        maxTempRoi = current.selectedRefRoi?.maxTemp
+                        selectedRoiId = currentState.selectedRefRoi?.id,
+                        maxTempRoi = currentState.selectedRefRoi?.maxTemp
                     )
                     if (thermogramRepository.getThermogramById(toInsertRef.id) != null) {
                         thermogramRepository.updateThermogram(toInsertRef)
@@ -527,7 +553,7 @@ class ThermalAnomalyViewModel @Inject constructor(
                     }
                     
                     // Salvar ROIs associadas à referência (garantindo o vínculo com o thermogramRef)
-                    val roiEntitiesRef = current.thermogramRefRois.map { roi -> roi.copy(thermogramId = toInsertRef.id) }
+                    val roiEntitiesRef = currentState.thermogramRefRois.map { roi -> roi.copy(thermogramId = toInsertRef.id) }
                     roiRepository.insertROIs(roiEntitiesRef)
                     
                     toInsertRef.id
@@ -536,9 +562,9 @@ class ThermalAnomalyViewModel @Inject constructor(
                 val deltaT = calculateTemperatureDifference() ?: 0.0
 
                 val record = ThermographicInspectionRecordEntity(
-                    id = if (current.isEditing) current.thermogramId ?: UUID.randomUUID() else UUID.randomUUID(),
+                    id = if (currentState.isEditing) currentState.thermogramId ?: UUID.randomUUID() else UUID.randomUUID(),
                     name = finalRecordName,
-                    type = ThermographicInspectionRecordType.ANOMALY_INITIAL,
+                    type = ThermographicInspectionRecordType.ANOMALY_DETECTED,
                     serviceOrder = state.serviceOrder.ifBlank { null },
                     createdAt = Instant.now(),
                     analysisDescription = state.analysisDescription.ifBlank { null },
@@ -558,10 +584,13 @@ class ThermalAnomalyViewModel @Inject constructor(
                     finishedById = createdById,
                     thermogramId = thermId,
                     thermogramRefId = thermRefId,
+                    current = state.current.replace(',', '.').toDoubleOrNull(),
+                    voltage = state.voltage.replace(',', '.').toDoubleOrNull(),
+                    windSpeed = state.windSpeed.replace(',', '.').toDoubleOrNull(),
                     syncStatus = RecordSyncStatus.NEW
                 )
 
-                if (current.isEditing) {
+                if (currentState.isEditing) {
                     val existingRecords = recordRepository.getThermographicInspectionRecordsByPlantId(plant.id).first()
                     val original = existingRecords.find { it.name == finalRecordName }
                     val recordToSave = if (original != null) record.copy(id = original.id, syncStatus = RecordSyncStatus.EDITED) else record
@@ -627,6 +656,20 @@ class ThermalAnomalyViewModel @Inject constructor(
                 selectedRefRoi = roi,
                 thermogramRef = updatedThermogramRef
             )
+        }
+    }
+
+    private fun updateThermogramPhase(phase: com.tech.thermography.android.data.local.entity.enumeration.PhaseType?, isReference: Boolean) {
+        val state = _uiState.value
+        val thermogram = if (isReference) state.thermogramRef else state.thermogram
+        val updated = thermogram?.copy(phase = phase)
+        _uiState.update {
+            if (isReference) it.copy(thermogramRef = updated, isDirty = true)
+            else it.copy(thermogram = updated, isDirty = true)
+        }
+        if (updated != null) viewModelScope.launch {
+            runCatching { thermogramRepository.updateThermogram(updated) }
+                .onFailure { Log.w("ThermAnomVM", "Failed to update thermogram phase: ${it.message}") }
         }
     }
 
@@ -982,5 +1025,16 @@ class ThermalAnomalyViewModel @Inject constructor(
         )
         userInfoRepository.insertUserInfo(defaultUser)
         return defaultUser.id
+    }
+
+    private fun sanitizeOneDecimal(value: String): String? {
+        if (value.isEmpty()) return ""
+        val regex = Regex("^\\d*([.,]\\d{0,1})?$")
+        return if (regex.matches(value)) value else null
+    }
+
+    private fun formatOneDecimal(value: Double?): String {
+        if (value == null) return ""
+        return if (value % 1.0 == 0.0) value.toLong().toString() else String.format(Locale.US, "%.1f", value)
     }
 }
