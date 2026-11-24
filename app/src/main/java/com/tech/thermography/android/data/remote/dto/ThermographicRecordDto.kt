@@ -37,7 +37,9 @@ class ThermogramDTO(
     val latitude: Double?,
     val longitude: Double?,
     val rois: List<ROIDto>?,
-    val phase: String? = null // Alterado de RoiDTO para ROIDto
+    val phase: String? = null, // Alterado de RoiDTO para ROIDto
+    val createdBy: IdRefDTO? = null,
+    val equipment: IdRefDTO? = null
 )
 
 // DTO principal

@@ -89,7 +89,7 @@ class ThermogramRepository @Inject constructor(
                     directory.mkdirs()
                 }
 
-                val fileName = "${prefix}_${thermogramId}.jpg"
+                val fileName = fullUrl.substringAfterLast('/').substringBefore('?').ifBlank { "${prefix}_${thermogramId}.jpg" }
                 val file = File(directory, fileName)
 
                 file.sink().buffer().use { sink ->

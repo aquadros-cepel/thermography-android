@@ -105,7 +105,9 @@ object ThermographicRecordMapper {
                     latitude = it.latitude,
                     longitude = it.longitude,
                     rois = rois,
-                    phase = it.phase?.name
+                    phase = it.phase?.name,
+                    createdBy = IdRefDTO(it.createdById),
+                    equipment = IdRefDTO(it.equipmentId)
                 )
             },
             thermogramRef = thermogramRef?.let {
@@ -131,7 +133,9 @@ object ThermographicRecordMapper {
                     latitude = it.latitude,
                     longitude = it.longitude,
                     rois = roisRef,
-                    phase = it.phase?.name
+                    phase = it.phase?.name,
+                    createdBy = IdRefDTO(it.createdById),
+                    equipment = IdRefDTO(it.equipmentId)
                 )
             },
             route = entity.routeId?.let { IdRefDTO(it) },
