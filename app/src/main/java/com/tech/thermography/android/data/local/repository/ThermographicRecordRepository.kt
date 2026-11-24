@@ -247,6 +247,7 @@ class ThermographicRecordRepository @Inject constructor(
                 thermogramDao.updateThermogram(updatedThermogram)
             } else {
                 Log.e("SyncDebug", "Falha no upload da imagem térmica. Código: ${uploadResponse.code()}")
+                throw java.io.IOException("Falha no upload da imagem térmica")
             }
         }
     }
@@ -273,6 +274,7 @@ class ThermographicRecordRepository @Inject constructor(
                 thermogramDao.updateThermogram(updatedThermogram)
             } else {
                 Log.e("SyncDebug", "Falha no upload da imagem REAL. Código: ${uploadResponse.code()}")
+                throw java.io.IOException("Falha no upload da imagem REAL")
             }
         }
     }

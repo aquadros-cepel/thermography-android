@@ -23,6 +23,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    val isConnected by viewModel.isConnected.collectAsState()
 
     Scaffold(
         topBar = {
@@ -92,6 +93,7 @@ fun SettingsScreen(
 
                     Button(
                         onClick = { showDialog = true },
+                        enabled = isConnected,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
@@ -105,6 +107,13 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Sincronizar")
+                    }
+                    if (!isConnected) {
+                        Text(
+                            text = "Sem conexão de rede",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }
@@ -122,10 +131,8 @@ fun SettingsScreen(
                 TextButton(
                     onClick = {
                         showDialog = false
-                        viewModel.clearLocalData {
-                            navController.navigate(NavRoutes.SYNC) {
-                                popUpTo(NavRoutes.SETTINGS) { inclusive = true }
-                            }
+                        navController.navigate(NavRoutes.SYNC) {
+                            popUpTo(NavRoutes.SETTINGS) { inclusive = true }
                         }
                     }
                 ) {

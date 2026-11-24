@@ -8,10 +8,12 @@ import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.repository.PlantRepository
 import com.tech.thermography.android.data.local.repository.SyncableRepository
 import com.tech.thermography.android.data.local.repository.ThermographicRecordRepository
+import com.tech.thermography.android.util.NetworkUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -59,37 +61,76 @@ class SyncViewModel @Inject constructor(
         //        val mapTask = SyncTask(name = "Baixando mapas para uso offline", repository = tileDownloaderRepository)
 //        _uiState.value = SyncState(tasks = dataTasks + mapTask)
         _uiState.value = SyncState(tasks = dataTasks)
+        viewModelScope.launch {
+            NetworkUtils.observeConnectivity(application).collect { connected ->
+                _uiState.update { it.copy(isConnected = connected) }
+            }
+        }
     }
 
     fun startSync() {
+        if (_uiState.value.isSyncing) return
+        if (!NetworkUtils.hasInternetConnection(application)) {
+            _uiState.update {
+                it.copy(
+                    isConnected = false,
+                    isSyncing = false,
+                    isSyncFinished = true,
+                    syncErrorMessage = SYNC_CONNECTION_ERROR
+                )
+            }
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                isConnected = true,
+                isSyncing = true,
+                isSyncFinished = false,
+                syncErrorMessage = null,
+                overallProgress = 0f,
+                tasks = it.tasks.map { task -> task.copy(status = SyncStatus.PENDING) }
+            )
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val uploadTaskIndex = _uiState.value.tasks.indexOfFirst {
                 it.repository is ThermographicRecordRepository
             }
             updateTaskStatus(uploadTaskIndex, SyncStatus.IN_PROGRESS)
 
-            val uploadsSucceeded = runUploadBeforeDownload(
-                uploadPendingRecords = {
-                    try {
-                        thermographicRecordRepository.syncPendingRecords()
-                    } catch (e: Exception) {
-                        Log.e("SyncViewModel", "Falha ao enviar registros pendentes", e)
-                        false
-                    }
-                },
-                clearLocalDatabase = { appDatabase.clearAllTables() },
-                downloadCloudData = { runDataSync() }
-            )
+            val uploadsSucceeded = runSyncWhenConnected(
+                isConnected = NetworkUtils.hasInternetConnection(application)
+            ) {
+                runUploadBeforeDownload(
+                    uploadPendingRecords = {
+                        try {
+                            thermographicRecordRepository.syncPendingRecords()
+                        } catch (e: Exception) {
+                            Log.e("SyncViewModel", "Falha ao enviar registros pendentes", e)
+                            false
+                        }
+                    },
+                    clearLocalDatabase = { appDatabase.clearAllTables() },
+                    downloadCloudData = { runDataSync() }
+                )
+            }
 
             if (!uploadsSucceeded) {
                 updateTaskStatus(uploadTaskIndex, SyncStatus.FAILED)
-                _uiState.update { it.copy(isSyncFinished = true, hasUploadFailed = true) }
+                finishWithConnectionError()
                 return@launch
             }
 
             // 2. SINCRONIZA TILES DO MAPA (APÓS DADOS)
 //            mapTask?.let { runMapSync(it) }
-            _uiState.update { it.copy(isSyncFinished = true) }
+            _uiState.update {
+                it.copy(isSyncing = false, isSyncFinished = true, syncErrorMessage = null)
+            }
+        }.invokeOnCompletion { error ->
+            if (error != null) {
+                Log.e("SyncViewModel", "Falha durante a sincronização", error)
+                finishWithConnectionError()
+            }
         }
     }
     
@@ -97,6 +138,7 @@ class SyncViewModel @Inject constructor(
         val tasks = _uiState.value.tasks
         val totalTasks = _uiState.value.tasks.size.toFloat()
         var completedTasks = 0
+        var allTasksSucceeded = true
 
         for ((taskIndex, task) in tasks.withIndex()) {
             updateTaskStatus(taskIndex, SyncStatus.IN_PROGRESS)
@@ -114,11 +156,13 @@ class SyncViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("SyncViewModel", "Falha na sincronização de "+task.name, e)
                 updateTaskStatus(taskIndex, SyncStatus.FAILED)
+                allTasksSucceeded = false
             } finally {
                 completedTasks++
                 _uiState.update { it.copy(overallProgress = completedTasks / totalTasks) }
             }
         }
+        if (!allTasksSucceeded) throw IllegalStateException("Uma ou mais operações de download falharam")
     }
     
     private suspend fun runMapSync(task: SyncTask) {
@@ -201,5 +245,20 @@ class SyncViewModel @Inject constructor(
             updatedTasks[taskIndex] = updatedTasks[taskIndex].copy(status = status)
             currentState.copy(tasks = updatedTasks)
         }
+    }
+
+    private fun finishWithConnectionError() {
+        _uiState.update {
+            it.copy(
+                isSyncing = false,
+                isSyncFinished = true,
+                syncErrorMessage = SYNC_CONNECTION_ERROR
+            )
+        }
+    }
+
+    private companion object {
+        const val SYNC_CONNECTION_ERROR =
+            "Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente."
     }
 }

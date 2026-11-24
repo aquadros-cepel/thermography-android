@@ -2,25 +2,21 @@ package com.tech.thermography.android.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tech.thermography.android.data.local.AppDatabase
+import android.content.Context
+import com.tech.thermography.android.util.NetworkUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val database: AppDatabase
+    @ApplicationContext context: Context
 ) : ViewModel() {
-
-    fun clearLocalData(onFinished: () -> Unit) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                // Limpa todas as tabelas do Room Database
-                database.clearAllTables()
-            }
-            onFinished()
-        }
-    }
+    val isConnected = NetworkUtils.observeConnectivity(context).stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = NetworkUtils.hasInternetConnection(context)
+    )
 }

@@ -9,7 +9,9 @@ data class SyncState(
     val tasks: List<SyncTask> = emptyList(),
     val overallProgress: Float = 0f,
     val isSyncFinished: Boolean = false,
-    val hasUploadFailed: Boolean = false
+    val isSyncing: Boolean = false,
+    val isConnected: Boolean = false,
+    val syncErrorMessage: String? = null
 )
 
 /**

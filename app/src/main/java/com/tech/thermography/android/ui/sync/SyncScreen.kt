@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +44,6 @@ fun SyncScreen(
     val uiState by viewModel.uiState.collectAsState()
     val animatedProgress by animateFloatAsState(targetValue = uiState.overallProgress, label = "Overall Progress")
     var countdown by remember { mutableStateOf(5) }
-
     // Inicia a sincronização quando a tela é criada
     LaunchedEffect(Unit) {
         viewModel.startSync()
@@ -56,22 +56,30 @@ fun SyncScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (uiState.isSyncFinished) {
+        if (uiState.isSyncFinished && uiState.syncErrorMessage == null) {
             LaunchedEffect(Unit) {
-                for (i in 5 downTo 1) {
-                    countdown = i
+                for (seconds in 5 downTo 1) {
+                    countdown = seconds
                     delay(1000)
                 }
                 onSyncComplete()
             }
-
-            Text(
-                if (uiState.hasUploadFailed) "Falha ao enviar registros. Dados locais foram preservados."
-                else "Dados sincronizados do dispositivo",
-                style = MaterialTheme.typography.headlineSmall
-            )
+            Text("Dados sincronizados do dispositivo", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(16.dp))
             Text("Redirecionando em $countdown s", style = MaterialTheme.typography.bodyLarge)
+        } else if (uiState.syncErrorMessage != null) {
+            Text(
+                text = uiState.syncErrorMessage.orEmpty(),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = viewModel::startSync,
+                enabled = uiState.isConnected && !uiState.isSyncing
+            ) {
+                Text("Tentar novamente")
+            }
         } else {
             Text("Sincronizando dados", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(32.dp))
