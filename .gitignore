@@ -16,3 +16,5 @@ local.properties
 
 # Ignore large AAR files
 app/libs/*.aar
+
+docs/specs
