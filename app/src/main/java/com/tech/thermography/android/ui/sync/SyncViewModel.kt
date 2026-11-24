@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.repository.PlantRepository
 import com.tech.thermography.android.data.local.repository.SyncableRepository
+import com.tech.thermography.android.data.local.repository.ThermographicRecordRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -33,7 +34,8 @@ class SyncViewModel @Inject constructor(
     private val syncableRepositories: Map<Int, @JvmSuppressWildcards SyncableRepository>,
     private val plantRepository: PlantRepository,
     private val application: Application,
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val thermographicRecordRepository: ThermographicRecordRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SyncState())
@@ -61,9 +63,29 @@ class SyncViewModel @Inject constructor(
 
     fun startSync() {
         viewModelScope.launch(Dispatchers.IO) {
-        appDatabase.clearAllTables()
-            // 1. SINCRONIZA DADOS DA API (EM ORDEM)
-            runDataSync()
+            val uploadTaskIndex = _uiState.value.tasks.indexOfFirst {
+                it.repository is ThermographicRecordRepository
+            }
+            updateTaskStatus(uploadTaskIndex, SyncStatus.IN_PROGRESS)
+
+            val uploadsSucceeded = runUploadBeforeDownload(
+                uploadPendingRecords = {
+                    try {
+                        thermographicRecordRepository.syncPendingRecords()
+                    } catch (e: Exception) {
+                        Log.e("SyncViewModel", "Falha ao enviar registros pendentes", e)
+                        false
+                    }
+                },
+                clearLocalDatabase = { appDatabase.clearAllTables() },
+                downloadCloudData = { runDataSync() }
+            )
+
+            if (!uploadsSucceeded) {
+                updateTaskStatus(uploadTaskIndex, SyncStatus.FAILED)
+                _uiState.update { it.copy(isSyncFinished = true, hasUploadFailed = true) }
+                return@launch
+            }
 
             // 2. SINCRONIZA TILES DO MAPA (APÓS DADOS)
 //            mapTask?.let { runMapSync(it) }

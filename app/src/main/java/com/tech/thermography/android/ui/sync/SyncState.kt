@@ -8,7 +8,8 @@ import com.tech.thermography.android.data.local.repository.SyncableRepository
 data class SyncState(
     val tasks: List<SyncTask> = emptyList(),
     val overallProgress: Float = 0f,
-    val isSyncFinished: Boolean = false
+    val isSyncFinished: Boolean = false,
+    val hasUploadFailed: Boolean = false
 )
 
 /**

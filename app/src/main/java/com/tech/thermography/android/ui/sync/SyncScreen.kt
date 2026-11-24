@@ -65,7 +65,11 @@ fun SyncScreen(
                 onSyncComplete()
             }
 
-            Text("Dados sincronizados do dispositivo", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                if (uiState.hasUploadFailed) "Falha ao enviar registros. Dados locais foram preservados."
+                else "Dados sincronizados do dispositivo",
+                style = MaterialTheme.typography.headlineSmall
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Text("Redirecionando em $countdown s", style = MaterialTheme.typography.bodyLarge)
         } else {

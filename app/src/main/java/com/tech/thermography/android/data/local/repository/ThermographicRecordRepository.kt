@@ -145,7 +145,7 @@ class ThermographicRecordRepository @Inject constructor(
         val records = thermographicRecordDao.getRecordsToSync()
         Log.d("SyncDebug", "syncPendingRecords: Encontrados ${records.size} registros para sincronizar")
         
-        var anySynced = false
+        var allSynced = true
         for (record in records) {
             try {
                 Log.d("SyncDebug", "Processando registro: ${record.id} com status: ${record.syncStatus}")
@@ -187,9 +187,9 @@ class ThermographicRecordRepository @Inject constructor(
                         if (response.isSuccessful) {
                             Log.d("SyncDebug", "Sucesso no POST do registro: ${record.id}")
                             thermographicRecordDao.updateStatus(record.id, "SYNCED")
-                            anySynced = true
                         } else {
                             Log.e("SyncDebug", "Erro no POST do registro: ${record.id}. Código: ${response.code()}")
+                            allSynced = false
                         }
                     }
                     "EDITED" -> {
@@ -198,9 +198,9 @@ class ThermographicRecordRepository @Inject constructor(
                         if (response.isSuccessful) {
                             Log.d("SyncDebug", "Sucesso no Update do registro: ${record.id}")
                             thermographicRecordDao.updateStatus(record.id, "SYNCED")
-                            anySynced = true
                         } else {
                             Log.e("SyncDebug", "Erro no Update do registro: ${record.id}. Código: ${response.code()}")
+                            allSynced = false
                         }
                     }
                     "DELETED" -> {
@@ -209,20 +209,22 @@ class ThermographicRecordRepository @Inject constructor(
                         if (response.isSuccessful) {
                             Log.d("SyncDebug", "Sucesso no DELETE do registro: ${record.id}")
                             thermographicRecordDao.deleteById(record.id)
-                            anySynced = true
                         } else {
                             Log.e("SyncDebug", "Erro no DELETE do registro: ${record.id}. Código: ${response.code()}")
+                            allSynced = false
                         }
                     }
                     else -> {
                         Log.d("SyncDebug", "Status desconhecido ou já sincronizado: ${record.syncStatus}")
+                        allSynced = false
                     }
                 }
             } catch (e: Exception) {
                 Log.e("SyncDebug", "Exceção ao processar registro: ${record.id}", e)
+                allSynced = false
             }
         }
-        return anySynced
+        return allSynced
     }
 
     private suspend fun syncThermogramImage(thermogramId: UUID) {
