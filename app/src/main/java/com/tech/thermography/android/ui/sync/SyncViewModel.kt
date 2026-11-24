@@ -98,21 +98,23 @@ class SyncViewModel @Inject constructor(
             }
             updateTaskStatus(uploadTaskIndex, SyncStatus.IN_PROGRESS)
 
-            val uploadsSucceeded = runSyncWhenConnected(
-                isConnected = NetworkUtils.hasInternetConnection(application)
-            ) {
-                runUploadBeforeDownload(
-                    uploadPendingRecords = {
-                        try {
-                            thermographicRecordRepository.syncPendingRecords()
-                        } catch (e: Exception) {
-                            Log.e("SyncViewModel", "Falha ao enviar registros pendentes", e)
-                            false
-                        }
-                    },
-                    clearLocalDatabase = { appDatabase.clearAllTables() },
-                    downloadCloudData = { runDataSync() }
-                )
+            val uploadsSucceeded = thermographicRecordRepository.withSyncLock {
+                runSyncWhenConnected(
+                    isConnected = NetworkUtils.hasInternetConnection(application)
+                ) {
+                    runUploadBeforeDownload(
+                        uploadPendingRecords = {
+                            try {
+                                thermographicRecordRepository.syncPendingRecords()
+                            } catch (e: Exception) {
+                                Log.e("SyncViewModel", "Falha ao enviar registros pendentes", e)
+                                false
+                            }
+                        },
+                        clearLocalDatabase = { appDatabase.clearAllTables() },
+                        downloadCloudData = { runDataSync() }
+                    )
+                }
             }
 
             if (!uploadsSucceeded) {

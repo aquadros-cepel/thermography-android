@@ -4,18 +4,14 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import androidx.work.Constraints
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.ExistingWorkPolicy
-import com.tech.thermography.android.work.ThermographicSyncWorker
 import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.dao.ThermographicRecordWithRelations
 import com.tech.thermography.android.data.local.entity.ThermographicRecord
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.remote.mapper.ThermographicRecordMapper
 import com.tech.thermography.android.data.remote.mapper.ROIMapper
 import com.tech.thermography.android.data.remote.sync.SyncApi
+import com.tech.thermography.android.work.ThermographicSyncScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -38,6 +34,7 @@ class ThermographicRecordRepository @Inject constructor(
     private val thermographicRecordDao = db.thermographicRecordDao()
     private val thermogramDao = db.thermogramDao()
     private val roiDao = db.roiDao()
+    private val synchronizationLock = SyncExecutionLock()
 
     fun getAllThermographicRecords(): Flow<List<ThermographicRecord>> = 
         thermographicRecordDao.getAllThermographicRecords()
@@ -60,7 +57,7 @@ class ThermographicRecordRepository @Inject constructor(
         persistThermogramImageLocally(record.thermogramId)
         record.thermogramRefId?.let { persistThermogramImageLocally(it) }
         
-        val newRecord = record.copy(syncStatus = com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus.NEW)
+        val newRecord = record.copy(syncStatus = RecordSyncStatus.NEW)
         thermographicRecordDao.insertThermographicRecord(newRecord)
         triggerSync(context)
     }
@@ -70,7 +67,7 @@ class ThermographicRecordRepository @Inject constructor(
         persistThermogramImageLocally(record.thermogramId)
         record.thermogramRefId?.let { persistThermogramImageLocally(it) }
         
-        val updated = record.copy(syncStatus = com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus.EDITED)
+        val updated = record.copy(syncStatus = RecordSyncStatus.EDITED)
         thermographicRecordDao.updateThermographicRecord(updated)
         triggerSync(context)
     }
@@ -115,21 +112,13 @@ class ThermographicRecordRepository @Inject constructor(
         }
     }
 
-    fun triggerSync(context: Context) {
-        Log.d("SyncDebug", "triggerSync chamado")
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val request = OneTimeWorkRequestBuilder<ThermographicSyncWorker>()
-            .setConstraints(constraints)
-            .build()
-        WorkManager.getInstance(context)
-            .enqueueUniqueWork(
-                "ThermographicSync",
-                ExistingWorkPolicy.REPLACE,
-                request
-            )
+    private suspend fun triggerSync(context: Context) {
+        Log.d("SyncDebug", "Agendando sincronização de alteração local")
+        ThermographicSyncScheduler.scheduleOnLocalChange(context)
     }
+
+    suspend fun <T> withSyncLock(block: suspend () -> T): T =
+        synchronizationLock.withLock(block)
 
     override suspend fun syncEntities() {
         val remoteEntities: List<com.tech.thermography.android.data.remote.dto.ThermographicRecordCreateDTO> = syncApi.getAllThermographicRecords()

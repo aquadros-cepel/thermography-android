@@ -25,7 +25,11 @@ class ThermographicSyncWorker @AssistedInject constructor(
         }
 
         return try {
-            repository.syncPendingRecords()
+            val synced = repository.withSyncLock { repository.syncPendingRecords() }
+            if (!synced) {
+                Log.w("ThermographicSyncWorker", "Há registros pendentes após falhas de upload")
+                return Result.retry()
+            }
             Log.d("ThermographicSyncWorker", "Sincronização concluída com sucesso")
             Result.success()
         } catch (e: Exception) {

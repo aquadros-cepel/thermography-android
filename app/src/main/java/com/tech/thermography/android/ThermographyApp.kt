@@ -7,15 +7,21 @@ import com.flir.thermalsdk.log.ThermalLog
 import dagger.hilt.android.HiltAndroidApp
 import androidx.work.Configuration
 import androidx.work.WorkManager
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import com.tech.thermography.android.work.ThermographicSyncWorker
+import com.tech.thermography.android.util.NetworkTransport
+import com.tech.thermography.android.util.NetworkUtils
+import com.tech.thermography.android.work.ThermographicSyncScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.hilt.work.HiltWorkerFactory
 
 @HiltAndroidApp
 class ThermographyApp : Application(), Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -31,13 +37,19 @@ class ThermographyApp : Application(), Configuration.Provider {
             ThermalLog.LogLevel.DEBUG
         )
 
-        // Gatilho para sincronização inicial. 
-        // Alterado para REPLACE para garantir que o worker seja disparado toda vez que o app abrir durante o desenvolvimento.
-        val request = OneTimeWorkRequestBuilder<ThermographicSyncWorker>().build()
-        WorkManager.getInstance(this).enqueueUniqueWork(
-            "ThermographicSync",
-            ExistingWorkPolicy.REPLACE,
-            request
-        )
+        ThermographicSyncScheduler.schedulePeriodic(this)
+        applicationScope.launch {
+            var previousTransport = NetworkTransport.DISCONNECTED
+            NetworkUtils.observeNetworkTransport(this@ThermographyApp).collect { transport ->
+                if (transport != NetworkTransport.DISCONNECTED && transport != previousTransport) {
+                    runCatching {
+                        ThermographicSyncScheduler.scheduleOnConnectivity(this@ThermographyApp)
+                    }.onFailure { error ->
+                        Log.e("ThermographyApp", "Não foi possível agendar sincronização por conectividade", error)
+                    }
+                }
+                previousTransport = transport
+            }
+        }
     }
 }
