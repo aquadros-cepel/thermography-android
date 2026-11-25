@@ -72,7 +72,7 @@ interface SyncApi {
     suspend fun uploadThermogram(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @Multipart
-    @POST("${Constants.IMAGE_BASE_URL}/py-api/flir/uploadImage")
+    @POST("${Constants.IMAGE_BASE_URL}/image/upload")
     suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @GET("thermographic-records")
