@@ -85,7 +85,7 @@ fun ThermogramMetadata.toEntity(
     equipmentId: UUID,
     createdById: UUID,
     localImagePath: String,
-    localImageRefPath: String = localImagePath,
+    localImageRefPath: String = "",
     imagePath: String? = null,
     audioPath: String? = null,
     imageRefPath: String? = null,
