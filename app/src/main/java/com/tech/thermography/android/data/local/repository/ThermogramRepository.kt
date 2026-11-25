@@ -19,6 +19,10 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal fun imageDownloadUrl(remotePath: String): String =
+    if (remotePath.startsWith("http")) remotePath
+    else "${Constants.IMAGE_BASE_URL}/py-api/${remotePath.trimStart('/')}"
+
 @Singleton
 class ThermogramRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -44,22 +48,12 @@ class ThermogramRepository @Inject constructor(
             
             // Tenta baixar a imagem térmica se houver path remoto
             val localPath = entity.imagePath?.let { remotePath ->
-                val fullUrl = if (remotePath.startsWith("http")) {
-                    remotePath
-                } else {
-                    "${Constants.IMAGE_BASE_URL}/py-api/$remotePath"
-                }
-                downloadAndSaveImage(fullUrl, entity.id, "thermal")
+                downloadAndSaveImage(imageDownloadUrl(remotePath), entity.id, "thermal")
             }
             
             // Tenta baixar a imagem real/referência se houver path remoto
             val localRefPath = entity.imageRefPath?.let { remotePath ->
-                val fullUrl = if (remotePath.startsWith("http")) {
-                    remotePath
-                } else {
-                    "${Constants.IMAGE_BASE_URL}/py-api/$remotePath"
-                }
-                downloadAndSaveImage(fullUrl, entity.id, "real")
+                downloadAndSaveImage(imageDownloadUrl(remotePath), entity.id, "real")
             }
             
             entity.copy(
