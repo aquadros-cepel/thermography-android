@@ -13,6 +13,7 @@ import com.tech.thermography.android.data.remote.mapper.ROIMapper
 import com.tech.thermography.android.data.remote.sync.SyncApi
 import com.tech.thermography.android.work.ThermographicSyncScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -24,6 +25,9 @@ import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+
+internal fun statusAfterLocalEdit(currentStatus: RecordSyncStatus?): RecordSyncStatus =
+    if (currentStatus == RecordSyncStatus.NEW) RecordSyncStatus.NEW else RecordSyncStatus.EDITED
 
 @Singleton
 class ThermographicRecordRepository @Inject constructor(
@@ -67,8 +71,11 @@ class ThermographicRecordRepository @Inject constructor(
         persistThermogramImageLocally(record.thermogramId)
         record.thermogramRefId?.let { persistThermogramImageLocally(it) }
         
-        val updated = record.copy(syncStatus = RecordSyncStatus.EDITED)
-        thermographicRecordDao.updateThermographicRecord(updated)
+        withSyncLock {
+            val currentStatus = thermographicRecordDao.getThermographicRecordById(record.id)?.syncStatus
+            val updated = record.copy(syncStatus = statusAfterLocalEdit(currentStatus))
+            thermographicRecordDao.updateThermographicRecord(updated)
+        }
         triggerSync(context)
     }
 
@@ -133,6 +140,7 @@ class ThermographicRecordRepository @Inject constructor(
     suspend fun syncPendingRecords(): Boolean {
         val records = thermographicRecordDao.getRecordsToSync()
         Log.d("SyncDebug", "syncPendingRecords: Encontrados ${records.size} registros para sincronizar")
+        Log.i("SyncDebug", "Pendências por status: ${records.groupingBy { it.syncStatus }.eachCount()}")
         
         var allSynced = true
         for (record in records) {
@@ -208,11 +216,14 @@ class ThermographicRecordRepository @Inject constructor(
                         allSynced = false
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("SyncDebug", "Exceção ao processar registro: ${record.id}", e)
                 allSynced = false
             }
         }
+        Log.i("SyncDebug", "Tentativas de upload concluídas: total=${records.size} sucessoCompleto=$allSynced")
         return allSynced
     }
 
@@ -246,7 +257,7 @@ class ThermographicRecordRepository @Inject constructor(
         
         // Verifica se existe caminho local para a imagem real e se o caminho remoto ainda não foi preenchido
         // Obs: Usamos imageRefPath como o campo remoto para a imagem real/visual
-        if (!thermogram.localImageRefPath.isNullOrBlank() && thermogram.imageRefPath.isNullOrBlank()) {
+        if (thermogram.localImageRefPath.isNotBlank() && thermogram.imageRefPath.isBlank()) {
             Log.d("SyncDebug", "Iniciando upload de imagem REAL para o termograma: ${thermogram.id}")
             
             val localPath = thermogram.localImageRefPath
