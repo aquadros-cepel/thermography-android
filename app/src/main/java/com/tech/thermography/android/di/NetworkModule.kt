@@ -1,5 +1,4 @@
 package com.tech.thermography.android.di
-
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.tech.thermography.android.data.remote.adapter.InstantAdapter
@@ -27,6 +26,7 @@ object NetworkModule {
     @Singleton
     fun provideGson(): Gson =
         GsonBuilder()
+            .setLenient()
             .registerTypeAdapter(Instant::class.java, InstantAdapter())
             .registerTypeAdapter(LocalDate::class.java, LocalDateAdapter())
             .create()
@@ -35,11 +35,6 @@ object NetworkModule {
     fun provideOkHttp(interceptor: AuthInterceptor): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(interceptor)
-            // .hostnameVerifier { hostname, session ->
-            //     // Permite o hostname energisa caso o certificado seja do eletronuclear
-            //     hostname == "energisa.thermalenergyapp.com" ||
-            //             javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, session)
-            // }
             .build()
 
     @Provides

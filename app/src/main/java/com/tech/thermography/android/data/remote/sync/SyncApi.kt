@@ -68,25 +68,25 @@ interface SyncApi {
     suspend fun downloadFile(@Url url: String): Response<ResponseBody>
 
     @Multipart
-    @POST("${Constants.IMAGE_BASE_URL}/py-api/flir/uploadThermogram")
+    @POST("${Constants.IMAGE_BASE_URL}/thermogram/upload")
     suspend fun uploadThermogram(@Part file: MultipartBody.Part): Response<UploadResponse>
 
     @Multipart
     @POST("${Constants.IMAGE_BASE_URL}/py-api/flir/uploadImage")
     suspend fun uploadImage(@Part file: MultipartBody.Part): Response<UploadResponse>
 
-    @GET("thermographic-inspection-records")
+    @GET("thermographic-records")
     suspend fun getAllThermographicRecords(): List<ThermographicRecordCreateDTO>
 
     @GET("user-infos")
     suspend fun getAllUserInfos(): List<UserInfoDto>
 
-    @POST("thermographic-inspection-records/actions/create")
+    @POST("thermographic-records/actions/create")
     suspend fun postThermographicRecord(@Body record: ThermographicRecordCreateDTO): Response<Unit>
 
-    @POST("thermographic-inspection-records/actions/update")
+    @POST("thermographic-records/actions/update")
     suspend fun updateThermographicRecord(@Body record: ThermographicRecordCreateDTO): Response<Unit>
 
-    @DELETE("thermographic-inspection-records/{id}")
+    @DELETE("thermographic-records/{id}")
     suspend fun deleteThermographicRecord(@Path("id") id: String): Response<Unit>
 }

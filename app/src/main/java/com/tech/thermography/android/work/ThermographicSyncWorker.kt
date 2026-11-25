@@ -9,6 +9,7 @@ import com.tech.thermography.android.data.local.repository.ThermographicRecordRe
 import com.tech.thermography.android.util.NetworkUtils
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 @HiltWorker
 class ThermographicSyncWorker @AssistedInject constructor(
@@ -17,7 +18,7 @@ class ThermographicSyncWorker @AssistedInject constructor(
     private val repository: ThermographicRecordRepository
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        Log.d("ThermographicSyncWorker", "Iniciando worker de sincronização")
+        Log.i("ThermographicSyncWorker", "Iniciando worker: id=$id tentativa=${runAttemptCount + 1}")
 
         if (!NetworkUtils.hasInternetConnection(applicationContext)) {
             Log.d("ThermographicSyncWorker", "Sem conexão com a internet. Tentando novamente mais tarde.")
@@ -25,13 +26,19 @@ class ThermographicSyncWorker @AssistedInject constructor(
         }
 
         return try {
-            val synced = repository.withSyncLock { repository.syncPendingRecords() }
+            Log.i("ThermographicSyncWorker", "Aguardando acesso exclusivo: id=$id")
+            val synced = repository.withSyncLock {
+                Log.i("ThermographicSyncWorker", "Consultando e enviando pendências: id=$id")
+                repository.syncPendingRecords()
+            }
             if (!synced) {
-                Log.w("ThermographicSyncWorker", "Há registros pendentes após falhas de upload")
+                Log.w("ThermographicSyncWorker", "Há falhas de upload; solicitando retry: id=$id tentativa=${runAttemptCount + 1}")
                 return Result.retry()
             }
-            Log.d("ThermographicSyncWorker", "Sincronização concluída com sucesso")
+            Log.i("ThermographicSyncWorker", "Sincronização concluída com sucesso: id=$id")
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("ThermographicSyncWorker", "Erro durante a sincronização", e)
             Result.retry()
