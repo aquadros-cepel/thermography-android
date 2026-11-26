@@ -8,6 +8,7 @@ import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEnti
 import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEquipmentEntity
 import com.tech.thermography.android.data.local.entity.PlantEntity
 import com.tech.thermography.android.data.local.entity.EquipmentEntity
+import com.tech.thermography.android.data.local.entity.enumeration.EquipmentInspectionStatus
 import com.tech.thermography.android.data.local.repository.InspectionRecordGroupEquipmentRepository
 import com.tech.thermography.android.data.local.repository.InspectionRecordGroupRepository
 import com.tech.thermography.android.data.local.repository.InspectionRecordRepository
@@ -64,6 +65,26 @@ class InspectionRecordDetailViewModel @Inject constructor(
     // Optional equipment id that should be brought into view after expansion
     private val _expandedTargetEquipmentId = MutableStateFlow<UUID?>(null)
     val expandedTargetEquipmentId: StateFlow<UUID?> = _expandedTargetEquipmentId.asStateFlow()
+
+    // Status chosen by the user; reapplied when the anomalies collector re-emits with its stale link snapshot
+    private val statusOverrides = mutableMapOf<UUID, EquipmentInspectionStatus>()
+
+    fun updateEquipmentStatus(link: InspectionRecordGroupEquipmentEntity, status: EquipmentInspectionStatus) {
+        val updated = link.copy(status = status)
+        statusOverrides[link.id] = status
+        _uiState.update { state ->
+            state.copy(groupEquipments = state.groupEquipments.mapValues { (_, items) ->
+                items.map { if (it.link.id == link.id) it.copy(link = updated) else it }
+            })
+        }
+        viewModelScope.launch {
+            try {
+                groupEquipmentRepository.updateInspectionRecordGroupEquipment(updated)
+            } catch (ex: Exception) {
+                Log.e("IRDetailVM", "Error updating equipment status for link=${link.id}", ex)
+            }
+        }
+    }
 
     // Given an equipmentId, find the group(s) that contain it and expand the path from root to that group
     fun expandToEquipment(equipmentId: UUID) {
@@ -166,7 +187,8 @@ class InspectionRecordDetailViewModel @Inject constructor(
                                         } catch (_: Exception) { }
                                         DisplayAnomaly(record = rec, componentName = compName)
                                     }
-                                    GroupEquipmentItem(link = link, equipment = eq, anomalies = displayAnomalies)
+                                    val currentLink = statusOverrides[link.id]?.let { link.copy(status = it) } ?: link
+                                    GroupEquipmentItem(link = currentLink, equipment = eq, anomalies = displayAnomalies)
                                 }
                             }
 

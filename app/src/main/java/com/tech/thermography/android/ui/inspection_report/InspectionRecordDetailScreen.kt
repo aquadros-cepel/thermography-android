@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
@@ -20,12 +22,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.tech.thermography.android.R
+import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEquipmentEntity
+import com.tech.thermography.android.data.local.entity.enumeration.EquipmentInspectionStatus
+import com.tech.thermography.android.navigation.DeviceUtils
 import com.tech.thermography.android.navigation.NavRoutes
 import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
@@ -139,7 +148,8 @@ fun InspectionRecordDetailScreen(
                             navController = navController,
                             plantId = uiState.plant?.id,
                             inspectionRecordId = uiState.record?.id,
-                            expandedGroupIds = vm.expandedGroupIds
+                            expandedGroupIds = vm.expandedGroupIds,
+                            onStatusChange = vm::updateEquipmentStatus
                         )
                         Spacer(modifier = Modifier.height(8.dp)) // Ajuste: aumenta o espaçamento entre os itens da árvore
                     }
@@ -159,6 +169,7 @@ private fun GroupNode(
     plantId: UUID?,
     inspectionRecordId: UUID?,
     expandedGroupIds: kotlinx.coroutines.flow.StateFlow<Set<UUID>>,
+    onStatusChange: (InspectionRecordGroupEquipmentEntity, EquipmentInspectionStatus) -> Unit,
 ) {
     val expandedIds by expandedGroupIds.collectAsState()
     var expanded by remember { mutableStateOf(false) }
@@ -218,14 +229,14 @@ private fun GroupNode(
         if (expanded) {
             val children = allGroups.filter { it.parentGroupId == grp.id }
             children.forEach { child ->
-                GroupNode(grp = child, allGroups = allGroups, groupEquipments = groupEquipments, level = level + 1, navController = navController, plantId = plantId, inspectionRecordId = inspectionRecordId, expandedGroupIds = expandedGroupIds)
+                GroupNode(grp = child, allGroups = allGroups, groupEquipments = groupEquipments, level = level + 1, navController = navController, plantId = plantId, inspectionRecordId = inspectionRecordId, expandedGroupIds = expandedGroupIds, onStatusChange = onStatusChange)
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
             // show equipments for this group (slightly indented from subgroups)
             val equipments = groupEquipments[grp.id]
             equipments?.forEach { item ->
-                EquipmentNode(item, level + 1, navController, plantId, inspectionRecordId)
+                EquipmentNode(item, level + 1, navController, plantId, inspectionRecordId, onStatusChange)
                 Spacer(modifier = Modifier.height(4.dp))
                 // render anomalies (components) under equipment
                 val anomalies = item.anomalies
@@ -239,7 +250,14 @@ private fun GroupNode(
 }
 
 @Composable
-private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: NavHostController, plantId: UUID?, inspectionRecordId: UUID?) {
+private fun EquipmentNode(
+    item: GroupEquipmentItem,
+    level: Int,
+    navController: NavHostController,
+    plantId: UUID?,
+    inspectionRecordId: UUID?,
+    onStatusChange: (InspectionRecordGroupEquipmentEntity, EquipmentInspectionStatus) -> Unit
+) {
     val paddingStart = (level * 8).dp
     val rowHeight = 40.dp
     val eq = item.equipment
@@ -251,7 +269,7 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
     }
     val baseLeft = 6.dp
     val baseRight = 8.dp
-    val rowColor = Color(0xFFEAF7EE) // light green
+    val rowColor = if (item.link.status == EquipmentInspectionStatus.INSPECTED) Color(0xFFEAF7EE) else EquipmentGray
     val textColor = Color.Black
     val iconColor = Color(0xFF294C7A) // substitui o preto pelo azul escuro
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -269,6 +287,14 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                EquipmentStatusSelector(
+                    status = item.link.status,
+                    isTablet = DeviceUtils.isTablet(LocalContext.current),
+                    arrowTint = iconColor,
+                    onSelected = { onStatusChange(item.link, it) }
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+
                 Text(text = display, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = textColor)
                 Icon(
                     imageVector = Icons.Filled.CameraAlt,
@@ -286,6 +312,92 @@ private fun EquipmentNode(item: GroupEquipmentItem, level: Int, navController: N
                             try { navController.navigate(route) } catch (ex: Exception) { android.util.Log.e("IRDetailScreen","Navigation failed for route=$route", ex); try { navController.navigate(NavRoutes.THERMOGRAMS) } catch (_: Exception) {} }
                         },
                     tint = iconColor
+                )
+            }
+        }
+    }
+}
+
+private val statusOptions = listOf(
+    EquipmentInspectionStatus.NOT_INSPECTED,
+    EquipmentInspectionStatus.INSPECTED,
+    EquipmentInspectionStatus.OUT_OF_OPERATION,
+    EquipmentInspectionStatus.INACCESSIBLE,
+    EquipmentInspectionStatus.OTHER
+)
+
+private fun EquipmentInspectionStatus.label(): String = when (this) {
+    EquipmentInspectionStatus.NOT_INSPECTED -> "Não Inspecionado"
+    EquipmentInspectionStatus.INSPECTED -> "Inspecionado"
+    EquipmentInspectionStatus.OUT_OF_OPERATION -> "Fora de Operação"
+    EquipmentInspectionStatus.INACCESSIBLE -> "Inacessível"
+    EquipmentInspectionStatus.OTHER -> "Outros"
+}
+
+private fun EquipmentInspectionStatus.iconRes(): Int = when (this) {
+    EquipmentInspectionStatus.NOT_INSPECTED -> R.drawable.ic_status_not_inspected
+    EquipmentInspectionStatus.INSPECTED -> R.drawable.ic_status_inspected
+    EquipmentInspectionStatus.OUT_OF_OPERATION -> R.drawable.ic_status_out_of_operation
+    EquipmentInspectionStatus.INACCESSIBLE -> R.drawable.ic_status_inaccessible
+    EquipmentInspectionStatus.OTHER -> R.drawable.ic_status_other
+}
+
+private val EquipmentGray = Color(0xFFEEF0F2)
+
+// The inset keeps the gray fill inside the PNG's circular border.
+@Composable
+private fun StatusIcon(status: EquipmentInspectionStatus, contentDescription: String?) {
+    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(21.dp)
+                .background(color = EquipmentGray, shape = CircleShape)
+        )
+        Icon(
+            painter = painterResource(status.iconRes()),
+            contentDescription = contentDescription,
+            tint = Color.Unspecified,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+/** Tablet: closed combo shows icon + label; phone: icon only. The open menu always shows both. */
+@Composable
+private fun EquipmentStatusSelector(
+    status: EquipmentInspectionStatus?,
+    isTablet: Boolean,
+    arrowTint: Color,
+    onSelected: (EquipmentInspectionStatus) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val current = status ?: EquipmentInspectionStatus.NOT_INSPECTED
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            StatusIcon(current, current.label())
+            if (isTablet) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = current.label(), style = MaterialTheme.typography.bodySmall, color = Color.Black)
+            }
+            Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null, tint = arrowTint)
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            statusOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label()) },
+                    leadingIcon = { StatusIcon(option, null) },
+                    onClick = {
+                        expanded = false
+                        onSelected(option)
+                    }
                 )
             }
         }
