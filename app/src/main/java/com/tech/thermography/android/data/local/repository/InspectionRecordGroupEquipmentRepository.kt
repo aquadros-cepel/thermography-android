@@ -3,6 +3,7 @@ package com.tech.thermography.android.data.local.repository
 import com.tech.thermography.android.data.local.AppDatabase
 import com.tech.thermography.android.data.local.dao.InspectionRecordGroupEquipmentWithEquipment
 import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEquipmentEntity
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.remote.mapper.InspectionRecordGroupEquipmentMapper
 import com.tech.thermography.android.data.remote.sync.SyncApi
 import kotlinx.coroutines.flow.Flow
@@ -38,8 +39,10 @@ class InspectionRecordGroupEquipmentRepository @Inject constructor(
     suspend fun insertInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity) =
         inspectionRecordGroupEquipmentDao.insertInspectionRecordGroupEquipment(equipment)
 
-    suspend fun updateInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity) =
-        inspectionRecordGroupEquipmentDao.updateInspectionRecordGroupEquipment(equipment)
+    suspend fun updateInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity) {
+        val updated = equipment.copy(syncStatus = RecordSyncStatus.EDITED)
+        inspectionRecordGroupEquipmentDao.updateInspectionRecordGroupEquipment(updated)
+    }
 
     suspend fun deleteInspectionRecordGroupEquipment(equipment: InspectionRecordGroupEquipmentEntity) =
         inspectionRecordGroupEquipmentDao.deleteInspectionRecordGroupEquipment(equipment)

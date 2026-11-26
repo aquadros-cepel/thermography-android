@@ -1,8 +1,9 @@
 package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
-import java.util.*
 import com.tech.thermography.android.data.local.entity.enumeration.EquipmentInspectionStatus
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
+import java.util.UUID
 
 @Entity(
     tableName = "inspection_record_group_equipment",
@@ -27,5 +28,6 @@ data class InspectionRecordGroupEquipmentEntity(
     val orderIndex: Int?,
     val status: EquipmentInspectionStatus?,
     val inspectionRecordGroupId: UUID?,
-    val equipmentId: UUID?
+    val equipmentId: UUID?,
+    val syncStatus: RecordSyncStatus = RecordSyncStatus.SYNCED
 )

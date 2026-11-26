@@ -11,6 +11,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
+
 @Singleton
 class InspectionRecordRepository @Inject constructor(
     private val db: AppDatabase,
@@ -23,6 +25,11 @@ class InspectionRecordRepository @Inject constructor(
     suspend fun getInspectionRecordById(id: UUID): InspectionRecordEntity? = inspectionRecordDao.getInspectionRecordById(id)
 
     suspend fun insertInspectionRecord(inspectionRecord: InspectionRecordEntity) = inspectionRecordDao.insertInspectionRecord(inspectionRecord)
+
+    suspend fun updateInspectionRecord(inspectionRecord: InspectionRecordEntity) {
+        val updated = inspectionRecord.copy(syncStatus = RecordSyncStatus.EDITED)
+        inspectionRecordDao.updateInspectionRecord(updated)
+    }
 
     suspend fun deleteInspectionRecord(inspectionRecord: InspectionRecordEntity) = inspectionRecordDao.deleteInspectionRecord(inspectionRecord)
 

@@ -9,6 +9,7 @@ import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEqui
 import com.tech.thermography.android.data.local.entity.PlantEntity
 import com.tech.thermography.android.data.local.entity.EquipmentEntity
 import com.tech.thermography.android.data.local.entity.enumeration.EquipmentInspectionStatus
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.local.repository.InspectionRecordGroupEquipmentRepository
 import com.tech.thermography.android.data.local.repository.InspectionRecordGroupRepository
 import com.tech.thermography.android.data.local.repository.InspectionRecordRepository
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 
@@ -67,7 +69,7 @@ class InspectionRecordDetailViewModel @Inject constructor(
     val expandedTargetEquipmentId: StateFlow<UUID?> = _expandedTargetEquipmentId.asStateFlow()
 
     // Status chosen by the user; reapplied when the anomalies collector re-emits with its stale link snapshot
-    private val statusOverrides = mutableMapOf<UUID, EquipmentInspectionStatus>()
+    private val statusOverrides = mutableMapOf<UUID, EquipmentInspectionStatus?>()
 
     fun updateEquipmentStatus(link: InspectionRecordGroupEquipmentEntity, status: EquipmentInspectionStatus) {
         val updated = link.copy(status = status)
@@ -221,5 +223,98 @@ class InspectionRecordDetailViewModel @Inject constructor(
                 Log.e("IRDetailVM", "Error loading inspection record detail", ex)
             }
         }
+    }
+
+    fun completeSubGroup(group: InspectionRecordGroupEntity) {
+        viewModelScope.launch {
+            try {
+                val now = Instant.now()
+                val updatedGroup = group.copy(
+                    finished = true,
+                    finishedAt = now,
+                    syncStatus = if (group.syncStatus == RecordSyncStatus.NEW) RecordSyncStatus.NEW else RecordSyncStatus.EDITED
+                )
+                groupRepository.updateInspectionRecordGroup(updatedGroup)
+
+                val targetGroupIds = getAllDescendantGroupIds(group.id, _uiState.value.allGroups)
+                val currentGroupEquipments = _uiState.value.groupEquipments
+
+                targetGroupIds.forEach { groupId ->
+                    val items = currentGroupEquipments[groupId] ?: emptyList()
+                    items.forEach { item ->
+                        val currentStatus = item.link.status
+                        val newStatus = if (currentStatus == EquipmentInspectionStatus.NOT_INSPECTED || currentStatus == null) {
+                            EquipmentInspectionStatus.INSPECTED
+                        } else {
+                            currentStatus
+                        }
+                        statusOverrides[item.link.id] = newStatus
+                        val updatedLink = item.link.copy(
+                            status = newStatus,
+                            syncStatus = if (item.link.syncStatus == RecordSyncStatus.NEW) RecordSyncStatus.NEW else RecordSyncStatus.EDITED
+                        )
+                        groupEquipmentRepository.updateInspectionRecordGroupEquipment(updatedLink)
+                    }
+                }
+
+                _uiState.value.record?.id?.let { load(it) }
+            } catch (ex: Exception) {
+                Log.e("IRDetailVM", "Error completing subgroup ${group.id}", ex)
+            }
+        }
+    }
+
+    fun revertSubGroup(group: InspectionRecordGroupEntity) {
+        viewModelScope.launch {
+            try {
+                val updatedGroup = group.copy(
+                    finished = false,
+                    finishedAt = null,
+                    syncStatus = if (group.syncStatus == RecordSyncStatus.NEW) RecordSyncStatus.NEW else RecordSyncStatus.EDITED
+                )
+                groupRepository.updateInspectionRecordGroup(updatedGroup)
+
+                val targetGroupIds = getAllDescendantGroupIds(group.id, _uiState.value.allGroups)
+                val currentGroupEquipments = _uiState.value.groupEquipments
+
+                targetGroupIds.forEach { groupId ->
+                    val items = currentGroupEquipments[groupId] ?: emptyList()
+                    items.forEach { item ->
+                        val currentStatus = item.link.status
+                        val hasThermogram = item.anomalies.isNotEmpty()
+                        val newStatus: EquipmentInspectionStatus? = when {
+                            hasThermogram -> currentStatus ?: EquipmentInspectionStatus.INSPECTED
+                            currentStatus == EquipmentInspectionStatus.INSPECTED -> null
+                            else -> currentStatus
+                        }
+                        statusOverrides[item.link.id] = newStatus
+                        val updatedLink = item.link.copy(
+                            status = newStatus,
+                            syncStatus = if (item.link.syncStatus == RecordSyncStatus.NEW) RecordSyncStatus.NEW else RecordSyncStatus.EDITED
+                        )
+                        groupEquipmentRepository.updateInspectionRecordGroupEquipment(updatedLink)
+                    }
+                }
+
+                _uiState.value.record?.id?.let { load(it) }
+            } catch (ex: Exception) {
+                Log.e("IRDetailVM", "Error reverting subgroup ${group.id}", ex)
+            }
+        }
+    }
+
+    private fun getAllDescendantGroupIds(rootId: UUID, allGroups: List<InspectionRecordGroupEntity>): List<UUID> {
+        val result = mutableListOf(rootId)
+        val queue = ArrayDeque<UUID>()
+        queue.add(rootId)
+        while (queue.isNotEmpty()) {
+            val parentId = queue.removeFirst()
+            val children = allGroups.filter { it.parentGroupId == parentId }
+            children.forEach { child ->
+                result.add(child.id)
+                queue.add(child.id)
+            }
+        }
+        return result
     }
 }

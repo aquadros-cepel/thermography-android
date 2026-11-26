@@ -1,6 +1,7 @@
 package com.tech.thermography.android.data.remote.mapper
 
 import com.tech.thermography.android.data.local.entity.InspectionRecordEntity
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.remote.dto.InspectionRecordDto
 
 object InspectionRecordMapper {
@@ -22,7 +23,8 @@ object InspectionRecordMapper {
             inspectionRouteId = dto.inspectionRoute?.id,
             createdById = dto.createdBy.id,
             startedById = dto.startedBy?.id,
-            finishedById = dto.finishedBy?.id
+            finishedById = dto.finishedBy?.id,
+            syncStatus = RecordSyncStatus.SYNCED
         )
     }
 }

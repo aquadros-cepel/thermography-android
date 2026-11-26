@@ -1,6 +1,7 @@
 package com.tech.thermography.android.data.local.entity
 
 import androidx.room.*
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import java.time.Instant
 import java.util.*
 
@@ -31,5 +32,6 @@ data class InspectionRecordGroupEntity(
     val finished: Boolean?,
     val finishedAt: Instant?,
     val inspectionRecordId: UUID?,
-    val parentGroupId: UUID?
+    val parentGroupId: UUID?,
+    val syncStatus: RecordSyncStatus = RecordSyncStatus.SYNCED
 )

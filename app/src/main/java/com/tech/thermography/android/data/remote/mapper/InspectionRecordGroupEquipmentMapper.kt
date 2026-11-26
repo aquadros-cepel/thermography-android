@@ -1,6 +1,7 @@
 package com.tech.thermography.android.data.remote.mapper
 
 import com.tech.thermography.android.data.local.entity.InspectionRecordGroupEquipmentEntity
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
 import com.tech.thermography.android.data.remote.dto.InspectionRecordGroupEquipmentDto
 
 object InspectionRecordGroupEquipmentMapper {
@@ -10,7 +11,8 @@ object InspectionRecordGroupEquipmentMapper {
             orderIndex = dto.orderIndex,
             status = dto.status,
             inspectionRecordGroupId = dto.inspectionRecordGroup?.id,
-            equipmentId = dto.equipment?.id
+            equipmentId = dto.equipment?.id,
+            syncStatus = RecordSyncStatus.SYNCED
         )
     }
 }

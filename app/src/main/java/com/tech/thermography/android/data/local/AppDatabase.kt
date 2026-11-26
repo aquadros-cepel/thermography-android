@@ -31,7 +31,7 @@ import com.tech.thermography.android.data.local.util.Converters
         RiskRecommendationTranslationEntity::class,
         SyncEntityState::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

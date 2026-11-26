@@ -10,6 +10,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.tech.thermography.android.data.local.entity.enumeration.RecordSyncStatus
+
 @Singleton
 class InspectionRecordGroupRepository @Inject constructor(
     private val db: AppDatabase,
@@ -24,6 +26,11 @@ class InspectionRecordGroupRepository @Inject constructor(
     suspend fun getGroupsByInspectionRecordIdOnce(recordId: UUID): List<InspectionRecordGroupEntity> = inspectionRecordGroupDao.getGroupsByRecordIdOnce(recordId)
 
     suspend fun insertInspectionRecordGroup(inspectionRecordGroup: InspectionRecordGroupEntity) = inspectionRecordGroupDao.insertInspectionRecordGroup(inspectionRecordGroup)
+
+    suspend fun updateInspectionRecordGroup(inspectionRecordGroup: InspectionRecordGroupEntity) {
+        val updated = inspectionRecordGroup.copy(syncStatus = RecordSyncStatus.EDITED)
+        inspectionRecordGroupDao.updateInspectionRecordGroup(updated)
+    }
 
     suspend fun deleteInspectionRecordGroup(inspectionRecordGroup: InspectionRecordGroupEntity) = inspectionRecordGroupDao.deleteInspectionRecordGroup(inspectionRecordGroup)
 

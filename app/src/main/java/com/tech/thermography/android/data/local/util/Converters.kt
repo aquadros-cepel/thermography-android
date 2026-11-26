@@ -68,4 +68,11 @@ class Converters {
     @TypeConverter
     fun toEquipmentInspectionStatus(value: String?): EquipmentInspectionStatus? = 
         value?.let { EquipmentInspectionStatus.valueOf(it) }
+
+    @TypeConverter
+    fun fromRecordSyncStatus(status: RecordSyncStatus?): String? = status?.name
+
+    @TypeConverter
+    fun toRecordSyncStatus(value: String?): RecordSyncStatus? =
+        value?.let { RecordSyncStatus.valueOf(it) }
 }

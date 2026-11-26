@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.*
@@ -149,7 +150,9 @@ fun InspectionRecordDetailScreen(
                             plantId = uiState.plant?.id,
                             inspectionRecordId = uiState.record?.id,
                             expandedGroupIds = vm.expandedGroupIds,
-                            onStatusChange = vm::updateEquipmentStatus
+                            onStatusChange = vm::updateEquipmentStatus,
+                            onCompleteSubGroup = vm::completeSubGroup,
+                            onRevertSubGroup = vm::revertSubGroup
                         )
                         Spacer(modifier = Modifier.height(8.dp)) // Ajuste: aumenta o espaçamento entre os itens da árvore
                     }
@@ -170,6 +173,9 @@ private fun GroupNode(
     inspectionRecordId: UUID?,
     expandedGroupIds: kotlinx.coroutines.flow.StateFlow<Set<UUID>>,
     onStatusChange: (InspectionRecordGroupEquipmentEntity, EquipmentInspectionStatus) -> Unit,
+    onCompleteSubGroup: (com.tech.thermography.android.data.local.entity.InspectionRecordGroupEntity) -> Unit,
+    onRevertSubGroup: (com.tech.thermography.android.data.local.entity.InspectionRecordGroupEntity) -> Unit,
+    parentFinished: Boolean = false
 ) {
     val expandedIds by expandedGroupIds.collectAsState()
     var expanded by remember { mutableStateOf(false) }
@@ -185,6 +191,8 @@ private fun GroupNode(
     }
     val textColor = Color.Black
     val iconColor = Color(0xFF294C7A) // substitui o preto pelo azul escuro
+
+    val currentGroupFinished = parentFinished || grp.finished == true
 
     Column(modifier = Modifier.fillMaxWidth().animateContentSize()) {
         val baseLeft = 6.dp
@@ -221,7 +229,66 @@ private fun GroupNode(
                         modifier = Modifier.weight(1f)
                     )
 
-//                    Text(text = grp.code ?: "", style = MaterialTheme.typography.bodySmall, color = textColor)
+                    if (grp.parentGroupId != null || level > 0) {
+                        val isFinished = grp.finished == true
+                        if (!isFinished) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFE0E5EC))
+                                    .clickable { onCompleteSubGroup(grp) }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Concluir Sub-Grupo",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black
+                                )
+                            }
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(color = Color(0xFFDFF5E6), shape = RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Inspecionado",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF1B5E20)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                var showMenu by remember { mutableStateOf(false) }
+                                Box {
+                                    IconButton(
+                                        onClick = { showMenu = true },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "Opções",
+                                            tint = iconColor
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Voltar para Inspeção") },
+                                            onClick = {
+                                                showMenu = false
+                                                onRevertSubGroup(grp)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -229,14 +296,35 @@ private fun GroupNode(
         if (expanded) {
             val children = allGroups.filter { it.parentGroupId == grp.id }
             children.forEach { child ->
-                GroupNode(grp = child, allGroups = allGroups, groupEquipments = groupEquipments, level = level + 1, navController = navController, plantId = plantId, inspectionRecordId = inspectionRecordId, expandedGroupIds = expandedGroupIds, onStatusChange = onStatusChange)
+                GroupNode(
+                    grp = child,
+                    allGroups = allGroups,
+                    groupEquipments = groupEquipments,
+                    level = level + 1,
+                    navController = navController,
+                    plantId = plantId,
+                    inspectionRecordId = inspectionRecordId,
+                    expandedGroupIds = expandedGroupIds,
+                    onStatusChange = onStatusChange,
+                    onCompleteSubGroup = onCompleteSubGroup,
+                    onRevertSubGroup = onRevertSubGroup,
+                    parentFinished = currentGroupFinished
+                )
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
             // show equipments for this group (slightly indented from subgroups)
             val equipments = groupEquipments[grp.id]
             equipments?.forEach { item ->
-                EquipmentNode(item, level + 1, navController, plantId, inspectionRecordId, onStatusChange)
+                EquipmentNode(
+                    item = item,
+                    level = level + 1,
+                    navController = navController,
+                    plantId = plantId,
+                    inspectionRecordId = inspectionRecordId,
+                    onStatusChange = onStatusChange,
+                    isGroupFinished = currentGroupFinished
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 // render anomalies (components) under equipment
                 val anomalies = item.anomalies
@@ -256,7 +344,8 @@ private fun EquipmentNode(
     navController: NavHostController,
     plantId: UUID?,
     inspectionRecordId: UUID?,
-    onStatusChange: (InspectionRecordGroupEquipmentEntity, EquipmentInspectionStatus) -> Unit
+    onStatusChange: (InspectionRecordGroupEquipmentEntity, EquipmentInspectionStatus) -> Unit,
+    isGroupFinished: Boolean = false
 ) {
     val paddingStart = (level * 8).dp
     val rowHeight = 40.dp
@@ -269,7 +358,7 @@ private fun EquipmentNode(
     }
     val baseLeft = 6.dp
     val baseRight = 8.dp
-    val rowColor = if (item.link.status == EquipmentInspectionStatus.INSPECTED) Color(0xFFEAF7EE) else EquipmentGray
+    val rowColor = if (isGroupFinished || item.link.status == EquipmentInspectionStatus.INSPECTED) Color(0xFFEAF7EE) else EquipmentGray
     val textColor = Color.Black
     val iconColor = Color(0xFF294C7A) // substitui o preto pelo azul escuro
     Row(modifier = Modifier.fillMaxWidth()) {
